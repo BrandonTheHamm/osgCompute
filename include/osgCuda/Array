@@ -1,0 +1,1027 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+ *                                                                     
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 3 of
+ * the License, or (at your option) any later version.
+ *                                                                     
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesse General Public License for more details.
+ *
+ * The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCUDA_ARRAY
+#define OSGCUDA_ARRAY 1
+
+#include <memory.h>
+#include <cuda_runtime.h>
+#include <driver_types.h>
+#include <osg/Image>
+#include <osgCompute/Buffer>
+#include "osgCuda/Context"
+#include "osgCuda/Export"
+
+namespace osg
+{
+    class Vec2b;
+    class Vec3b;
+    class Vec4b;
+    class Vec4ub;
+    class Vec2s;
+    class Vec3s;
+    class Vec4s;
+    class Vec2f;
+    class Vec3f;
+    class Vec4f;
+    class Vec2d;
+    class Vec3d;
+    class Vec4d;
+}
+
+namespace osgCuda
+{
+    template<class T>
+    class Array;
+
+    typedef Array<unsigned char>     UByteArray;
+    typedef Array<osg::Vec4ub>       Vec4ubArray;
+    typedef Array<char>              ByteArray;
+    typedef Array<osg::Vec2b>        Vec2bArray;
+    typedef Array<osg::Vec3b>        Vec3bArray;
+    typedef Array<osg::Vec4b>        Vec4bArray;
+    typedef Array<unsigned short>    UShortArray;
+    typedef Array<short>             ShortArray;
+    typedef Array<osg::Vec2s>        Vec2sArray;
+    typedef Array<osg::Vec3s>        Vec3sArray;
+    typedef Array<osg::Vec4s>        Vec4sArray;
+    typedef Array<unsigned int>      UIntArray;
+    typedef Array<int>               IntArray;
+    typedef Array<unsigned long>     ULongArray;
+    typedef Array<long>              LongArray;
+    typedef Array<float>             FloatArray;
+    typedef Array<osg::Vec2f>        Vec2fArray;
+    typedef Array<osg::Vec3f>        Vec3fArray;
+    typedef Array<osg::Vec4f>        Vec4fArray;
+    typedef Array<double>            DoubleArray;
+    typedef Array<osg::Vec2d>        Vec2dArray;
+    typedef Array<osg::Vec3d>        Vec3dArray;
+    typedef Array<osg::Vec4d>        Vec4dArray;
+
+    typedef std::vector< osg::ref_ptr<osg::Image> >                     StreamImageList;
+    typedef std::vector< osg::ref_ptr<osg::Image> >::iterator           StreamImageListItr;
+    typedef std::vector< osg::ref_ptr<osg::Image> >::const_iterator     StreamImageListCnstItr;
+
+    enum ALLOC_HINTS
+    {
+        ALLOC_LINEAR = 0x0,
+        ALLOC_ARRAY = 0x1,
+        ALLOC_DYNAMIC = 0x2
+    };
+
+    /**
+    */
+    template< class DATATYPE >
+    class ArrayStream : public osgCompute::BufferStream<DATATYPE>
+    {
+    public:
+        cudaArray*                      _devArray;
+        bool                            _devArrayAllocated;
+        bool                            _syncDevice;
+        DATATYPE*                       _hostPtr;
+        bool                            _hostPtrAllocated;
+        bool                            _syncHost;
+        unsigned int                    _allocHint;
+
+        ArrayStream();
+        virtual ~ArrayStream();
+
+    private:
+        // not allowed to call copy-constructor or copy-operator
+        ArrayStream( const ArrayStream& ) {}
+        ArrayStream& operator=( const ArrayStream& ) { return *this; }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    ArrayStream<DATATYPE>::ArrayStream()
+        :   osgCompute::BufferStream<DATATYPE>(),
+        _devArray(NULL),
+        _hostPtr(NULL),
+        _syncDevice(false),
+        _syncHost(false),
+        _allocHint(0),
+        _devArrayAllocated(false),
+        _hostPtrAllocated(false)
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    ArrayStream<DATATYPE>::~ArrayStream()
+    {
+        if( _devArrayAllocated && NULL != _devArray )
+            static_cast<Context*>(osgCompute::BufferStream<DATATYPE>::_context.get())->freeMemory( _devArray );
+
+        if( _hostPtrAllocated && NULL != _hostPtr)
+            static_cast<Context*>(osgCompute::BufferStream<DATATYPE>::_context.get())->freeMemory( _hostPtr );
+    }
+
+    /**
+    */
+    template< class DATATYPE >
+    class Array : public osgCompute::Buffer<DATATYPE>
+    {
+
+    public:
+        Array();
+
+        META_Object( osgCuda, Array )
+
+        virtual bool init();
+        virtual void clear();
+
+        virtual cudaArray* mapArray( const osgCompute::Context& context, unsigned int mapping, unsigned int streamIdx = 0 ) const;
+        virtual DATATYPE* map( const osgCompute::Context& context, unsigned int mapping, unsigned int streamIdx = 0 ) const;
+        virtual void unmap( const osgCompute::Context& context, unsigned int streamIdx = 0 ) const;
+
+        virtual void setStreamImage( osg::Image& image, unsigned int streamIdx = 0 );
+        virtual osg::Image* getStreamImage( unsigned int streamIdx = 0 );
+        virtual const osg::Image* getStreamImage( unsigned int streamIdx = 0 ) const;
+
+        inline void setChannelFormatDesc(cudaChannelFormatDesc& channelFormatDesc);
+        inline cudaChannelFormatDesc& getChannelFormatDesc();
+        inline const cudaChannelFormatDesc& getChannelFormatDesc() const;
+
+    protected:
+        virtual ~Array() { clearLocal(); }
+        void clearLocal();
+
+        DATATYPE* mapStream( ArrayStream<DATATYPE>& stream, unsigned int mapping ) const;
+        cudaArray* mapArrayStream( ArrayStream<DATATYPE>& stream, unsigned int mapping ) const;
+        void unmapStream( ArrayStream<DATATYPE>& stream ) const;
+
+        bool allocStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const;
+        bool syncStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const;
+
+        virtual osgCompute::BufferStream<DATATYPE>* newStream( const osgCompute::Context& context, unsigned int streamIdx ) const;
+
+        mutable StreamImageList _streamImages;
+        cudaChannelFormatDesc   _channelFormatDesc;
+
+    private:
+        // copy constructor and operator should not be called
+        Array( const Array&, const osg::CopyOp& ) {}
+        Array& operator=( const Array& copy ) { return (*this); }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    Array<DATATYPE>::Array()
+        : osgCompute::Buffer<DATATYPE>()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Array<DATATYPE>::clear()
+    {
+        clearLocal();
+        osgCompute::Buffer<DATATYPE>::clear();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Array<DATATYPE>::init()
+    {
+        unsigned int streamSize = sizeof( DATATYPE );
+        for( unsigned int d=0; d<osgCompute::Buffer<DATATYPE>::getNumDimensions(); ++d )
+            streamSize *= osgCompute::Buffer<DATATYPE>::getDimension( d );
+
+        // check Images
+        for( unsigned int i=0; i<_streamImages.size(); ++i )
+        {
+            if( !_streamImages[i].valid() )
+                continue;
+
+            if( _streamImages[i]->getNumMipmapLevels() > 1 )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::init() for array \""
+                    << osg::Object::getName() <<"\": image \""
+                    << _streamImages[i]->getName() << "\" for stream \""<<i<<"\" uses MipMaps which are currently"
+                    << "not supported."
+                    << std::endl;
+
+                clear();
+                return false;
+            }
+
+            if( _streamImages[i]->getTotalSizeInBytes() != streamSize )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::init() for array \""
+                    << osg::Object::getName() <<"\": image \""
+                    << _streamImages[i]->getName() << "\" for stream \""<<i<<"\" has an incorrect size of \""
+                    << _streamImages[i]->getTotalSizeInBytes() << "\" which must be of Size \""
+                    << streamSize << "\"."
+                    << std::endl;
+
+                clear();
+                return false;
+            }
+        }
+
+        if( osgCompute::Buffer<DATATYPE>::getNumDimensions() > 3 )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::init() for array \""
+                << osg::Object::getName() <<"\": the maximum dimension allowed is 3."
+                << std::endl;
+
+            clear();
+            return false;
+        }
+
+        return osgCompute::Buffer<DATATYPE>::init();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    cudaArray* osgCuda::Array<DATATYPE>::mapArray( const osgCompute::Context& context, unsigned int mapping, unsigned int streamIdx /*= 0*/ ) const
+    {
+        if( osgCompute::Param::isDirty() )
+        {
+            osg::notify(osg::INFO)
+                << "CUDA::Array::map() for array \""
+                << osg::Object::getName() <<"\": array is dirty."
+                << std::endl;
+
+            return NULL;
+        }
+
+        if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::map() for array \""
+                << osg::Object::getName() <<"\": calling thread differs from the context's thread."
+                << std::endl;
+
+            return NULL;
+        }
+
+        if( mapping & osgCompute::MAP_HOST )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::mapArray() for array \""
+                << osg::Object::getName() <<"\": cannot map array to host. Call map() instead."
+                << std::endl;
+
+            return NULL;
+        }
+
+        ArrayStream<DATATYPE>* stream = static_cast<ArrayStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context,streamIdx) );
+        if( NULL == stream )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::map() for array \""
+                << osg::Object::getName() <<"\": cannot receive ArrayStream for context \""
+                << context.getId() << "\" and stream \""
+                << streamIdx << "\"."
+                << std::endl;
+            return NULL;
+        }
+
+        cudaArray* ptr = NULL;
+        if( mapping != osgCompute::UNMAPPED )
+            ptr = mapArrayStream( *stream, mapping );
+        else
+            unmapStream( *stream );
+
+        return ptr;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    DATATYPE* Array<DATATYPE>::map( const osgCompute::Context& context, unsigned int mapping, unsigned int streamIdx /*= 0*/ ) const
+    {
+        if( osgCompute::Param::isDirty() )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::map() for array \""
+                << osg::Object::getName() <<"\": array is dirty."
+                << std::endl;
+
+            return NULL;
+        }
+
+        if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::map() for array \""
+                << osg::Object::getName() <<"\": calling thread differs from the context assigned thread."
+                << std::endl;
+
+            return NULL;
+        }
+
+        if( mapping & osgCompute::MAP_DEVICE )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::mapArray() for array \""
+                << osg::Object::getName() <<"\": cannot map buffer to device. Call mapArray() instead."
+                << std::endl;
+
+            return NULL;
+        }
+
+        ArrayStream<DATATYPE>* stream = static_cast<ArrayStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context,streamIdx) );
+        if( NULL == stream )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::map() for array \""
+                << osg::Object::getName() <<"\": cannot receive ArrayStream for context \""
+                << context.getId() << "\" and stream \""
+                << streamIdx << "\"."
+                << std::endl;
+            return NULL;
+        }
+
+        DATATYPE* ptr = NULL;
+        if( mapping != osgCompute::UNMAPPED )
+            ptr = mapStream( *stream, mapping );
+        else
+            unmapStream( *stream );
+
+        return ptr;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Array<DATATYPE>::unmap( const osgCompute::Context& context, unsigned int streamIdx /*= 0*/ ) const
+    {
+        if( osgCompute::Param::isDirty() )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::map() for array \""
+                << osg::Object::getName() <<"\": array is dirty."
+                << std::endl;
+
+            return;
+        }
+
+        if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::map() for array \""
+                << osg::Object::getName() <<"\": calling thread differs from the context's thread."
+                << std::endl;
+
+            return;
+        }
+
+        ArrayStream<DATATYPE>* stream = static_cast<ArrayStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context,streamIdx) );
+        if( NULL == stream )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Array::map() for array \""
+                << osg::Object::getName() <<"\": could not receive ArrayStream for context \""
+                << context.getId() << "\" and stream \""
+                << streamIdx << "\"."
+                << std::endl;
+
+            return;
+        }
+
+        unmapStream( *stream );
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    cudaArray* Array<DATATYPE>::mapArrayStream( ArrayStream<DATATYPE>& stream, unsigned int mapping ) const
+    {
+        ///////////////////
+        // PROOF MAPPING //
+        ///////////////////
+        if( stream._mapping == mapping )
+        {
+            return stream._devArray;
+        }
+        else if( stream._mapping != osgCompute::UNMAPPED )
+        {
+            unmapStream( stream );
+        }
+
+        stream._mapping = mapping;
+
+        //////////////
+        // MAP DATA //
+        //////////////
+        bool firstLoad = false;
+        cudaArray* ptr = NULL;
+        cudaError res;
+        if( (stream._mapping & osgCompute::MAP_DEVICE) )
+        {
+            if( NULL == stream._devArray )
+            {
+                ////////////////////////////
+                // ALLOCATE DEVICE-MEMORY //
+                ////////////////////////////
+                if( !allocStream( mapping, stream ) )
+                    return NULL;
+
+                firstLoad = true;
+            }
+
+            /////////////////////
+            // COPY IMAGE DATA //
+            /////////////////////
+            if( _streamImages.size() > stream._streamIdx &&
+                NULL != _streamImages[stream._streamIdx] )
+            {
+                res = cudaMemcpyToArray(stream._devArray,0,0,_streamImages[stream._streamIdx]->data(), osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyHostToDevice);
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::syncStream() for array \""<<osg::Object::getName()
+                        << "\": Something goes wrong on cudaMemcpy3D() to device within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\". Returned code is "
+                        << std::hex<<res<<"."
+                        << std::endl;
+
+                    return false;
+                }
+
+                // release image after copy
+                if( osgCompute::Buffer<DATATYPE>::getRemoveUsedImages() )
+                    _streamImages[stream._streamIdx] = NULL;
+
+                // host must be synchronized
+                stream._syncHost = true;
+            }
+
+            /////////////////
+            // SYNC DEVICE //
+            /////////////////
+            if( stream._syncDevice && NULL != stream._hostPtr )
+                if( !syncStream( mapping, stream ) )
+                    return NULL;
+
+            ptr = stream._devArray;
+        }
+        else
+        {
+            osg::notify(osg::WARN)
+                << "CUDA::Array::mapArrayStream() for array \""<<osg::Object::getName()<<"\": wrong mapping was specified. Use one of the following: "
+                << "DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
+                << std::endl;
+
+            return NULL;
+        }
+
+        //////////////////
+        // LOAD/SUBLOAD //
+        //////////////////
+        if( osgCompute::Param::getSubloadCallback() && NULL != ptr )
+        {
+            const osgCompute::BufferSubloadCallback* callback = osgCompute::Param::getSubloadCallback()->asBufferSubloadCallback();
+            if( callback )
+            {
+                // load or subload data before returning the host pointer
+                if( firstLoad )
+                    callback->load( reinterpret_cast<void*>(ptr), stream._streamIdx, mapping, *this, *stream._context );
+                else
+                    callback->subload( reinterpret_cast<void*>(ptr), stream._streamIdx, mapping, *this, *stream._context );
+            }
+        }
+
+        return ptr;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    DATATYPE* Array<DATATYPE>::mapStream( ArrayStream<DATATYPE>& stream, unsigned int mapping ) const
+    {
+        ///////////////////
+        // PROOF MAPPING //
+        ///////////////////
+        if( stream._mapping == mapping )
+        {
+            return stream._hostPtr;
+        }
+        else if( stream._mapping != osgCompute::UNMAPPED )
+        {
+            unmapStream( stream );
+        }
+
+        stream._mapping = mapping;
+
+        //////////////
+        // MAP DATA //
+        //////////////
+        bool firstLoad = false;
+        DATATYPE* ptr = NULL;
+        cudaError res;
+        if( (stream._mapping & osgCompute::MAP_HOST) )
+        {
+            if( NULL == stream._hostPtr )
+            {
+                //////////////////////////
+                // ALLOCATE HOST-MEMORY //
+                //////////////////////////
+                if( !allocStream( mapping, stream ) )
+                    return NULL;
+
+                firstLoad = true;
+            }
+
+            /////////////////////
+            // COPY IMAGE DATA //
+            /////////////////////
+            if( _streamImages.size() > stream._streamIdx &&
+                NULL != _streamImages[stream._streamIdx]  )
+            {
+                res = cudaMemcpy( stream._hostPtr, _streamImages[stream._streamIdx]->data(), osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyHostToHost );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::mapStream() for array \""<<osg::Object::getName()
+                        << "\": something goes wrong within cudaMemcpy() to host for image \""
+                        << _streamImages[stream._streamIdx]->getName()<< "\" within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\". Returned code is " << std::hex<<res<<"."
+                        << std::endl;
+
+                    return NULL;
+                }
+
+                // release image after copy
+                if( osgCompute::Buffer<DATATYPE>::getRemoveUsedImages() )
+                    _streamImages[stream._streamIdx] = NULL;
+
+                // device must be synchronized
+                stream._syncDevice = true;
+            }
+
+            ///////////////
+            // SYNC HOST //
+            ///////////////
+            if( stream._syncHost && NULL != stream._devArray )
+                if( !syncStream( mapping, stream ) )
+                    return NULL;
+
+            ptr = stream._hostPtr;
+        }
+        else
+        {
+            osg::notify(osg::WARN)
+                << "CUDA::Array::mapStream() for array \""<<osg::Object::getName()<<"\": wrong mapping was specified. Use one of the following: "
+                << "HOST_SOURCE, HOST_TARGET, HOST."
+                << std::endl;
+            return NULL;
+        }
+
+        //////////////////
+        // LOAD/SUBLOAD //
+        //////////////////
+        if( osgCompute::Param::getSubloadCallback() && NULL != ptr )
+        {
+            const osgCompute::BufferSubloadCallback* callback = osgCompute::Param::getSubloadCallback()->asBufferSubloadCallback();
+            if( callback )
+            {
+                // load or subload data before returning the host pointer
+                if( firstLoad )
+                    callback->load( ptr, stream._streamIdx, mapping, *this, *stream._context );
+                else
+                    callback->subload( ptr, stream._streamIdx, mapping, *this, *stream._context );
+            }
+        }
+
+        return ptr;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Array<DATATYPE>::allocStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const
+    {
+        if( mapping & osgCompute::MAP_HOST )
+        {
+            if( stream._hostPtr != NULL )
+                return true;
+
+            if( (stream._allocHint & ALLOC_DYNAMIC) == ALLOC_DYNAMIC )
+            {
+                stream._hostPtr = reinterpret_cast<DATATYPE*>(
+                    static_cast<Context*>(stream._context.get())->mallocDeviceHostMemory( osgCompute::Buffer<DATATYPE>::getStreamSize() ) );
+                if( NULL == stream._hostPtr )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::allocStream() for array \""
+                        << osg::Object::getName()<<"\": something goes wrong within mallocDeviceHostMemory() within Context \""<<stream._context->getId()
+                        << "\" and Stream \""
+                        << stream._streamIdx << "\"."
+                        << std::endl;
+
+                    return false;
+                }
+
+                stream._hostPtrAllocated = true;
+                return true;
+            }
+            else
+            {
+                stream._hostPtr = reinterpret_cast<DATATYPE*>(
+                    static_cast<Context*>(stream._context.get())->mallocHostMemory( osgCompute::Buffer<DATATYPE>::getStreamSize() ) );
+                if( NULL == stream._hostPtr )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::allocStream() for array \""
+                        << osg::Object::getName()<<"\": something goes wrong within mallocHostMemory() within Context \""<<stream._context->getId()
+                        << "\" and Stream \""
+                        << stream._streamIdx << "\"."
+                        << std::endl;
+
+                    return false;
+                }
+
+                stream._hostPtrAllocated = true;
+                return true;
+            }
+        }
+        else if( mapping & osgCompute::MAP_DEVICE )
+        {
+            if( stream._devArray != NULL )
+                return true;
+
+            const cudaChannelFormatDesc& desc = getChannelFormatDesc();
+            if( desc.x == INT_MAX && desc.y == INT_MAX && desc.z == INT_MAX )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::allocStream() for array \""<<osg::Object::getName()<<"\": no valid ChannelFormatDesc found."
+                    << std::endl;
+
+                return false;
+            }
+
+            //cudaExtent extent;
+            //extent.width = osgCompute::Buffer<DATATYPE>::getDimension(0);
+            //extent.height = (osgCompute::Buffer<DATATYPE>::getDimension(1) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(1);
+            //extent.depth = (osgCompute::Buffer<DATATYPE>::getDimension(2) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(2);
+            if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 3 )
+            {
+                //res = cudaMalloc3DArray( &stream._devArray, &desc, extent );
+                stream._devArray = static_cast<Context*>(stream._context.get())->mallocDevice3DArray(
+                                        osgCompute::Buffer<DATATYPE>::getDimension(0),
+                                        (osgCompute::Buffer<DATATYPE>::getDimension(1) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(1),
+                                        (osgCompute::Buffer<DATATYPE>::getDimension(2) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(2),
+                                        desc );
+                if( NULL == stream._devArray )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::allocStream() for array \""<<osg::Object::getName()<<"\": something goes wrong within mallocDevice3DArray() within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 2 )
+            {
+
+
+                //res = cudaMalloc3DArray( &stream._devArray, &desc, extent );
+                stream._devArray = static_cast<Context*>(stream._context.get())->mallocDevice2DArray(
+                                        osgCompute::Buffer<DATATYPE>::getDimension(0),
+                                        (osgCompute::Buffer<DATATYPE>::getDimension(1) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(1),
+                                        desc );
+                if( NULL == stream._devArray )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::allocStream() for array \""<<osg::Object::getName()<<"\": something goes wrong within mallocDevice2DArray() within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 2 )
+            {
+
+
+                //res = cudaMalloc3DArray( &stream._devArray, &desc, extent );
+                stream._devArray = static_cast<Context*>(stream._context.get())->mallocDeviceArray(
+                                        osgCompute::Buffer<DATATYPE>::getDimension(0),
+                                        desc );
+                if( NULL == stream._devArray )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::allocStream() for array \""<<osg::Object::getName()<<"\": something goes wrong within mallocDeviceArray() within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+
+            stream._devArrayAllocated = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Array<DATATYPE>::syncStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const
+    {
+        cudaError res;
+        if( mapping & osgCompute::MAP_DEVICE )
+        {
+            if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 1 )
+            {
+                res = cudaMemcpyToArray( stream._devArray, 0, 0, stream._hostPtr, osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyHostToDevice );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::syncStream() for array \""<<osg::Object::getName()
+                        << "\": something goes wrong on cudaMemcpyToArray() to device within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\". Returned code is "
+                        << std::hex<<res<<"."
+                        << std::endl;
+                    return false;
+                }
+            }
+            else if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 2 )
+            {
+                res = cudaMemcpy2DToArray( stream._devArray,
+                    0, 0,
+                    stream._hostPtr,
+                    osgCompute::Buffer<DATATYPE>::getDimension(0) * sizeof(DATATYPE),
+                    osgCompute::Buffer<DATATYPE>::getDimension(0),
+                    osgCompute::Buffer<DATATYPE>::getDimension(1),
+                    cudaMemcpyHostToDevice );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::syncStream() for array \""<<osg::Object::getName()
+                        << "\": something goes wrong on cudaMemcpy2DToArray() to device within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\". Returned code is "
+                        << std::hex<<res<<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else
+            {
+                cudaPitchedPtr pitchPtr = {0};
+                pitchPtr.pitch = osgCompute::Buffer<DATATYPE>::getDimension(0)*sizeof(DATATYPE);
+                pitchPtr.ptr = (void*)stream._hostPtr;
+                pitchPtr.xsize = osgCompute::Buffer<DATATYPE>::getDimension(0);
+                pitchPtr.ysize = osgCompute::Buffer<DATATYPE>::getDimension(1);
+
+                cudaExtent extent = {0};
+                extent.width = osgCompute::Buffer<DATATYPE>::getDimension(0);
+                extent.height = osgCompute::Buffer<DATATYPE>::getDimension(1);
+                extent.depth = osgCompute::Buffer<DATATYPE>::getDimension(2);
+
+                cudaMemcpy3DParms copyParams = {0};
+                copyParams.srcPtr = pitchPtr;
+                copyParams.dstArray = stream._devArray;
+                copyParams.extent = extent;
+                copyParams.kind = cudaMemcpyHostToDevice;
+
+                res = cudaMemcpy3D( &copyParams );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::syncStream() for array \""<<osg::Object::getName()
+                        << "\": something goes wrong on cudaMemcpy3D() to device within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\". Returned code is "
+                        << std::hex<<res<<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+
+            stream._syncDevice = false;
+            return true;
+        }
+        else if( mapping & osgCompute::MAP_HOST )
+        {
+            if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 1 )
+            {
+                res = cudaMemcpyFromArray( stream._hostPtr, stream._devArray, 0, 0, osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyDeviceToHost );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::syncStream() for array \""
+                        << osg::Object::getName()<<"\": something goes wrong within cudaMemcpyFromArray() to host within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\". Returned code is "
+                        << std::hex<<res<<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 2 )
+            {
+                res = cudaMemcpy2DFromArray(
+                    stream._hostPtr,
+                    osgCompute::Buffer<DATATYPE>::getDimension(0) * sizeof(DATATYPE),
+                    stream._devArray,
+                    0, 0,
+                    osgCompute::Buffer<DATATYPE>::getDimension(0),
+                    osgCompute::Buffer<DATATYPE>::getDimension(1),
+                    cudaMemcpyDeviceToHost );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::syncStream() for array \""<<osg::Object::getName()
+                        << "\": something goes wrong on cudaMemcpy2DFromArray() to device within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\". Returned code is "
+                        << std::hex<<res<<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else
+            {
+                cudaPitchedPtr pitchPtr = {0};
+                pitchPtr.pitch = osgCompute::Buffer<DATATYPE>::getDimension(0)*sizeof(DATATYPE);
+                pitchPtr.ptr = (void*)stream._hostPtr;
+                pitchPtr.xsize = osgCompute::Buffer<DATATYPE>::getDimension(0);
+                pitchPtr.ysize = osgCompute::Buffer<DATATYPE>::getDimension(1);
+
+                cudaExtent extent = {0};
+                extent.width = osgCompute::Buffer<DATATYPE>::getDimension(0);
+                extent.height = osgCompute::Buffer<DATATYPE>::getDimension(1);
+                extent.depth = osgCompute::Buffer<DATATYPE>::getDimension(2);
+
+                cudaMemcpy3DParms copyParams = {0};
+                copyParams.srcArray = stream._devArray;
+                copyParams.dstPtr = pitchPtr;
+                copyParams.extent = extent;
+                copyParams.kind = cudaMemcpyDeviceToHost;
+
+                res = cudaMemcpy3D( &copyParams );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::syncStream() for array \""<<osg::Object::getName()
+                        << "\": something goes wrong on cudaMemcpy3D() to device within context \""
+                        << stream._context->getId() << "\" and stream \""
+                        << stream._streamIdx << "\". Returned code is "
+                        << std::hex<<res<<"."
+                        << std::endl;
+
+                    return false;
+
+                }
+            }
+
+            stream._syncHost = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Array<DATATYPE>::unmapStream( ArrayStream<DATATYPE>& stream ) const
+    {
+        if( (stream._mapping & osgCompute::MAP_HOST_TARGET) )
+        {
+            stream._syncDevice = true;
+        }
+        else if( (stream._mapping & osgCompute::MAP_DEVICE_TARGET) )
+        {
+            stream._syncHost = true;
+        }
+
+        stream._mapping = osgCompute::UNMAPPED;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Array<DATATYPE>::setStreamImage( osg::Image& image, unsigned int streamIdx )
+    {
+        if( _streamImages.size() <= streamIdx )
+            _streamImages.resize( streamIdx + 1, NULL );
+
+        if( !osgCompute::Param::isDirty() )
+        {
+            if( image.getNumMipmapLevels() > 1 )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::init() for array \""
+                    << osg::Object::getName() <<"\": image \""
+                    << image.getName() << "\" for stream \""<<streamIdx<<"\" uses MipMaps which are currently"
+                    << "not supported."
+                    << std::endl;
+
+                return;
+            }
+
+            if( image.getTotalSizeInBytes() != osgCompute::Buffer<DATATYPE>::getStreamSize() )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::init() for array \""
+                    << osg::Object::getName() <<"\": image \""
+                    << image.getName() << "\" for stream \""<<streamIdx<<"\" has an incorrect size of \""
+                    << image.getTotalSizeInBytes() << "\" which must be of size \""
+                    << osgCompute::Buffer<DATATYPE>::getStreamSize() << "\"."
+                    << std::endl;
+
+                return;
+            }
+        }
+
+        _streamImages[streamIdx] = &image;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    osg::Image* Array<DATATYPE>::getStreamImage( unsigned int streamIdx )
+    {
+        if( _streamImages.size() <= streamIdx )
+            return NULL;
+
+        return _streamImages[streamIdx];
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    const osg::Image* Array<DATATYPE>::getStreamImage( unsigned int streamIdx ) const
+    {
+        if( (_streamImages.size()-1) < streamIdx )
+            return NULL;
+
+        return _streamImages[streamIdx];
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    cudaChannelFormatDesc& osgCuda::Array<DATATYPE>::getChannelFormatDesc()
+    {
+        return _channelFormatDesc;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    const cudaChannelFormatDesc& osgCuda::Array<DATATYPE>::getChannelFormatDesc() const
+    {
+        return _channelFormatDesc;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void osgCuda::Array<DATATYPE>::setChannelFormatDesc(cudaChannelFormatDesc& channelFormatDesc)
+    {
+        if( !osgCompute::Param::isDirty() )
+            return;
+
+        _channelFormatDesc = channelFormatDesc;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Array<DATATYPE>::clearLocal()
+    {
+        _streamImages.clear();
+        memset( &_channelFormatDesc, INT_MAX, sizeof(cudaChannelFormatDesc) );
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    osgCompute::BufferStream<DATATYPE>* Array<DATATYPE>::newStream( const osgCompute::Context& context, unsigned int streamIdx ) const
+    {
+        return new ArrayStream<DATATYPE>;
+    }
+}
+
+#endif //OSGCUDA_ARRAY

@@ -1,0 +1,9 @@
+This is a list of all contributors to the osgCompute library.
+Since we just started the project and released it to the
+public the list is quite short :-)
+ 
+ 
+Contributors:
+--------------
+
+Team of SVT Group

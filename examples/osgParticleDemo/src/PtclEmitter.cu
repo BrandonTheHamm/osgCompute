@@ -1,0 +1,103 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+ *                                                                     
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 3 of
+ * the License, or (at your option) any later version.
+ *                                                                     
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesse General Public License for more details.
+ *
+ * The full license is in LICENSE file included with this distribution.
+*/
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// DEVICE FUNCTIONS //////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+inline __device__ 
+float lerp(float a, float b, float t)
+{
+    return a + t*(b-a);
+}
+
+//------------------------------------------------------------------------------
+inline __device__
+float4 reseed( float* seeds, unsigned int seedCount, unsigned int seedIdx, unsigned int ptclIdx, float3 bbmin, float3 bbmax )
+{
+    // random seed idx
+    unsigned int idx1 = (seedIdx + ptclIdx) % seedCount;
+    unsigned int idx2 = (idx1 + ptclIdx) % seedCount;
+
+    // seeds are within the range [0,1]
+    float intFac1 = seeds[idx1];
+    float intFac2 = seeds[idx2];
+
+    return make_float4(lerp(bbmin.x,bbmax.x,intFac1), 0,
+                       lerp(bbmin.z,bbmax.z,intFac2), 1);
+}
+
+//------------------------------------------------------------------------------
+inline __device__
+unsigned int globalThreadIdx()
+{
+    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned int width = gridDim.x * blockDim.x;
+
+    return y*width + x;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// GLOBAL FUNCTIONS //////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+__global__
+void k_reseed( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int seedIdx, float3 bbmin, float3 bbmax )
+{
+    // compute particle idx
+    unsigned int ptclIdx = globalThreadIdx();
+    float4 curPtcl = ptcls[ptclIdx];
+
+    // Reseed Particles if they
+    // moved out of the bounding box
+    if( curPtcl.x < bbmin.x ||
+        curPtcl.y < bbmin.y ||
+        curPtcl.z < bbmin.z ||
+        curPtcl.x > bbmax.x ||
+        curPtcl.y > bbmax.y ||
+        curPtcl.z > bbmax.z )
+        ptcls[ptclIdx] = reseed( seeds, seedCount, seedIdx, ptclIdx, bbmin, bbmax );
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// HOST FUNCTIONS ////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include <osg/Vec4f>
+
+//------------------------------------------------------------------------------
+extern "C" __host__
+void reseed( unsigned int numBlocks, 
+                      unsigned int numThreads, 
+                      osg::Vec4f* ptcls, 
+                      float* seeds, 
+                      unsigned int seedCount, 
+                      unsigned int seedIdx, 
+                      osg::Vec3f bbmin, 
+                      osg::Vec3f bbmax )
+{
+    dim3 blocks( numBlocks, 1, 1 );
+    dim3 threads( numThreads, 1, 1 );
+
+    k_reseed<<< blocks, threads >>>(
+                        reinterpret_cast<float4*>(ptcls),
+                        seeds,
+                        seedCount,
+                        seedIdx,
+                        *reinterpret_cast<float3*>(&bbmin),
+                        *reinterpret_cast<float3*>(&bbmax) );
+}

@@ -1,0 +1,187 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+ *                                                                     
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 3 of
+ * the License, or (at your option) any later version.
+ *                                                                     
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesse General Public License for more details.
+ *
+ * The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCOMPUTE_PIPELINEBIN
+#define OSGCOMPUTE_PIPELINEBIN 1
+
+#include <osg/ref_ptr>
+#include <osg/Object>
+#include <osg/Drawable>
+#include <osg/NodeVisitor>
+#include "osgCompute/Export"
+#include "osgCompute/Callback"
+#include "osgCompute/Module"
+
+namespace osgCompute
+{
+    class Pipeline;
+    class PipelineBin;
+
+    typedef std::map<osg::NodeVisitor*, osg::ref_ptr<PipelineBin> >                          BinMap;
+    typedef std::map<osg::NodeVisitor*, osg::ref_ptr<PipelineBin> >::iterator                BinMapItr;
+    typedef std::map<osg::NodeVisitor*, osg::ref_ptr<PipelineBin> >::const_iterator          BinMapCnstItr;
+
+
+    typedef std::map< std::string, osg::ref_ptr<osgCompute::Param> >                         HandleToParamMap;
+    typedef std::map< std::string, osg::ref_ptr<osgCompute::Param> >::iterator               HandleToParamMapItr;
+    typedef std::map< std::string, osg::ref_ptr<osgCompute::Param> >::const_iterator         HandleToParamMapCnstItr;
+
+    /**
+    */
+    class LIBRARY_EXPORT PipelineBin : public osg::Drawable 
+    {
+    public:
+        PipelineBin() : osg::Drawable() { clearLocal(); }  
+
+        META_Object( osgCompute, PipelineBin )
+        
+        virtual bool init( Pipeline& pipeline );
+
+        virtual void drawImplementation( osg::RenderInfo& renderInfo ) const;
+
+        virtual bool hasModule( const std::string& moduleName ) const;
+        virtual bool hasModule( Module& module ) const;
+        virtual bool hasModules() const;
+        virtual Module* getModule( const std::string& moduleName );
+        virtual const Module* getModule( const std::string& moduleName ) const;
+        virtual ModuleList* getModules();
+        virtual const ModuleList* getModules() const;
+        virtual unsigned int getNumModules() const;
+
+        inline void setContext( Context& context );
+        inline Context* getContext();
+        inline const Context* getContext() const;
+        inline bool isDirty() const;
+        inline Pipeline* getPipeline();
+        inline const Pipeline* getPipeline() const;
+        inline LaunchCallback* getLaunchCallback();
+        inline const LaunchCallback* getLaunchCallback() const;
+
+        inline void enable();
+        inline void disable();
+        inline bool isEnabled() const;
+
+        virtual void clear();
+
+    protected:
+        friend class Pipeline;
+        virtual ~PipelineBin() { clearLocal(); }
+        void clearLocal();
+
+        virtual void clear( const Context& context ) const;
+
+        virtual void launch() const;
+
+        // members
+        bool                                 _enabled;
+        Pipeline*                            _pipeline;  
+        bool                                 _dirty;
+        LaunchCallback*                      _launchCallback;
+        ModuleList                           _modules;
+        HandleToParamMap                     _paramHandles; 
+        mutable osg::ref_ptr<Context>        _context;               
+
+    private:
+        // copy constructor and operator should not be called
+        PipelineBin(const PipelineBin&, const osg::CopyOp& ) {}
+        inline PipelineBin &operator=(const PipelineBin &) { return *this; }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    inline bool PipelineBin::isDirty() const
+    { 
+        return _dirty; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline Pipeline* PipelineBin::getPipeline()
+    { 
+        if( isDirty() )
+            return NULL;
+
+        return _pipeline; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline const Pipeline* PipelineBin::getPipeline() const
+    { 
+        if( isDirty() )
+            return NULL;
+
+        return _pipeline; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline LaunchCallback* PipelineBin::getLaunchCallback()
+    { 
+        if( isDirty() )
+            return NULL;
+
+        return _launchCallback; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline const LaunchCallback* PipelineBin::getLaunchCallback() const
+    { 
+        if( isDirty() )
+            return NULL;
+
+        return _launchCallback; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline void PipelineBin::enable() 
+    { 
+        _enabled = true; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline void PipelineBin::disable() 
+    { 
+        _enabled = false; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline bool PipelineBin::isEnabled() const
+    {
+        if( isDirty() )
+            return false;
+
+        return _enabled;
+    }
+
+    //------------------------------------------------------------------------------
+    inline void PipelineBin::setContext( Context& context )
+    {
+        _context = &context;
+    }
+
+    //------------------------------------------------------------------------------
+    inline Context* PipelineBin::getContext()
+    {
+        return _context.get();
+    }
+
+    //------------------------------------------------------------------------------
+    inline const Context* PipelineBin::getContext() const
+    {
+        return _context.get();
+    }
+}
+
+#endif //OSGCOMPUTE_PIPELINEBIN

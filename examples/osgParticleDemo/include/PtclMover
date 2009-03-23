@@ -1,0 +1,60 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+ *                                                                     
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 3 of
+ * the License, or (at your option) any later version.
+ *                                                                     
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesse General Public License for more details.
+ *
+ * The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef PTCLDEMO_PTCL_MOVER
+#define PTCLDEMO_PTCL_MOVER 1
+
+#include <osg/ref_ptr>
+#include <osgCuda/Module>
+#include <osgCuda/Export>
+#include <osgCuda/Buffer>
+#include <osgCuda/Constant>
+
+namespace PtclDemo
+{
+    class PtclMover : public osgCuda::Module 
+    {
+    public:
+        PtclMover() : osgCuda::Module() {clearLocal();}
+        
+        META_Module( PtclDemo, PtclMover )
+
+        virtual bool init();
+        virtual void clear() { clearLocal(); osgCuda::Module::clear(); }
+
+        virtual void launch( const osgCompute::Context& context ) const;
+
+        virtual void acceptParam( const std::string& handle, osgCompute::Param& param );
+
+    protected:
+        virtual ~PtclMover();
+        void clearLocal();
+
+        mutable double                                    _lastTime;
+        mutable const osg::FrameStamp*                    _frameStamp;
+
+        unsigned int                                      _numBlocks;
+        unsigned int                                      _numThreads;
+
+        osg::ref_ptr<osgCuda::Vec4fBuffer>                _particles;
+
+    private:
+        PtclMover(const PtclMover&, const osg::CopyOp& ) {} 
+        inline PtclMover &operator=(const PtclMover &) { return *this; }
+    };
+
+};
+
+#endif // PTCLDEMO_PTCL_MOVER

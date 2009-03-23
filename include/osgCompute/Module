@@ -1,0 +1,169 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+ *                                                                     
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 3 of
+ * the License, or (at your option) any later version.
+ *                                                                     
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesse General Public License for more details.
+ *
+ * The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCOMPUTE_MODULE
+#define OSGCOMPUTE_MODULE 1
+
+#include <vector>
+#include <osg/Object>
+#include <osg/NodeVisitor>
+#include "osgCompute/Export"
+#include "osgCompute/Param"
+#include "osgCompute/Callback"
+#include "osgCompute/Context"
+
+#define META_Module( libraryname, classname )                      \
+        META_Object( libraryname, classname )                      
+
+
+namespace osgCompute
+{
+    class Module;
+
+    typedef std::vector<osg::ref_ptr<osgCompute::Module> >                          ModuleList;
+    typedef std::vector<osg::ref_ptr<osgCompute::Module> >::iterator                ModuleListItr;
+    typedef std::vector<osg::ref_ptr<osgCompute::Module> >::const_iterator          ModuleListCnstItr;
+
+    /**
+    */
+    class LIBRARY_EXPORT Module : public ContextResource
+    {
+    public:
+        Module() : ContextResource() { clearLocal(); }
+
+        virtual bool init();
+        virtual void clear();
+        virtual void launch( const Context& context ) const = 0;
+
+        inline void setLaunchCallback( LaunchCallback* pc );
+        inline LaunchCallback* getLaunchCallback();
+        inline const LaunchCallback* getLaunchCallback() const;
+        inline void setUpdateCallback( UpdateCallback* uc );
+        inline UpdateCallback* getUpdateCallback();
+        inline const UpdateCallback* getUpdateCallback() const;
+        inline void setEventCallback( EventCallback* ec );
+        inline EventCallback* getEventCallback();
+        inline const EventCallback* getEventCallback() const;
+
+        virtual void acceptParam( const std::string& handle, osgCompute::Param& param );
+        virtual bool usesParam( const std::string& handle ) const;
+        virtual void removeParam( const std::string& handle );
+        virtual Param* getParam( const std::string& handle );
+        virtual const Param* getParam( const std::string& handle ) const;
+
+        inline bool isDirty() const;
+        inline void enable();
+        inline void disable();
+        inline bool isEnabled() const;
+
+    protected:
+        virtual ~Module() { clearLocal(); }
+        void clearLocal();
+
+        virtual bool init( const Context& context ) const;
+        virtual void clear( const Context& context ) const;
+
+        LaunchCallback*                _launchCallback;
+        UpdateCallback*                _updateCallback;
+        EventCallback*                 _eventCallback;
+        bool                           _enabled;
+        bool                           _dirty;
+
+    private:
+        // copy constructor and operator should not be called
+        Module( const Module&, const osg::CopyOp& ) {}
+        Module& operator=( const Module& copy ) { return (*this); }
+    };
+
+    //------------------------------------------------------------------------------
+    inline void Module::setLaunchCallback( LaunchCallback* pc ) 
+    { 
+        _launchCallback = pc; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline LaunchCallback* Module::getLaunchCallback() 
+    { 
+        return _launchCallback; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline const LaunchCallback* Module::getLaunchCallback() const 
+    { 
+        return _launchCallback; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline void Module::setUpdateCallback( UpdateCallback* uc ) 
+    { 
+        _updateCallback = uc; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline UpdateCallback* Module::getUpdateCallback() 
+    { 
+        return _updateCallback; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline const UpdateCallback* Module::getUpdateCallback() const 
+    { 
+        return _updateCallback; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline void Module::setEventCallback( EventCallback* ec ) 
+    { 
+        _eventCallback = ec; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline EventCallback* Module::getEventCallback() 
+    { 
+        return _eventCallback; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline const EventCallback* Module::getEventCallback() const 
+    { 
+        return _eventCallback; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline bool Module::isDirty() const
+    { 
+        return _dirty; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline void Module::enable() 
+    { 
+        _enabled = true; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline void Module::disable() 
+    { 
+        _enabled = false; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline bool Module::isEnabled() const
+    {
+        return _enabled;
+    }
+}
+
+#endif //OSGCOMPUTE_MODULE

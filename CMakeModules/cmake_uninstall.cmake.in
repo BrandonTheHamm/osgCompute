@@ -1,0 +1,38 @@
+IF(NOT EXISTS "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt")
+  MESSAGE(FATAL_ERROR "Cannot find install manifest: \"@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt\"")
+ENDIF(NOT EXISTS "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt")
+
+FILE(READ "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt" files)
+STRING(REGEX REPLACE "\n" ";" files "${files}")
+FOREACH(file ${files})
+  #convert filename: still needs to be tested on linux 
+  file(TO_CMAKE_PATH "$ENV{DESTDIR}${file}" MY_FILE)
+  #MESSAGE(STATUS "Uninstalling \"$ENV{DESTDIR}${file}\"")#old
+  MESSAGE(STATUS "Uninstalling \"${MY_FILE}\"")
+  #IF(EXISTS "$ENV{DESTDIR}${file}") #old: did not work for windows i.e. "Eigene Dateien"
+  # check for program command and convert it to cmake path style (check for linux)
+  #SET(MY_CMAKE_COMMAND @CMAKE_COMMAND@)
+  file(TO_CMAKE_PATH "@CMAKE_COMMAND@" MY_CMAKE_COMMAND)
+  GET_FILENAME_COMPONENT(MY_CMAKE_COMMAND_PATH ${MY_CMAKE_COMMAND} PATH)
+  GET_FILENAME_COMPONENT(MY_CMAKE_COMMAND_EXEC ${MY_CMAKE_COMMAND} NAME)
+  IF(EXISTS "${MY_FILE}")
+    EXEC_PROGRAM(
+      #"@CMAKE_COMMAND@" ARGS "-E remove \"$ENV{DESTDIR}${file}\"" #old
+      #"${MY_CMAKE_COMMAND}" ARGS "-E remove \"${MY_FILE}\""
+      "${MY_CMAKE_COMMAND_EXEC}" MY_CMAKE_COMMAND_PATH ARGS "-E remove \"${MY_FILE}\""
+      OUTPUT_VARIABLE rm_out
+      RETURN_VALUE rm_retval
+      )
+    IF(NOT "${rm_retval}" STREQUAL 0)
+      #MESSAGE(FATAL_ERROR "Problem when removing \"$ENV{DESTDIR}${file}\"") #old
+      #MESSAGE(FATAL_ERROR "Problem when removing \"${MY_FILE}\" with \"${MY_CMAKE_COMMAND}\"")
+      MESSAGE(FATAL_ERROR "Problem when removing \"${MY_FILE}\" with \"${MY_CMAKE_COMMAND_PATH} ${MY_CMAKE_COMMAND_EXEC}\"")
+    ENDIF(NOT "${rm_retval}" STREQUAL 0)
+  #ELSE(EXISTS "$ENV{DESTDIR}${file}") #old
+  ELSE(EXISTS "${MY_FILE}")
+    # MESSAGE(STATUS "File \"$ENV{DESTDIR}${file}\" does not exist.") #old
+    MESSAGE(STATUS "File \"${MY_FILE}\" does not exist.")
+  
+  # ENDIF(EXISTS "$ENV{DESTDIR}${file}") #old
+  ENDIF(EXISTS "${MY_FILE}")
+ENDFOREACH(file)

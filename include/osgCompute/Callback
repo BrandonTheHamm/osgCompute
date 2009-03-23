@@ -1,0 +1,179 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+ *                                                                     
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 3 of
+ * the License, or (at your option) any later version.
+ *                                                                     
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesse General Public License for more details.
+ *
+ * The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCOMPUTE_CALLBACK
+#define OSGCOMPUTE_CALLBACK 1
+
+namespace osg
+{
+    class NodeVisitor;
+}
+
+namespace osgCompute
+{
+    class Param;
+    class Context;
+    class ConstantSubloadCallback;
+    class BufferSubloadCallback;
+
+    /**
+    */
+    class LIBRARY_EXPORT SubloadCallback
+    {
+    public:
+        inline SubloadCallback() { clearLocal(); }
+
+        virtual void clear() { clearLocal(); }
+
+        virtual bool isConstantSubloadCallback() const { return false; }
+        virtual ConstantSubloadCallback* asConstantSubloadCallback() { return NULL; }
+        virtual const ConstantSubloadCallback* asConstantSubloadCallback() const { return NULL; }
+        virtual bool isBufferSubloadCallback() const { return false; }
+        virtual BufferSubloadCallback* asBufferSubloadCallback() { return NULL; }
+        virtual const BufferSubloadCallback* asBufferSubloadCallback() const { return NULL; }
+
+    protected:
+        virtual ~SubloadCallback() { clearLocal(); }
+        void clearLocal() {}
+
+    private:
+        // copy constructor and operator should not be called
+        SubloadCallback(const SubloadCallback& copy) {}
+        SubloadCallback &operator=(const SubloadCallback &) { return *this; }
+    };
+
+    /**
+    */
+    class LIBRARY_EXPORT ConstantSubloadCallback : public SubloadCallback
+    {
+    public:
+        inline ConstantSubloadCallback() : SubloadCallback() { clearLocal(); }
+
+        virtual void clear() { clearLocal(); }
+
+        virtual bool isConstantSubloadCallback() const { return true; }
+        virtual ConstantSubloadCallback* asConstantSubloadCallback() { return this; }
+        virtual const ConstantSubloadCallback* asConstantSubloadCallback() const { return this; }
+
+        /** do customized callback code.*/
+        virtual void subload( void* data, const Param& constant, const Context& context ) const = 0;
+        virtual void load( void* data, const Param& constant, const Context& context ) const = 0;
+
+    protected:
+        virtual ~ConstantSubloadCallback() { clearLocal(); }
+        void clearLocal() {}
+
+    private:
+        // copy constructor and operator should not be called
+        ConstantSubloadCallback(const ConstantSubloadCallback& copy) {}
+        ConstantSubloadCallback &operator=(const ConstantSubloadCallback &) { return *this; }
+    };
+
+    /**
+    */
+    class LIBRARY_EXPORT BufferSubloadCallback : public SubloadCallback
+    {
+    public:
+        inline BufferSubloadCallback() : SubloadCallback() { clearLocal(); }
+
+        virtual void clear() { clearLocal(); }
+
+        virtual bool isBufferSubloadCallback() const { return true; }
+        virtual BufferSubloadCallback* asBufferSubloadCallback() { return this; }
+        virtual const BufferSubloadCallback* asBufferSubloadCallback() const { return this; }
+
+        /** do customized callback code.*/
+        virtual void subload( void* mappedPtr, unsigned int streamIdx, unsigned int mapping, const Param& buffer, const Context& context ) const = 0;
+        virtual void load( void* mappedPtr, unsigned int streamIdx, unsigned int mapping, const Param& buffer, const Context& context ) const = 0;
+
+    protected:
+        virtual ~BufferSubloadCallback() { clearLocal(); }
+        void clearLocal() {}
+
+    private:
+        // copy constructor and operator should not be called
+        BufferSubloadCallback(const BufferSubloadCallback& copy) {}
+        BufferSubloadCallback &operator=(const BufferSubloadCallback &) { return *this; }
+    };
+
+    /**
+    */
+    class LIBRARY_EXPORT LaunchCallback
+    {
+    public:
+        inline LaunchCallback() { clearLocal(); }
+
+        virtual void clear() { clearLocal(); }
+        virtual void clear( const Context& context ) const {}
+
+        /** do customized callback code.*/
+        virtual void launch( const osg::Object& object, const Context& context ) const = 0;
+
+    protected:
+        virtual ~LaunchCallback() { clearLocal(); }
+        void clearLocal() {}
+
+    private:
+        // copy constructor and operator should not be called
+        LaunchCallback( const LaunchCallback& ) {}
+        LaunchCallback &operator=(const LaunchCallback &) { return *this; }
+    };
+
+    /**
+    */
+    class LIBRARY_EXPORT UpdateCallback
+    {
+    public:
+        inline UpdateCallback() { clearLocal(); }
+
+        virtual void clear() { clearLocal(); }
+
+        /** do customized callback code.*/
+        virtual void update( osg::Object& object, osg::NodeVisitor& visitor ) const = 0;
+
+    protected:
+        virtual ~UpdateCallback() { clearLocal(); }
+        void clearLocal() {}
+
+    private:
+        // copy constructor and operator should not be called
+        UpdateCallback( const UpdateCallback& ) {}
+        UpdateCallback &operator=(const UpdateCallback &) { return *this; }
+    };
+
+    /**
+    */
+    class LIBRARY_EXPORT EventCallback
+    {
+    public:
+        inline EventCallback() { clearLocal(); }
+
+        virtual void clear() { clearLocal(); }
+
+        /** do customized callback code.*/
+        virtual void handleevent( osg::Object& object, osg::NodeVisitor& visitor ) const = 0;
+
+    protected:
+        virtual ~EventCallback() { clearLocal(); }
+        void clearLocal() {}
+
+    private:
+        // copy constructor and operator should not be called
+        EventCallback( const EventCallback& ) {}
+        EventCallback &operator=(const EventCallback&) { return *this; }
+    };
+}
+
+#endif //OSGCOMPUTE_CALLBACK

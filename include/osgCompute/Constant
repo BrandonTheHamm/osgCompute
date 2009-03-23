@@ -1,0 +1,255 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+ *                                                                     
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 3 of
+ * the License, or (at your option) any later version.
+ *                                                                     
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesse General Public License for more details.
+ *
+ * The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCOMPUTE_CONSTANT
+#define OSGCOMPUTE_CONSTANT 1
+
+#include <osg/Notify>
+#include "osgCompute/Param"
+
+namespace osg
+{
+    class Vec2b;
+    class Vec3b;
+    class Vec4b;
+    class Vec4ub;
+    class Vec2s;
+    class Vec3s;
+    class Vec4s;
+    class Vec2f;
+    class Vec3f;
+    class Vec4f;
+    class Vec2d;
+    class Vec3d;
+    class Vec4d;
+}
+
+namespace osgCompute
+{
+    template<class T>
+    class Constant;
+
+    typedef Constant<unsigned char>     UByteConstant;
+    typedef Constant<char>              ByteConstant;
+    typedef Constant<osg::Vec2b>        Vec2bConstant;
+    typedef Constant<osg::Vec3b>        Vec3bConstant;
+    typedef Constant<osg::Vec4b>        Vec4bConstant;
+    typedef Constant<unsigned short>    UShortConstant;
+    typedef Constant<short>             ShortConstant;
+    typedef Constant<osg::Vec2s>        Vec2sConstant;
+    typedef Constant<osg::Vec3s>        Vec3sConstant;
+    typedef Constant<osg::Vec4s>        Vec4sConstant;
+    typedef Constant<unsigned int>      UIntConstant;
+    typedef Constant<int>               IntConstant;
+    typedef Constant<unsigned long>     ULongConstant;
+    typedef Constant<long>              LongConstant;
+    typedef Constant<float>             FloatConstant;
+    typedef Constant<osg::Vec2f>        Vec2fConstant;
+    typedef Constant<osg::Vec3f>        Vec3fConstant;
+    typedef Constant<osg::Vec4f>        Vec4fConstant;
+    typedef Constant<double>            DoubleConstant;
+    typedef Constant<osg::Vec2d>        Vec2dConstant;
+    typedef Constant<osg::Vec3d>        Vec3dConstant;
+    typedef Constant<osg::Vec4d>        Vec4dConstant;
+
+    /**
+    */
+    template< class DATATYPE >
+    class ConstantData
+    {
+    public:
+        osg::ref_ptr<Context>           _context;
+
+        ConstantData();
+        virtual ~ConstantData();
+    private:
+        // not allowed to call copy-constructor or copy-operator
+        ConstantData( const ConstantData& ) {}
+        ConstantData& operator=( const ConstantData& ) { return *this; }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    ConstantData<DATATYPE>::ConstantData() 
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    ConstantData<DATATYPE>::~ConstantData() 
+    {
+    }
+
+    /**
+	*/
+	template< class DATATYPE >
+    class Constant : public Param
+    {
+    public:
+        Constant();
+
+        virtual bool init();   
+        virtual bool isConstant() { return true; }
+
+        virtual DATATYPE* data( const Context& context ) const = 0;
+
+		virtual void setData( const DATATYPE& data ) = 0;
+		virtual DATATYPE* getData() = 0;
+		virtual const DATATYPE* getData() const = 0;
+
+		virtual unsigned int getByteSize() const;
+
+        virtual void clear(); 
+    protected:
+        virtual ~Constant() { clearLocal(); }
+        void clearLocal();
+
+        virtual bool init( const Context& context ) const;
+        virtual void clear( const Context& context ) const;
+
+        virtual ConstantData<DATATYPE>* newData( const Context& context ) const = 0;
+        inline ConstantData<DATATYPE>* lookupData( const Context& context ) const;
+
+        mutable OpenThreads::Mutex                          _mutex;
+        mutable std::vector<ConstantData<DATATYPE>*>        _array;
+
+    private:
+        // copy constructor and operator should not be called
+        Constant( const Constant&, const osg::CopyOp& );
+        Constant& operator=( const Constant& copy ) { return (*this); }
+    };
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	template< class DATATYPE >
+	Constant<DATATYPE>::Constant() 
+		: Param()
+	{ 
+		clearLocal(); 
+	}
+
+	//------------------------------------------------------------------------------
+	template< class DATATYPE >
+	bool Constant<DATATYPE>::init()
+	{
+		return Param::init();
+	}
+
+	//------------------------------------------------------------------------------
+	template< class DATATYPE >
+	void Constant<DATATYPE>::clear()
+	{
+		clearLocal();
+		Param::clear();
+	}
+
+	//------------------------------------------------------------------------------
+	template< class DATATYPE >
+	unsigned int Constant<DATATYPE>::getByteSize() const 
+	{ 
+		return sizeof(DATATYPE); 
+	}
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // PROTECTED FUNCTIONS ////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Constant<DATATYPE>::clearLocal()
+    {
+        /////////////////
+        // DELETE DATA //
+        /////////////////
+        for( unsigned int ctx = 0; ctx < _array.size(); ++ctx )
+        {
+            // unregister context
+            osgCompute::Context* context = osgCompute::Context::instance( ctx );
+            if( !context )
+                continue;
+
+            clear( *context );
+        }
+
+        _array.clear();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Constant<DATATYPE>::init( const Context& context ) const
+    {
+        // resize array.
+        if (_array.size()<=context.getId())
+            _array.resize(context.getId()+1,NULL);
+
+        // register param 
+        return Param::init( context );
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Constant<DATATYPE>::clear( const Context& context ) const
+    {
+        if( _array.size() > context.getId() &&
+            NULL != _array[context.getId()] )
+        {
+            // delete data
+            delete _array[context.getId()];
+            _array[context.getId()] = NULL;
+        }
+
+        // unregister param
+        Param::clear( context );
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    inline ConstantData<DATATYPE>* Constant<DATATYPE>::lookupData( const Context& context ) const
+    {
+        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+
+        if (_array.size()<=context.getId() ||
+            _array[context.getId()] == NULL )
+        {
+            // resize array and register param
+            if( !init( context ) )
+                return NULL;
+
+            // create lazy data
+            _array[context.getId()] = newData( context );
+            if( NULL == _array[context.getId()] )
+            {
+                osg::notify( osg::FATAL )  
+                    << "Constant::data() for Constant \"" << getName()
+                    << "\": Could not create data within context \"" 
+                    << context.getId() << "\"."
+                    << std::endl;
+
+                return NULL;
+            }
+
+            // setup constant data
+            _array[context.getId()]->_context = const_cast<osgCompute::Context*>(&context);
+        }
+
+        return _array[context.getId()];
+    }
+}
+
+#endif //OSGCOMPUTE_CONSTANT
