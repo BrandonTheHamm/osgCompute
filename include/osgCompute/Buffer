@@ -76,10 +76,18 @@ namespace osgCompute
     }; 
 
 
-    enum ALLOC_HINTS
+    enum ALLOC_HINT
     {
-        ALLOC_LINEAR = 0x0,
+        NO_ALLOC_HINT = 0x0,
         ALLOC_DYNAMIC = 0x1
+    };
+
+    enum SETUP_HINT
+    {
+        NO_SETUP_HINT                   = 0x0,
+        REMOVE_SETUP_IMAGES             = 0x1,
+        REMOVE_SETUP_VECTORS            = 0x2,
+        REMOVE_SETUP_IMAGES_AND_VECTORS = 0x3
     };
 
     /**
@@ -124,7 +132,7 @@ namespace osgCompute
     */
     template< class DATATYPE >
     class Buffer : public Param
-    {
+    {  
     public:
         Buffer();
 
@@ -135,9 +143,13 @@ namespace osgCompute
         virtual DATATYPE* map( const Context& context, unsigned int mapping, unsigned int streamIdx = 0 ) const = 0;
         virtual void unmap( const Context& context, unsigned int streamIdx = 0 ) const = 0;
 
-        virtual void setStreamImage( osg::Image& image, unsigned int streamIdx = 0 ) = 0;
-        virtual osg::Image* getStreamImage( unsigned int streamIdx = 0 ) = 0;
-        virtual const osg::Image* getStreamImage( unsigned int streamIdx = 0 ) const = 0;
+        virtual void setImage( osg::Image& streamImage, unsigned int streamIdx = 0 ) = 0;
+        virtual osg::Image* getImage( unsigned int streamIdx = 0 ) = 0;
+        virtual const osg::Image* getImage( unsigned int streamIdx = 0 ) const = 0;
+
+        virtual void setVector( std::vector<DATATYPE>& streamVector, unsigned int streamIdx = 0 ) = 0;
+        virtual std::vector<DATATYPE>* getVector( unsigned int streamIdx = 0 ) = 0;
+        virtual const std::vector<DATATYPE>* getVector( unsigned int streamIdx = 0 ) const = 0;
 
         virtual unsigned int getByteSize() const;
 		inline unsigned int getStreamSize() const;
@@ -151,8 +163,8 @@ namespace osgCompute
         inline void setAllocHint( unsigned int allocHint );
         inline unsigned int getAllocHint() const;
 
-        inline void setRemoveUsedImages( bool removeUsedImages );
-        inline bool getRemoveUsedImages() const;
+        inline void setSetupHint( unsigned int setupHint );
+        inline unsigned int getSetupHint() const;
 
         virtual unsigned int getMapping( Context& context, unsigned int streamIdx = 0 ) const;
 
@@ -166,7 +178,7 @@ namespace osgCompute
         virtual BufferStream<DATATYPE>* newStream( const Context& context, unsigned int streamIdx ) const = 0;
         inline BufferStream<DATATYPE>* lookupStream( const Context& context, unsigned int streamIdx ) const;
 
-        bool                                            _removeUsedImages;
+        unsigned int                                    _setupHint;
         unsigned int                                    _allocHint;
 		unsigned int							        _byteSize;
         unsigned int                                    _numStreams;
@@ -320,16 +332,19 @@ namespace osgCompute
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    inline void osgCompute::Buffer<DATATYPE>::setRemoveUsedImages( bool removeUsedImages )
+    inline void osgCompute::Buffer<DATATYPE>::setSetupHint( unsigned int setupHint )
     {
-        _removeUsedImages = removeUsedImages;
+        if( !isDirty() )
+            return;
+
+        _setupHint = (_setupHint | setupHint);
     }
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    inline bool osgCompute::Buffer<DATATYPE>::getRemoveUsedImages() const
+    inline unsigned int osgCompute::Buffer<DATATYPE>::getSetupHint() const
     {
-        return _removeUsedImages;
+        return _setupHint;
     }
 
     //------------------------------------------------------------------------------
@@ -380,8 +395,8 @@ namespace osgCompute
         _dimensions.clear();
         _numStreams = 1;
         _byteSize = 0;
-        _allocHint = 0;
-        _removeUsedImages = false;
+        _allocHint = NO_ALLOC_HINT;
+        _setupHint = NO_SETUP_HINT;
     }
 
     //------------------------------------------------------------------------------

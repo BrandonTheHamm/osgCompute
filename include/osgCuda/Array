@@ -150,9 +150,17 @@ namespace osgCuda
         virtual DATATYPE* map( const osgCompute::Context& context, unsigned int mapping, unsigned int streamIdx = 0 ) const;
         virtual void unmap( const osgCompute::Context& context, unsigned int streamIdx = 0 ) const;
 
-        virtual void setStreamImage( osg::Image& image, unsigned int streamIdx = 0 );
-        virtual osg::Image* getStreamImage( unsigned int streamIdx = 0 );
-        virtual const osg::Image* getStreamImage( unsigned int streamIdx = 0 ) const;
+        //virtual void setStreamImage( osg::Image& image, unsigned int streamIdx = 0 );
+        //virtual osg::Image* getStreamImage( unsigned int streamIdx = 0 );
+        //virtual const osg::Image* getStreamImage( unsigned int streamIdx = 0 ) const;
+
+        virtual void setImage( osg::Image& image, unsigned int streamIdx = 0 );
+        virtual osg::Image* getImage( unsigned int streamIdx = 0 );
+        virtual const osg::Image* getImage( unsigned int streamIdx = 0 ) const;
+
+        virtual void setVector( std::vector<DATATYPE>& streamVector, unsigned int streamIdx = 0 );
+        virtual std::vector<DATATYPE>* getVector( unsigned int streamIdx = 0 );
+        virtual const std::vector<DATATYPE>* getVector( unsigned int streamIdx = 0 ) const;
 
         inline void setChannelFormatDesc(cudaChannelFormatDesc& channelFormatDesc);
         inline cudaChannelFormatDesc& getChannelFormatDesc();
@@ -166,13 +174,23 @@ namespace osgCuda
         cudaArray* mapArrayStream( ArrayStream<DATATYPE>& stream, unsigned int mapping ) const;
         void unmapStream( ArrayStream<DATATYPE>& stream ) const;
 
+        bool setupStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const;
         bool allocStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const;
         bool syncStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const;
 
         virtual osgCompute::BufferStream<DATATYPE>* newStream( const osgCompute::Context& context, unsigned int streamIdx ) const;
 
-        mutable StreamImageList _streamImages;
-        cudaChannelFormatDesc   _channelFormatDesc;
+        struct StreamData
+        {
+            std::vector<DATATYPE>        _vector;
+            osg::ref_ptr<osg::Image>     _image;
+            bool                         _needsSetup;
+
+            StreamData() : _needsSetup(false) {}
+        };
+
+        cudaChannelFormatDesc                       _channelFormatDesc;
+        mutable std::vector< StreamData >           _streamSetupList;
 
     private:
         // copy constructor and operator should not be called
@@ -203,43 +221,6 @@ namespace osgCuda
     template< class DATATYPE >
     bool Array<DATATYPE>::init()
     {
-        unsigned int streamSize = sizeof( DATATYPE );
-        for( unsigned int d=0; d<osgCompute::Buffer<DATATYPE>::getNumDimensions(); ++d )
-            streamSize *= osgCompute::Buffer<DATATYPE>::getDimension( d );
-
-        // check Images
-        for( unsigned int i=0; i<_streamImages.size(); ++i )
-        {
-            if( !_streamImages[i].valid() )
-                continue;
-
-            if( _streamImages[i]->getNumMipmapLevels() > 1 )
-            {
-                osg::notify(osg::FATAL)
-                    << "CUDA::Array::init() for array \""
-                    << osg::Object::getName() <<"\": image \""
-                    << _streamImages[i]->getName() << "\" for stream \""<<i<<"\" uses MipMaps which are currently"
-                    << "not supported."
-                    << std::endl;
-
-                clear();
-                return false;
-            }
-
-            if( _streamImages[i]->getTotalSizeInBytes() != streamSize )
-            {
-                osg::notify(osg::FATAL)
-                    << "CUDA::Array::init() for array \""
-                    << osg::Object::getName() <<"\": image \""
-                    << _streamImages[i]->getName() << "\" for stream \""<<i<<"\" has an incorrect size of \""
-                    << _streamImages[i]->getTotalSizeInBytes() << "\" which must be of Size \""
-                    << streamSize << "\"."
-                    << std::endl;
-
-                clear();
-                return false;
-            }
-        }
 
         if( osgCompute::Buffer<DATATYPE>::getNumDimensions() > 3 )
         {
@@ -251,6 +232,57 @@ namespace osgCuda
             clear();
             return false;
         }
+
+        unsigned int streamSize = sizeof( DATATYPE );
+        for( unsigned int d=0; d<osgCompute::Buffer<DATATYPE>::getNumDimensions(); ++d )
+            streamSize *= osgCompute::Buffer<DATATYPE>::getDimension( d );
+
+        // check stream data
+        for( unsigned int i=0; i<_streamSetupList.size(); ++i )
+        {
+            if( _streamSetupList[i]._image.valid() )
+            {
+                if( _streamSetupList[i]._image->getNumMipmapLevels() > 1 )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::init() for array \""
+                        << osg::Object::getName() <<"\": image \""
+                        << _streamSetupList[i]._image->getName() << "\" for stream \""<<i<<"\" uses MipMaps which are currently"
+                        << "not supported."
+                        << std::endl;
+
+                    clear();
+                    return false;
+                }
+
+                if( _streamSetupList[i]._image->getTotalSizeInBytes() != streamSize )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::init() for array \""
+                        << osg::Object::getName() <<"\": size of image \""
+                        << _streamSetupList[i]._image->getName() << "\" does not match the array size."
+                        << std::endl;
+
+                    clear();
+                    return false;
+                }
+            }
+            else if( !_streamSetupList[i]._vector.empty() ) 
+            {
+                if( (_streamSetupList[i]._vector.size() * sizeof(DATATYPE)) != streamSize )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Array::init() for array \""
+                        << osg::Object::getName() <<"\": size of vector does not match the array size."
+                        << std::endl;
+
+                    clear();
+                    return false;
+                }
+            }
+        }
+
+
 
         return osgCompute::Buffer<DATATYPE>::init();
     }
@@ -428,7 +460,6 @@ namespace osgCuda
         //////////////
         bool firstLoad = false;
         cudaArray* ptr = NULL;
-        cudaError res;
         if( (stream._mapping & osgCompute::MAP_DEVICE) )
         {
             if( NULL == stream._devArray )
@@ -442,36 +473,17 @@ namespace osgCuda
                 firstLoad = true;
             }
 
-            /////////////////////
-            // COPY IMAGE DATA //
-            /////////////////////
-            if( _streamImages.size() > stream._streamIdx &&
-                NULL != _streamImages[stream._streamIdx] )
-            {
-                res = cudaMemcpyToArray(stream._devArray,0,0,_streamImages[stream._streamIdx]->data(), osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyHostToDevice);
-                if( cudaSuccess != res )
-                {
-                    osg::notify(osg::FATAL)
-                        << "CUDA::Array::syncStream() for array \""<<osg::Object::getName()
-                        << "\": Something goes wrong on cudaMemcpy3D() to device within context \""
-                        << stream._context->getId() << "\" and stream \""
-                        << stream._streamIdx << "\". Returned code is "
-                        << std::hex<<res<<"."
-                        << std::endl;
 
-                    return false;
-                }
-
-                // release image after copy
-                if( osgCompute::Buffer<DATATYPE>::getRemoveUsedImages() )
-                    _streamImages[stream._streamIdx] = NULL;
-
-                // host must be synchronized
-                stream._syncHost = true;
-            }
+            //////////////////
+            // SETUP STREAM //
+            //////////////////
+            if( _streamSetupList.size() > stream._streamIdx &&
+                _streamSetupList[stream._streamIdx]._needsSetup )
+                if( !setupStream( mapping, stream ) )
+                    return NULL;
 
             /////////////////
-            // SYNC DEVICE //
+            // SYNC STREAM //
             /////////////////
             if( stream._syncDevice && NULL != stream._hostPtr )
                 if( !syncStream( mapping, stream ) )
@@ -531,7 +543,6 @@ namespace osgCuda
         //////////////
         bool firstLoad = false;
         DATATYPE* ptr = NULL;
-        cudaError res;
         if( (stream._mapping & osgCompute::MAP_HOST) )
         {
             if( NULL == stream._hostPtr )
@@ -545,37 +556,17 @@ namespace osgCuda
                 firstLoad = true;
             }
 
-            /////////////////////
-            // COPY IMAGE DATA //
-            /////////////////////
-            if( _streamImages.size() > stream._streamIdx &&
-                NULL != _streamImages[stream._streamIdx]  )
-            {
-                res = cudaMemcpy( stream._hostPtr, _streamImages[stream._streamIdx]->data(), osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyHostToHost );
-                if( cudaSuccess != res )
-                {
-                    osg::notify(osg::FATAL)
-                        << "CUDA::Array::mapStream() for array \""<<osg::Object::getName()
-                        << "\": something goes wrong within cudaMemcpy() to host for image \""
-                        << _streamImages[stream._streamIdx]->getName()<< "\" within context \""
-                        << stream._context->getId() << "\" and stream \""
-                        << stream._streamIdx << "\". Returned code is " << std::hex<<res<<"."
-                        << std::endl;
-
+            //////////////////
+            // SETUP STREAM //
+            //////////////////
+            if( _streamSetupList.size() > stream._streamIdx &&
+                _streamSetupList[stream._streamIdx]._needsSetup )
+                if( !setupStream( mapping, stream ) )
                     return NULL;
-                }
 
-                // release image after copy
-                if( osgCompute::Buffer<DATATYPE>::getRemoveUsedImages() )
-                    _streamImages[stream._streamIdx] = NULL;
-
-                // device must be synchronized
-                stream._syncDevice = true;
-            }
-
-            ///////////////
-            // SYNC HOST //
-            ///////////////
+            /////////////////
+            // SYNC STREAM //
+            /////////////////
             if( stream._syncHost && NULL != stream._devArray )
                 if( !syncStream( mapping, stream ) )
                     return NULL;
@@ -588,6 +579,7 @@ namespace osgCuda
                 << "CUDA::Array::mapStream() for array \""<<osg::Object::getName()<<"\": wrong mapping was specified. Use one of the following: "
                 << "HOST_SOURCE, HOST_TARGET, HOST."
                 << std::endl;
+
             return NULL;
         }
 
@@ -608,6 +600,111 @@ namespace osgCuda
         }
 
         return ptr;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Array<DATATYPE>::setupStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const
+    {
+        StreamData& setupData = _streamSetupList[stream._streamIdx];
+        cudaError res;
+
+        if( mapping & osgCompute::MAP_DEVICE )
+        {
+            void* data = NULL;
+            if( setupData._image.valid() )
+            {
+                data = setupData._image->data();
+            }
+            else if( !setupData._vector.empty() )
+            {
+                data = &setupData._vector.front();
+            }
+
+            if( data == NULL )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::setupStream() for array \""<< osg::Object::getName()
+                    << "\": Cannot receive valid data pointer."
+                    << std::endl;
+
+                return false;
+            }
+
+            res = cudaMemcpyToArray(stream._devArray,0,0,data, osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyHostToDevice);
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::setupStream() for array \""<< osg::Object::getName()
+                    << "\": cudaMemcpyToArray() failed for image \""
+                    << setupData._image->getName()<< "\" within context \""
+                    << stream._context->getId() << "\" and stream \""
+                    << stream._streamIdx << "\". Returned code is " << std::hex<<res<<"."
+                    << std::endl;
+
+                return false;
+            }
+
+            if( osgCompute::Buffer<DATATYPE>::getSetupHint() & osgCompute::REMOVE_SETUP_IMAGES )
+                setupData._image = NULL;
+            if( osgCompute::Buffer<DATATYPE>::getSetupHint() & osgCompute::REMOVE_SETUP_VECTORS )
+                setupData._vector.clear();
+
+            setupData._needsSetup = false;
+
+            // host must be synchronized
+            stream._syncHost = true;
+            return true;
+        }
+        else if( mapping & osgCompute::MAP_HOST )
+        {
+            void* data = NULL;
+            if( setupData._image.valid() )
+            {
+                data = setupData._image->data();
+            }
+            else if( !setupData._vector.empty() )
+            {
+                data = &setupData._vector.front();
+            }
+
+            if( data == NULL )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::setupStream() for array \""<< osg::Object::getName()
+                    << "\": Cannot receive valid data pointer."
+                    << std::endl;
+
+                return false;
+            }
+
+            res = cudaMemcpy( stream._hostPtr,  setupData._image->data(), osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyHostToHost );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::setupStream() for array \""<< osg::Object::getName()
+                    << "\": cudaMemcpy() failed for image \""
+                    << setupData._image->getName()<< "\" within context \""
+                    << stream._context->getId() << "\" and stream \""
+                    << stream._streamIdx << "\". Returned code is " << std::hex<<res<<"."
+                    << std::endl;
+
+                return false;
+            }
+
+            if( osgCompute::Buffer<DATATYPE>::getSetupHint() & osgCompute::REMOVE_SETUP_IMAGES )
+                setupData._image = NULL;
+            if( osgCompute::Buffer<DATATYPE>::getSetupHint() & osgCompute::REMOVE_SETUP_VECTORS )
+                setupData._vector.clear();
+
+            setupData._needsSetup = false;
+
+            // device must be synchronized
+            stream._syncDevice = true;
+            return true;
+        }
+
+        return false;
     }
 
     //------------------------------------------------------------------------------
@@ -673,13 +770,8 @@ namespace osgCuda
                 return false;
             }
 
-            //cudaExtent extent;
-            //extent.width = osgCompute::Buffer<DATATYPE>::getDimension(0);
-            //extent.height = (osgCompute::Buffer<DATATYPE>::getDimension(1) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(1);
-            //extent.depth = (osgCompute::Buffer<DATATYPE>::getDimension(2) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(2);
             if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 3 )
             {
-                //res = cudaMalloc3DArray( &stream._devArray, &desc, extent );
                 stream._devArray = static_cast<Context*>(stream._context.get())->mallocDevice3DArray(
                                         osgCompute::Buffer<DATATYPE>::getDimension(0),
                                         (osgCompute::Buffer<DATATYPE>::getDimension(1) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(1),
@@ -698,9 +790,6 @@ namespace osgCuda
             }
             else if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 2 )
             {
-
-
-                //res = cudaMalloc3DArray( &stream._devArray, &desc, extent );
                 stream._devArray = static_cast<Context*>(stream._context.get())->mallocDevice2DArray(
                                         osgCompute::Buffer<DATATYPE>::getDimension(0),
                                         (osgCompute::Buffer<DATATYPE>::getDimension(1) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(1),
@@ -718,9 +807,6 @@ namespace osgCuda
             }
             else if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 2 )
             {
-
-
-                //res = cudaMalloc3DArray( &stream._devArray, &desc, extent );
                 stream._devArray = static_cast<Context*>(stream._context.get())->mallocDeviceArray(
                                         osgCompute::Buffer<DATATYPE>::getDimension(0),
                                         desc );
@@ -925,17 +1011,17 @@ namespace osgCuda
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    void Array<DATATYPE>::setStreamImage( osg::Image& image, unsigned int streamIdx )
+    void Array<DATATYPE>::setImage( osg::Image& image, unsigned int streamIdx )
     {
-        if( _streamImages.size() <= streamIdx )
-            _streamImages.resize( streamIdx + 1, NULL );
+        if( _streamSetupList.size() <= streamIdx )
+            _streamSetupList.resize( streamIdx + 1 );
 
         if( !osgCompute::Param::isDirty() )
         {
             if( image.getNumMipmapLevels() > 1 )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Array::init() for array \""
+                    << "CUDA::Array::setupStream() for array \""
                     << osg::Object::getName() <<"\": image \""
                     << image.getName() << "\" for stream \""<<streamIdx<<"\" uses MipMaps which are currently"
                     << "not supported."
@@ -947,38 +1033,83 @@ namespace osgCuda
             if( image.getTotalSizeInBytes() != osgCompute::Buffer<DATATYPE>::getStreamSize() )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Array::init() for array \""
-                    << osg::Object::getName() <<"\": image \""
-                    << image.getName() << "\" for stream \""<<streamIdx<<"\" has an incorrect size of \""
-                    << image.getTotalSizeInBytes() << "\" which must be of size \""
-                    << osgCompute::Buffer<DATATYPE>::getStreamSize() << "\"."
+                    << "CUDA::Array::setupStream() for array \""
+                    << osg::Object::getName() <<"\": size of image \""
+                    << image.getName() << "\" does not match the buffer size."
                     << std::endl;
 
                 return;
             }
         }
 
-        _streamImages[streamIdx] = &image;
+        _streamSetupList[streamIdx]._image = &image;
+        _streamSetupList[streamIdx]._vector.clear();
+        _streamSetupList[streamIdx]._needsSetup = true;
     }
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    osg::Image* Array<DATATYPE>::getStreamImage( unsigned int streamIdx )
+    osg::Image* Array<DATATYPE>::getImage( unsigned int streamIdx )
     {
-        if( _streamImages.size() <= streamIdx )
+        if( _streamSetupList.size() <= streamIdx )
             return NULL;
 
-        return _streamImages[streamIdx];
+        return _streamSetupList[streamIdx]._image.get();
     }
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    const osg::Image* Array<DATATYPE>::getStreamImage( unsigned int streamIdx ) const
+    const osg::Image* Array<DATATYPE>::getImage( unsigned int streamIdx ) const
     {
-        if( (_streamImages.size()-1) < streamIdx )
+        if( (_streamSetupList.size()-1) < streamIdx )
             return NULL;
 
-        return _streamImages[streamIdx];
+        return _streamSetupList[streamIdx]._image.get();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Array<DATATYPE>::setVector( std::vector<DATATYPE>& data, unsigned int streamIdx )
+    {
+        if( _streamSetupList.size() <= streamIdx )
+            _streamSetupList.resize( streamIdx + 1 );
+
+        if( !osgCompute::Param::isDirty() )
+        {
+            if( (data.size() * sizeof(DATATYPE)) != osgCompute::Buffer<DATATYPE>::getStreamSize() )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::setupStream() for array \""
+                    << osg::Object::getName() <<"\": size of vector does not match the buffer size."
+                    << std::endl;
+
+                return;
+            }
+        }
+
+        _streamSetupList[streamIdx]._image = NULL;
+        _streamSetupList[streamIdx]._vector = data;
+        _streamSetupList[streamIdx]._needsSetup = true;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    std::vector<DATATYPE>* Array<DATATYPE>::getVector( unsigned int streamIdx )
+    {
+        if( _streamSetupList.size() <= streamIdx )
+            return NULL;
+
+        return &_streamSetupList[streamIdx]._vector;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    const std::vector<DATATYPE>* Array<DATATYPE>::getVector( unsigned int streamIdx ) const
+    {
+        if( _streamSetupList.size() <= streamIdx )
+            return NULL;
+
+        return &_streamSetupList[streamIdx]._vector;
     }
 
     //------------------------------------------------------------------------------
@@ -1012,7 +1143,7 @@ namespace osgCuda
     template< class DATATYPE >
     void Array<DATATYPE>::clearLocal()
     {
-        _streamImages.clear();
+        _streamSetupList.clear();
         memset( &_channelFormatDesc, INT_MAX, sizeof(cudaChannelFormatDesc) );
     }
 

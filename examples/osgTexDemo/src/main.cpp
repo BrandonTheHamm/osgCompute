@@ -46,7 +46,7 @@ osgCuda::Pipeline* getPipeline( osg::Image& srcImage, osg::Texture2D& outTexture
     srcArray->setChannelFormatDesc( srcDesc );
     srcArray->setDimension( 0, srcImage.s() );
     srcArray->setDimension( 1, srcImage.t() );
-    srcArray->setStreamImage( srcImage, 0 );
+    srcArray->setImage( srcImage, 0 );
 
     osgCuda::Vec4ubIntOpBuffer* trgBuffer = new osgCuda::Vec4ubIntOpBuffer;
     trgBuffer->setName( "trgBuffer" );
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     osgViewer::Viewer viewer(arguments);
     viewer.setUpViewInWindow( 50, 50, 640, 480);
 
-    // if you have the current SVN Version then try multithreaded
+    // if you have the current SVN Version then try to run it multi-threaded
     //viewer.setThreadingModel(osgViewer::Viewer::DrawThreadPerContext);
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 

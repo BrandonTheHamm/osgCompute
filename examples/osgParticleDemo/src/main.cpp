@@ -41,6 +41,13 @@
 #include "PtclMover"
 #include "PtclEmitter"
 
+float frand( float minf, float maxf )
+{
+    float unit = float(rand()) / RAND_MAX;
+    float diff = maxf - minf;
+    return minf + unit * diff;
+}
+
 osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
     osg::Geometry* bbgeom = new osg::Geometry;
@@ -213,13 +220,6 @@ osg::Geode* getGeode( osg::Geometry& ptclGeom )
     geode->getOrCreateStateSet()->addUniform( pixelsize );
 
     return geode;
-}
-
-float frand( float minf, float maxf )
-{
-    float unit = float(rand()) / RAND_MAX;
-    float diff = maxf - minf;
-    return minf + unit * diff;
 }
 
 int main(int argc, char *argv[])
