@@ -14,8 +14,8 @@
 */
 
 #include <osg/Notify>
-#include "osgCompute/PipelineBin"
-#include "osgCompute/Pipeline"
+#include "osgCompute/ProcessorBin"
+#include "osgCompute/Processor"
 #include "osgCompute/Context"
 
 namespace osgCompute
@@ -24,13 +24,13 @@ namespace osgCompute
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void PipelineBin::clear()
+    void ProcessorBin::clear()
     {
         clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    void PipelineBin::drawImplementation( osg::RenderInfo& ) const
+    void ProcessorBin::drawImplementation( osg::RenderInfo& ) const
     { 
         if( !isEnabled() || !_context.valid() )
             return;
@@ -45,48 +45,48 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool PipelineBin::init( Pipeline& pipeline )
+    bool ProcessorBin::init( Processor& processor )
     {
         if( !_dirty )
         {
-            osg::notify(osg::INFO) << "PipelineBin::init(): PipelineBin for Pipeline \""
-                                    << pipeline.asObject()->getName()<<"\" is not dirty."
+            osg::notify(osg::INFO) << "ProcessorBin::init(): ProcessorBin for Processor \""
+                                    << processor.asObject()->getName()<<"\" is not dirty."
                                     << std::endl;
             return true;
         }
 
-        // PIPELINE 
-        _pipeline = &pipeline;
+        // PROCESSOR 
+        _processor = &processor;
 
         // MODULES 
-        if( _pipeline->hasModules())
-            _modules = *_pipeline->getModules();
+        if( _processor->hasModules())
+            _modules = *_processor->getModules();
 
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->isDirty() )
                 (*itr)->init();
 
         // PARAMS
-        if( _pipeline->getParamHandles() )
-            _paramHandles = *_pipeline->getParamHandles();
+        if( _processor->getParamHandles() )
+            _paramHandles = *_processor->getParamHandles();
         
         for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
             if( (*itr).second->isDirty() )
                 (*itr).second->init();
 
         // OBJECT 
-        setName( _pipeline->asObject()->getName() );
-        setDataVariance( _pipeline->asObject()->getDataVariance() );
+        setName( _processor->asObject()->getName() );
+        setDataVariance( _processor->asObject()->getDataVariance() );
 
         // CALLBACK 
-        _launchCallback = _pipeline->getLaunchCallback();
+        _launchCallback = _processor->getLaunchCallback();
 
         _dirty = false;
         return true;
     }
 
     //------------------------------------------------------------------------------
-    bool PipelineBin::hasModule( const std::string& moduleName ) const
+    bool ProcessorBin::hasModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName )
@@ -96,7 +96,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool PipelineBin::hasModule( Module& module ) const
+    bool ProcessorBin::hasModule( Module& module ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr) == &module )
@@ -106,13 +106,13 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool PipelineBin::hasModules() const 
+    bool ProcessorBin::hasModules() const 
     { 
         return !_modules.empty(); 
     }
 
     //-----------------------------------------------------------------------------
-    Module* PipelineBin::getModule( const std::string& moduleName )
+    Module* ProcessorBin::getModule( const std::string& moduleName )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName && (*itr).valid() )
@@ -122,7 +122,7 @@ namespace osgCompute
     }
 
     //-----------------------------------------------------------------------------
-    const Module* PipelineBin::getModule( const std::string& moduleName ) const
+    const Module* ProcessorBin::getModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName && (*itr).valid() )
@@ -132,19 +132,19 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    ModuleList* PipelineBin::getModules() 
+    ModuleList* ProcessorBin::getModules() 
     { 
         return &_modules; 
     }
 
     //------------------------------------------------------------------------------
-    const ModuleList* PipelineBin::getModules() const 
+    const ModuleList* ProcessorBin::getModules() const 
     { 
         return &_modules; 
     }
 
     //------------------------------------------------------------------------------
-    unsigned int PipelineBin::getNumModules() const 
+    unsigned int ProcessorBin::getNumModules() const 
     { 
         return _modules.size(); 
     }
@@ -153,12 +153,12 @@ namespace osgCompute
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void PipelineBin::clearLocal()
+    void ProcessorBin::clearLocal()
     {
         osg::Drawable::setSupportsDisplayList(false); 
         osg::Object::setDataVariance( osg::Object::DYNAMIC ); 
 
-        _pipeline = NULL;
+        _processor = NULL;
         _context = NULL;
         _dirty = true;
         _launchCallback = NULL;
@@ -168,16 +168,16 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void PipelineBin::clear( const Context& context ) const
+    void ProcessorBin::clear( const Context& context ) const
     {
         if( _context == &context )
             _context = NULL;
     }
 
     //------------------------------------------------------------------------------
-    void PipelineBin::launch() const
+    void ProcessorBin::launch() const
     {
-        if( _dirty || !_pipeline || !_context.valid() )
+        if( _dirty || !_processor || !_context.valid() )
             return;
 
         ////////////////////

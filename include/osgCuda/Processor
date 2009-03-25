@@ -13,10 +13,10 @@
  * The full license is in LICENSE file included with this distribution.
 */
 
-#ifndef OSGCUDA_PIPELINE
-#define OSGCUDA_PIPELINE 1
+#ifndef OSGCUDA_PROCESSOR
+#define OSGCUDA_PROCESSOR 1
 
-#include <osgCompute/Pipeline>
+#include <osgCompute/Processor>
 #include "osgCuda/Export"
 #include "osgCuda/Context"
 
@@ -24,25 +24,25 @@ namespace osgCuda
 {
     /**
     */
-    class LIBRARY_EXPORT Pipeline : public osgCompute::Pipeline
+    class LIBRARY_EXPORT Processor : public osgCompute::Processor
     {
     public:
-        Pipeline();
+        Processor();
 
-        META_Pipeline( this, this, osgCompute, PipelineBin, osgCuda, Context )
-        META_Object( osgCuda, Pipeline )
+        META_Processor( this, this, osgCompute, ProcessorBin, osgCuda, Context )
+        META_Object( osgCuda, Processor )
 
         virtual void clear();
 
     protected:
-        virtual ~Pipeline() { clearLocal(); }
+        virtual ~Processor() { clearLocal(); }
         void clearLocal();
         
     private:
         // copy constructor and operator should not be called
-        Pipeline( const Pipeline&, const osg::CopyOp& ) {}
-        Pipeline &operator=(const Pipeline &) { return *this; }
+        Processor( const Processor&, const osg::CopyOp& ) {}
+        Processor &operator=(const Processor &) { return *this; }
     };
 }
 
-#endif //OSGCUDA_PIPELINE
+#endif //OSGCUDA_PROCESSOR

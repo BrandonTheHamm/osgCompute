@@ -150,10 +150,6 @@ namespace osgCuda
         virtual DATATYPE* map( const osgCompute::Context& context, unsigned int mapping, unsigned int streamIdx = 0 ) const;
         virtual void unmap( const osgCompute::Context& context, unsigned int streamIdx = 0 ) const;
 
-        //virtual void setStreamImage( osg::Image& image, unsigned int streamIdx = 0 );
-        //virtual osg::Image* getStreamImage( unsigned int streamIdx = 0 );
-        //virtual const osg::Image* getStreamImage( unsigned int streamIdx = 0 ) const;
-
         virtual void setImage( osg::Image& image, unsigned int streamIdx = 0 );
         virtual osg::Image* getImage( unsigned int streamIdx = 0 );
         virtual const osg::Image* getImage( unsigned int streamIdx = 0 ) const;

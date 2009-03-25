@@ -13,12 +13,12 @@
  * The full license is in LICENSE file included with this distribution.
 */
 
-#ifndef OSGCOMPUTE_PIPELINE
-#define OSGCOMPUTE_PIPELINE 1
+#ifndef OSGCOMPUTE_PROCESSOR
+#define OSGCOMPUTE_PROCESSOR 1
 
 #include <map>
 #include <osg/Node>
-#include "osgCompute/PipelineBin"
+#include "osgCompute/ProcessorBin"
 
 namespace osg
 {
@@ -28,13 +28,13 @@ namespace osg
 /**
 An helper macro
 */
-#define META_Pipeline( asobject, asnode, binlibrary, binclass, ctxlibrary, ctxclass )               \
+#define META_Processor( asobject, asnode, binlibrary, binclass, ctxlibrary, ctxclass )               \
     virtual osg::Object*                asObject() { return asobject; }                             \
     virtual const osg::Object*          asObject() const { return asobject; }                       \
     virtual osg::Node*                  asNode() { return asnode; }                                 \
     virtual const osg::Node*            asNode() const { return asnode; }                           \
     virtual bool                        isNode() const { return (asnode != NULL); }                 \
-    virtual osgCompute::PipelineBin*    newPipelineBin() const { return new binlibrary::binclass; } \
+    virtual osgCompute::ProcessorBin*    newProcessorBin() const { return new binlibrary::binclass; } \
     virtual std::string                 contextLibraryName() const { return #ctxlibrary; }          \
     virtual std::string                 contextClassName() const { return #ctxclass; }
 
@@ -42,14 +42,14 @@ An helper macro
 namespace osgCompute
 {
     class Redirection;
-    class PipelineBin;
+    class ProcessorBin;
 
     /**
     */
-    class LIBRARY_EXPORT Pipeline : public osg::Node
+    class LIBRARY_EXPORT Processor : public osg::Node
     {
     public:
-        Pipeline();
+        Processor();
 
         virtual void accept( osg::NodeVisitor& nv );
 
@@ -91,7 +91,7 @@ namespace osgCompute
         virtual void clear();
 
     protected:
-        virtual ~Pipeline() { clearLocal(); }
+        virtual ~Processor() { clearLocal(); }
         void clearLocal();
 
         virtual void update( osg::NodeVisitor& uv );
@@ -99,10 +99,10 @@ namespace osgCompute
 
         virtual void checkTraversalModules();
 
-        virtual PipelineBin* newPipelineBin() const = 0;
+        virtual ProcessorBin* newProcessorBin() const = 0;
 
         virtual Context* getOrCreateContext( osg::State& state );
-        virtual PipelineBin* getOrCreatePipelineBin( osg::NodeVisitor& nv );
+        virtual ProcessorBin* getOrCreateProcessorBin( osg::NodeVisitor& nv );
      
         LaunchCallback*                     _launchCallback; 
         ModuleList                          _modules;
@@ -113,15 +113,15 @@ namespace osgCompute
 
     private:
         // copy constructor and operator should not be called
-        Pipeline( const Pipeline& ) {}
-        Pipeline &operator=(const Pipeline &) { return *this; }
+        Processor( const Processor& ) {}
+        Processor &operator=(const Processor &) { return *this; }
     };
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    inline void Pipeline::setLaunchCallback( LaunchCallback* lc ) 
+    inline void Processor::setLaunchCallback( LaunchCallback* lc ) 
     { 
         if( lc == _launchCallback )
             return;
@@ -131,16 +131,16 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    inline LaunchCallback* Pipeline::getLaunchCallback() 
+    inline LaunchCallback* Processor::getLaunchCallback() 
     { 
         return _launchCallback; 
     }
 
     //------------------------------------------------------------------------------
-    inline const LaunchCallback* Pipeline::getLaunchCallback() const 
+    inline const LaunchCallback* Processor::getLaunchCallback() const 
     { 
         return _launchCallback; 
     }
 }
 
-#endif //OSGCOMPUTE_PIPELINE
+#endif //OSGCOMPUTE_PROCESSOR

@@ -1,7 +1,7 @@
 #include <osg/NodeVisitor>
 #include <osg/OperationThread>
 #include <osgUtil/CullVisitor>
-#include "osgCuda/Pipeline"
+#include "osgCuda/Processor"
 
 namespace osgCuda
 { 
@@ -9,24 +9,24 @@ namespace osgCuda
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    Pipeline::Pipeline() 
-        :   osgCompute::Pipeline()
+    Processor::Processor() 
+        :   osgCompute::Processor()
     { 
         clearLocal(); 
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::clear() 
+    void Processor::clear() 
     { 
         clearLocal();
-        osgCompute::Pipeline::clear(); 
+        osgCompute::Processor::clear(); 
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void Pipeline::clearLocal() 
+    void Processor::clearLocal() 
     {
     }
 }

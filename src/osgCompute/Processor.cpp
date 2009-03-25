@@ -16,7 +16,7 @@
 #include <osg/NodeVisitor>
 #include <osg/OperationThread>
 #include <osgUtil/CullVisitor>
-#include "osgCompute/Pipeline"
+#include "osgCompute/Processor"
 
 namespace osgCompute
 {
@@ -24,14 +24,14 @@ namespace osgCompute
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------ 
-    Pipeline::Pipeline() 
+    Processor::Processor() 
         :   osg::Node() 
     { 
         clearLocal(); 
     }
 
     //------------------------------------------------------------------------------   
-    void Pipeline::clearLocal()
+    void Processor::clearLocal()
     {
         _launchCallback = NULL;
         _modules.clear();
@@ -40,13 +40,13 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------   
-    void Pipeline::clear()
+    void Processor::clear()
     {
         clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::accept(osg::NodeVisitor& nv) 
+    void Processor::accept(osg::NodeVisitor& nv) 
     { 
         if( nv.validNodeMask(*this) ) 
         { 
@@ -57,7 +57,7 @@ namespace osgCompute
                 osgUtil::CullVisitor* cv = dynamic_cast<osgUtil::CullVisitor*>( &nv );
                 if( !cv )
                 {
-                    osg::notify(osg::FATAL)  << "Pipeline::accept() for \""
+                    osg::notify(osg::FATAL)  << "Processor::accept() for \""
                         << getName()<<"\": NodeVisitor is not a CullVisitor."
                         << std::endl;
 
@@ -66,7 +66,7 @@ namespace osgCompute
 
                 if( !cv->getState() )
                 {
-                    osg::notify(osg::FATAL)  << "Pipeline::accept() for \""
+                    osg::notify(osg::FATAL)  << "Processor::accept() for \""
                         << getName()<<"\": CullVisitor has no valid state."
                         << std::endl;
                     return;
@@ -76,7 +76,7 @@ namespace osgCompute
                 // SETUP REDIRECTION //
                 ///////////////////////
                 Context* ctx = getOrCreateContext( *cv->getState() );
-                PipelineBin* bin = getOrCreatePipelineBin( nv );
+                ProcessorBin* bin = getOrCreateProcessorBin( nv );
                 
                 if( ctx && bin )
                 {
@@ -87,7 +87,7 @@ namespace osgCompute
                 else
                 {
                     osg::notify(osg::FATAL)  
-                        << "Pipeline::accept(\"CULL_VISITOR\") for \""<<getName()<<"\": Redirection could not be created."
+                        << "Processor::accept(\"CULL_VISITOR\") for \""<<getName()<<"\": Redirection could not be created."
                         << std::endl;
                     return;
                 }
@@ -106,13 +106,13 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::loadModule( const std::string& modName )
+    void Processor::loadModule( const std::string& modName )
     {
         // not implemented yet
     }
     
     //------------------------------------------------------------------------------
-    void Pipeline::addModule( Module& module )
+    void Processor::addModule( Module& module )
     {
         if( hasModule(module) )
             return;
@@ -128,7 +128,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::removeModule( Module& module )
+    void Processor::removeModule( Module& module )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
         {
@@ -144,7 +144,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::removeModule( const std::string& moduleName )
+    void Processor::removeModule( const std::string& moduleName )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
         {
@@ -160,7 +160,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool Pipeline::hasModule( const std::string& moduleName ) const
+    bool Processor::hasModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName )
@@ -170,7 +170,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool Pipeline::hasModule( Module& module ) const
+    bool Processor::hasModule( Module& module ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr) == &module )
@@ -180,13 +180,13 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool Pipeline::hasModules() const 
+    bool Processor::hasModules() const 
     { 
         return !_modules.empty(); 
     }
 
     //-----------------------------------------------------------------------------
-    Module* Pipeline::getModule( const std::string& moduleName )
+    Module* Processor::getModule( const std::string& moduleName )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName && (*itr).valid() )
@@ -196,7 +196,7 @@ namespace osgCompute
     }
 
     //-----------------------------------------------------------------------------
-    const Module* Pipeline::getModule( const std::string& moduleName ) const
+    const Module* Processor::getModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName && (*itr).valid() )
@@ -206,25 +206,25 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    ModuleList* Pipeline::getModules() 
+    ModuleList* Processor::getModules() 
     { 
         return &_modules; 
     }
 
     //------------------------------------------------------------------------------
-    const ModuleList* Pipeline::getModules() const 
+    const ModuleList* Processor::getModules() const 
     { 
         return &_modules; 
     }
 
     //------------------------------------------------------------------------------
-    unsigned int Pipeline::getNumModules() const 
+    unsigned int Processor::getNumModules() const 
     { 
         return _modules.size(); 
     }
 
     //------------------------------------------------------------------------------
-    bool osgCompute::Pipeline::hasParamHandle( const std::string& handle ) const
+    bool osgCompute::Processor::hasParamHandle( const std::string& handle ) const
     {
         HandleToParamMapCnstItr itr = _paramHandles.find( handle );
         if( itr != _paramHandles.end() )
@@ -234,7 +234,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void osgCompute::Pipeline::addParamHandle( const std::string& handle, Param& param )
+    void osgCompute::Processor::addParamHandle( const std::string& handle, Param& param )
     {
         if( hasParamHandle( handle ) )
             return;
@@ -248,7 +248,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void osgCompute::Pipeline::removeParamHandle( const std::string& handle )
+    void osgCompute::Processor::removeParamHandle( const std::string& handle )
     {
         HandleToParamMapItr itr = _paramHandles.find( handle );
         if( itr != _paramHandles.end() )
@@ -261,19 +261,19 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    HandleToParamMap* osgCompute::Pipeline::getParamHandles()
+    HandleToParamMap* osgCompute::Processor::getParamHandles()
     {
         return &_paramHandles;
     }
 
     //------------------------------------------------------------------------------
-    const HandleToParamMap* osgCompute::Pipeline::getParamHandles() const
+    const HandleToParamMap* osgCompute::Processor::getParamHandles() const
     {
         return &_paramHandles;
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::clearBins() 
+    void Processor::clearBins() 
     { 
         BinMapItr itr = _bins.begin();
         for(; itr != _bins.end(); ++itr) 
@@ -282,7 +282,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::enableBins() 
+    void Processor::enableBins() 
     { 
         BinMapItr itr = _bins.begin();
         for(; itr != _bins.end(); ++itr) 
@@ -291,7 +291,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::disableBins() 
+    void Processor::disableBins() 
     { 
         BinMapItr itr = _bins.begin();
         for(; itr != _bins.end(); ++itr) 
@@ -303,7 +303,7 @@ namespace osgCompute
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void Pipeline::update( osg::NodeVisitor& uv )
+    void Processor::update( osg::NodeVisitor& uv )
     {
         if( getUpdateCallback() )
             (*getUpdateCallback())( this, &uv );
@@ -324,7 +324,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::handleevent( osg::NodeVisitor& ev )
+    void Processor::handleevent( osg::NodeVisitor& ev )
     {
         if( getEventCallback() )
             (*getEventCallback())( this, &ev );
@@ -347,7 +347,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Pipeline::checkTraversalModules()
+    void Processor::checkTraversalModules()
     {
         unsigned int numUpdates = 0;
         unsigned int numEvents = 0;
@@ -375,7 +375,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    Context* Pipeline::getOrCreateContext( osg::State& state )
+    Context* Processor::getOrCreateContext( osg::State& state )
     {
         Context* context = osgCompute::Context::instance( state );
         if( context == NULL )
@@ -387,18 +387,18 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    PipelineBin* Pipeline::getOrCreatePipelineBin( osg::NodeVisitor& nv )
+    ProcessorBin* Processor::getOrCreateProcessorBin( osg::NodeVisitor& nv )
     {
         // lock mutex to prevent distinct threads from
         // changing each others cache. Note that each 
         // thread must occupy a different object
         OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 
-        PipelineBin* pb = NULL;
+        ProcessorBin* pb = NULL;
         BinMapItr itr = _bins.find( &nv );
         if( itr == _bins.end() )
         {   
-            pb = newPipelineBin();
+            pb = newProcessorBin();
             if( pb )
                 _bins[&nv] = pb;
         }

@@ -27,7 +27,7 @@
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
 #include <osgDB/Registry>
-#include <osgCuda/Pipeline>
+#include <osgCuda/Processor>
 #include <osgCuda/Buffer>
 #include <osgCuda/IntOpBuffer>
 #include <osgCuda/Constant>
@@ -122,7 +122,7 @@ osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     return bbox;
 }
 
-osgCuda::Pipeline* getPipeline( osg::Geometry& ptclGeom, osg::Vec3& bbmin, osg::Vec3& bbmax )
+osgCuda::Processor* getProcessor( osg::Geometry& ptclGeom, osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
     if( ptclGeom.getVertexArray() == NULL )
         return NULL;
@@ -157,17 +157,17 @@ osgCuda::Pipeline* getPipeline( osg::Geometry& ptclGeom, osg::Vec3& bbmin, osg::
     PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
     ptclEmitter->setName( "ptclEmitter" );
 
-    //////////////
-    // PIPELINE //
-    //////////////
-    osgCuda::Pipeline* pipeline = new osgCuda::Pipeline;
-    pipeline->addModule( *ptclMover );
-    pipeline->addModule( *ptclEmitter );
-    pipeline->addParamHandle( "PTCL_BUFFER", *ptclBuffer );
-    pipeline->addParamHandle( "PTCL_SEED_BOX_MIN", *ptclSeedBoxMin );
-    pipeline->addParamHandle( "PTCL_SEED_BOX_MAX", *ptclSeedBoxMax );
+    ///////////////
+    // PROCESSOR //
+    ///////////////
+    osgCuda::Processor* processor = new osgCuda::Processor;
+    processor->addModule( *ptclMover );
+    processor->addModule( *ptclEmitter );
+    processor->addParamHandle( "PTCL_BUFFER", *ptclBuffer );
+    processor->addParamHandle( "PTCL_SEED_BOX_MIN", *ptclSeedBoxMin );
+    processor->addParamHandle( "PTCL_SEED_BOX_MAX", *ptclSeedBoxMax );
 
-    return pipeline;
+    return processor;
 }
 
 osg::Geode* getGeode( osg::Geometry& ptclGeom )
@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
     /////////////////
     osg::Group* scene = new osg::Group;
     scene->addChild( getBBox( bbmin, bbmax ) );
-    scene->addChild( getPipeline( *ptclGeom, bbmin, bbmax ) );
+    scene->addChild( getProcessor( *ptclGeom, bbmin, bbmax ) );
     scene->addChild( getGeode( *ptclGeom ) );
 
     ////////////
@@ -262,7 +262,8 @@ int main(int argc, char *argv[])
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.setUpViewInWindow( 50, 50, 640, 480);
 
-    // if you have the current SVN Version then try multithreaded
+    // if you have the current OSG SVN Version (2.9.1 or later) then try multithreaded
+    // otherwise the application will finish with segmentation fault
     //viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 

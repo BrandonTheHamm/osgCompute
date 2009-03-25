@@ -26,13 +26,13 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 
-#include <osgCuda/Pipeline>
+#include <osgCuda/Processor>
 #include <osgCuda/IntOpBuffer>
 #include <osgCuda/Constant>
 
 #include "TexStreamer"
 
-osgCuda::Pipeline* getPipeline( osg::Image& srcImage, osg::Texture2D& outTexture )
+osgCuda::Processor* getProcessor( osg::Image& srcImage, osg::Texture2D& outTexture )
 {
     cudaChannelFormatDesc srcDesc;
     srcDesc.f = cudaChannelFormatKindUnsigned;
@@ -67,13 +67,13 @@ osgCuda::Pipeline* getPipeline( osg::Image& srcImage, osg::Texture2D& outTexture
     ///////////
     // SETUP //
     ///////////
-    osgCuda::Pipeline* pipeline = new osgCuda::Pipeline;
-    pipeline->addModule( *texStreamer );
-    pipeline->addParamHandle( "TRG_BUFFER", *trgBuffer );
-    pipeline->addParamHandle( "SRC_ARRAY", *srcArray );
-    pipeline->addParamHandle( "SCALE", *scale );
+    osgCuda::Processor* processor = new osgCuda::Processor;
+    processor->addModule( *texStreamer );
+    processor->addParamHandle( "TRG_BUFFER", *trgBuffer );
+    processor->addParamHandle( "SRC_ARRAY", *srcArray );
+    processor->addParamHandle( "SCALE", *scale );
 
-    return pipeline;
+    return processor;
 }
 
 osg::Geode* getGeode( osg::Texture2D& trgTexture )
@@ -154,8 +154,8 @@ int main(int argc, char *argv[])
     // SCENE //
     ///////////
     osg::Group* scene = new osg::Group;
-    // PIPELINE
-    scene->addChild( getPipeline( *srcImage, *trgTexture ) );
+    // PROCESSOR
+    scene->addChild( getProcessor( *srcImage, *trgTexture ) );
     // QUAD
     scene->addChild( getGeode( *trgTexture ) );
 
@@ -166,7 +166,8 @@ int main(int argc, char *argv[])
     osgViewer::Viewer viewer(arguments);
     viewer.setUpViewInWindow( 50, 50, 640, 480);
 
-    // if you have the current SVN Version then try to run it multi-threaded
+    // if you have the current OSG SVN Version (2.9.1 or later) then try to run it multi-threaded
+    // otherwise the application will finish with segmentation fault
     //viewer.setThreadingModel(osgViewer::Viewer::DrawThreadPerContext);
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
