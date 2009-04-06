@@ -49,7 +49,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    inline void Module::removeParam( const std::string& handle ) 
+    inline void Module::removeParam( const std::string& handle, const osgCompute::Param* param /*= NULL*/ ) 
     {
     }
 

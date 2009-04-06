@@ -1,3 +1,9 @@
+2009-04-06 17:34  svt group
+
+	* [r6]
+      - computation is now a RenderBin (instead of leaf node)
+      - renaming pipe -> processor -> computation
+
 2009-03-23 17:15  svt group
 
 	* [r1]

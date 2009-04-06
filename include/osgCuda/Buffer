@@ -527,7 +527,7 @@ namespace osgCuda
                 return false;
             }
 
-            res = cudaMemcpy( stream._hostPtr,  setupData._image->data(), osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyHostToHost );
+            res = cudaMemcpy( stream._hostPtr,  data, osgCompute::Buffer<DATATYPE>::getStreamSize(), cudaMemcpyHostToHost );
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)

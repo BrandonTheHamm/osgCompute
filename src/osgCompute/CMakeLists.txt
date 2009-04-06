@@ -48,8 +48,8 @@ SET(TARGET_H
 	${HEADER_PATH}/Export	
 	${HEADER_PATH}/Module
 	${HEADER_PATH}/Param
-	${HEADER_PATH}/Processor
-	${HEADER_PATH}/ProcessorBin
+	${HEADER_PATH}/Computation
+	${HEADER_PATH}/ComputationBin
 )
 
 
@@ -58,8 +58,8 @@ SET(TARGET_SRC
 	Module.cpp
 	Param.cpp
 	Context.cpp
-	Processor.cpp
-	ProcessorBin.cpp	
+	Computation.cpp
+	ComputationBin.cpp	
 )
 
 

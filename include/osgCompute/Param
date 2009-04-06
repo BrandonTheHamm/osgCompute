@@ -58,9 +58,9 @@ namespace osgCompute
         virtual bool init( const Context& context ) const;
         virtual void clear( const Context& context ) const;
 
-        SubloadCallback*                    _subloadCallback;
-        UpdateCallback*                     _updateCallback;
-        EventCallback*                      _eventCallback;
+        osg::ref_ptr<SubloadCallback>       _subloadCallback;
+        osg::ref_ptr<UpdateCallback>        _updateCallback;
+        osg::ref_ptr<EventCallback>         _eventCallback;
         bool                                _dirty;
 
     private:

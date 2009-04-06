@@ -26,13 +26,13 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 
-#include <osgCuda/Processor>
+#include <osgCuda/Computation>
 #include <osgCuda/IntOpBuffer>
 #include <osgCuda/Constant>
 
 #include "TexStreamer"
 
-osgCuda::Processor* getProcessor( osg::Image& srcImage, osg::Texture2D& outTexture )
+osgCuda::Computation* getComputation( osg::Image& srcImage, osg::Texture2D& outTexture )
 {
     cudaChannelFormatDesc srcDesc;
     srcDesc.f = cudaChannelFormatKindUnsigned;
@@ -67,13 +67,13 @@ osgCuda::Processor* getProcessor( osg::Image& srcImage, osg::Texture2D& outTextu
     ///////////
     // SETUP //
     ///////////
-    osgCuda::Processor* processor = new osgCuda::Processor;
-    processor->addModule( *texStreamer );
-    processor->addParamHandle( "TRG_BUFFER", *trgBuffer );
-    processor->addParamHandle( "SRC_ARRAY", *srcArray );
-    processor->addParamHandle( "SCALE", *scale );
+    osgCuda::Computation* computation = new osgCuda::Computation;
+    computation->addModule( *texStreamer );
+    computation->addParamHandle( "TRG_BUFFER", *trgBuffer );
+    computation->addParamHandle( "SRC_ARRAY", *srcArray );
+    computation->addParamHandle( "SCALE", *scale );
 
-    return processor;
+    return computation;
 }
 
 osg::Geode* getGeode( osg::Texture2D& trgTexture )
@@ -154,8 +154,8 @@ int main(int argc, char *argv[])
     // SCENE //
     ///////////
     osg::Group* scene = new osg::Group;
-    // PROCESSOR
-    scene->addChild( getProcessor( *srcImage, *trgTexture ) );
+    // COMPUTATION
+    scene->addChild( getComputation( *srcImage, *trgTexture ) );
     // QUAD
     scene->addChild( getGeode( *trgTexture ) );
 

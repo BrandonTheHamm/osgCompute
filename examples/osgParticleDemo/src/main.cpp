@@ -27,7 +27,7 @@
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
 #include <osgDB/Registry>
-#include <osgCuda/Processor>
+#include <osgCuda/Computation>
 #include <osgCuda/Buffer>
 #include <osgCuda/IntOpBuffer>
 #include <osgCuda/Constant>
@@ -122,7 +122,7 @@ osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     return bbox;
 }
 
-osgCuda::Processor* getProcessor( osg::Geometry& ptclGeom, osg::Vec3& bbmin, osg::Vec3& bbmax )
+osgCuda::Computation* getComputation( osg::Geometry& ptclGeom, osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
     if( ptclGeom.getVertexArray() == NULL )
         return NULL;
@@ -157,17 +157,17 @@ osgCuda::Processor* getProcessor( osg::Geometry& ptclGeom, osg::Vec3& bbmin, osg
     PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
     ptclEmitter->setName( "ptclEmitter" );
 
-    ///////////////
-    // PROCESSOR //
-    ///////////////
-    osgCuda::Processor* processor = new osgCuda::Processor;
-    processor->addModule( *ptclMover );
-    processor->addModule( *ptclEmitter );
-    processor->addParamHandle( "PTCL_BUFFER", *ptclBuffer );
-    processor->addParamHandle( "PTCL_SEED_BOX_MIN", *ptclSeedBoxMin );
-    processor->addParamHandle( "PTCL_SEED_BOX_MAX", *ptclSeedBoxMax );
+    /////////////////
+    // COMPUTATION //
+    /////////////////
+    osgCuda::Computation* computation = new osgCuda::Computation;
+    computation->addModule( *ptclMover );
+    computation->addModule( *ptclEmitter );
+    computation->addParamHandle( "PTCL_BUFFER", *ptclBuffer );
+    computation->addParamHandle( "PTCL_SEED_BOX_MIN", *ptclSeedBoxMin );
+    computation->addParamHandle( "PTCL_SEED_BOX_MAX", *ptclSeedBoxMax );
 
-    return processor;
+    return computation;
 }
 
 osg::Geode* getGeode( osg::Geometry& ptclGeom )
@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
     /////////////////
     osg::Group* scene = new osg::Group;
     scene->addChild( getBBox( bbmin, bbmax ) );
-    scene->addChild( getProcessor( *ptclGeom, bbmin, bbmax ) );
+    scene->addChild( getComputation( *ptclGeom, bbmin, bbmax ) );
     scene->addChild( getGeode( *ptclGeom ) );
 
     ////////////

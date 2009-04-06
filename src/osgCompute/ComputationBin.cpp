@@ -14,8 +14,8 @@
 */
 
 #include <osg/Notify>
-#include "osgCompute/ProcessorBin"
-#include "osgCompute/Processor"
+#include "osgCompute/ComputationBin"
+#include "osgCompute/Computation"
 #include "osgCompute/Context"
 
 namespace osgCompute
@@ -24,69 +24,94 @@ namespace osgCompute
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void ProcessorBin::clear()
+    ComputationBin::ComputationBin()
+        : osgUtil::RenderBin()
     {
         clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    void ProcessorBin::drawImplementation( osg::RenderInfo& ) const
-    { 
-        if( !isEnabled() || !_context.valid() )
-            return;
-
-        // Apply context 
-        _context->apply();
-        
-        // Launch 
-        if( _launchCallback ) 
-            _launchCallback->launch( *this, *_context ); 
-        else launch(); 
+    ComputationBin::ComputationBin( osgUtil::RenderBin::SortMode mode )
+        : osgUtil::RenderBin( mode )
+    {
+        clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    bool ProcessorBin::init( Processor& processor )
+    void ComputationBin::clear()
     {
-        if( !_dirty )
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    void ComputationBin::drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
+    { 
+        // render sub-graph
+        osgUtil::RenderBin::drawImplementation(renderInfo, previous );
+
+        if( _context.valid() )
         {
-            osg::notify(osg::INFO) << "ProcessorBin::init(): ProcessorBin for Processor \""
-                                    << processor.asObject()->getName()<<"\" is not dirty."
-                                    << std::endl;
-            return true;
+            // Apply context 
+            _context->apply();
+
+            // Launch Modules
+            if( _launchCallback ) 
+                (*_launchCallback)( *this, *_context ); 
+            else launch(); 
         }
 
-        // PROCESSOR 
-        _processor = &processor;
+        // don't forget to decrement dynamic object count
+        renderInfo.getState()->decrementDynamicObjectCount();
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int ComputationBin::computeNumberOfDynamicRenderLeaves() const
+    {
+        // increment dynamic object count to execute modules
+        return osgUtil::RenderBin::computeNumberOfDynamicRenderLeaves() + 1;
+    }
+
+    //------------------------------------------------------------------------------
+    bool ComputationBin::init( Computation& computation )
+    {
+        // COMPUTATION 
+        _computation = &computation;
+
+        // PARAMS
+        if( _computation->getParamHandles() )
+            _paramHandles = *_computation->getParamHandles();
+
+        for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
+            if( (*itr).second->isDirty() )
+                (*itr).second->init();
 
         // MODULES 
-        if( _processor->hasModules())
-            _modules = *_processor->getModules();
+        if( _computation->hasModules())
+            _modules = *_computation->getModules();
 
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->isDirty() )
                 (*itr)->init();
 
-        // PARAMS
-        if( _processor->getParamHandles() )
-            _paramHandles = *_processor->getParamHandles();
-        
-        for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
-            if( (*itr).second->isDirty() )
-                (*itr).second->init();
-
         // OBJECT 
-        setName( _processor->asObject()->getName() );
-        setDataVariance( _processor->asObject()->getDataVariance() );
+        setName( _computation->asObject()->getName() );
+        setDataVariance( _computation->asObject()->getDataVariance() );
 
         // CALLBACK 
-        _launchCallback = _processor->getLaunchCallback();
+        _launchCallback = _computation->getLaunchCallback();
 
         _dirty = false;
         return true;
     }
 
     //------------------------------------------------------------------------------
-    bool ProcessorBin::hasModule( const std::string& moduleName ) const
+    void ComputationBin::reset()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    bool ComputationBin::hasModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName )
@@ -96,7 +121,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool ProcessorBin::hasModule( Module& module ) const
+    bool ComputationBin::hasModule( Module& module ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr) == &module )
@@ -106,13 +131,13 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool ProcessorBin::hasModules() const 
+    bool ComputationBin::hasModules() const 
     { 
         return !_modules.empty(); 
     }
 
     //-----------------------------------------------------------------------------
-    Module* ProcessorBin::getModule( const std::string& moduleName )
+    Module* ComputationBin::getModule( const std::string& moduleName )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName && (*itr).valid() )
@@ -122,7 +147,7 @@ namespace osgCompute
     }
 
     //-----------------------------------------------------------------------------
-    const Module* ProcessorBin::getModule( const std::string& moduleName ) const
+    const Module* ComputationBin::getModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName && (*itr).valid() )
@@ -132,19 +157,19 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    ModuleList* ProcessorBin::getModules() 
+    ModuleList* ComputationBin::getModules() 
     { 
         return &_modules; 
     }
 
     //------------------------------------------------------------------------------
-    const ModuleList* ProcessorBin::getModules() const 
+    const ModuleList* ComputationBin::getModules() const 
     { 
         return &_modules; 
     }
 
     //------------------------------------------------------------------------------
-    unsigned int ProcessorBin::getNumModules() const 
+    unsigned int ComputationBin::getNumModules() const 
     { 
         return _modules.size(); 
     }
@@ -153,31 +178,22 @@ namespace osgCompute
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void ProcessorBin::clearLocal()
+    void ComputationBin::clearLocal()
     {
-        osg::Drawable::setSupportsDisplayList(false); 
-        osg::Object::setDataVariance( osg::Object::DYNAMIC ); 
-
-        _processor = NULL;
+        _computation = NULL;
         _context = NULL;
         _dirty = true;
         _launchCallback = NULL;
-        _enabled = true;
         _modules.clear();
         _paramHandles.clear();
+
+        osgUtil::RenderBin::reset();
     }
 
     //------------------------------------------------------------------------------
-    void ProcessorBin::clear( const Context& context ) const
+    void ComputationBin::launch() const
     {
-        if( _context == &context )
-            _context = NULL;
-    }
-
-    //------------------------------------------------------------------------------
-    void ProcessorBin::launch() const
-    {
-        if( _dirty || !_processor || !_context.valid() )
+        if( _dirty || !_computation || !_context.valid() )
             return;
 
         ////////////////////
@@ -188,11 +204,11 @@ namespace osgCompute
             if( (*itr)->isEnabled() )
             {
                 if( (*itr)->getLaunchCallback() ) 
-                    (*itr)->getLaunchCallback()->launch( *(*itr), *_context );
+                    (*(*itr)->getLaunchCallback())( *(*itr), *_context );
                 // launch module
                 (*itr)->launch( *_context );
             }
         }
-
     }
+
 }

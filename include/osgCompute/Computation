@@ -13,43 +13,51 @@
  * The full license is in LICENSE file included with this distribution.
 */
 
-#ifndef OSGCOMPUTE_PROCESSOR
-#define OSGCOMPUTE_PROCESSOR 1
+#ifndef OSGCOMPUTE_COMPUTATION
+#define OSGCOMPUTE_COMPUTATION 1
 
 #include <map>
-#include <osg/Node>
-#include "osgCompute/ProcessorBin"
+#include <osg/Group>
+#include "osgCompute/ComputationBin"
 
 namespace osg
 {
     class NodeVisitor;
 }
 
+namespace osgUtil
+{
+    class CullVisitor;
+}
+
 /**
-An helper macro
+Helper macro
 */
-#define META_Processor( asobject, asnode, binlibrary, binclass, ctxlibrary, ctxclass )               \
+#define META_Computation( asobject, asnode, ctxlibrary, ctxclass )               \
     virtual osg::Object*                asObject() { return asobject; }                             \
     virtual const osg::Object*          asObject() const { return asobject; }                       \
     virtual osg::Node*                  asNode() { return asnode; }                                 \
     virtual const osg::Node*            asNode() const { return asnode; }                           \
     virtual bool                        isNode() const { return (asnode != NULL); }                 \
-    virtual osgCompute::ProcessorBin*    newProcessorBin() const { return new binlibrary::binclass; } \
     virtual std::string                 contextLibraryName() const { return #ctxlibrary; }          \
     virtual std::string                 contextClassName() const { return #ctxclass; }
 
 
 namespace osgCompute
 {
-    class Redirection;
-    class ProcessorBin;
-
     /**
     */
-    class LIBRARY_EXPORT Processor : public osg::Node
+    class LIBRARY_EXPORT Computation : public osg::Group
     {
+    public: 
+        enum ComputeOrder
+        {
+            PRE_COMPUTE = 0,
+            POST_COMPUTE = 1
+        };
+
     public:
-        Processor();
+        Computation();
 
         virtual void accept( osg::NodeVisitor& nv );
 
@@ -75,72 +83,103 @@ namespace osgCompute
         virtual unsigned int getNumModules() const;
 
         virtual void addParamHandle( const std::string& handle, osgCompute::Param& param );
-        virtual void removeParamHandle( const std::string& handle );
+        virtual void removeParamHandles( const std::string& handle );
+        virtual void removeParamHandle( const osgCompute::Param& param );
         virtual bool hasParamHandle( const std::string& handle ) const;
         virtual HandleToParamMap* getParamHandles();
         virtual const HandleToParamMap* getParamHandles() const;
-
-        virtual void clearBins();
-        virtual void enableBins();
-        virtual void disableBins();
 
         inline void setLaunchCallback( LaunchCallback* lc );
         inline LaunchCallback* getLaunchCallback();
         inline const LaunchCallback* getLaunchCallback() const;
 
+        inline void setComputeOrder( ComputeOrder co );
+        inline ComputeOrder getComputeOrder();
+
+        inline void enable();
+        inline void disable();
+        inline bool isEnabled() const;
+
         virtual void clear();
 
     protected:
-        virtual ~Processor() { clearLocal(); }
+        virtual ~Computation() { clearLocal(); }
         void clearLocal();
 
+        virtual void addBin( osgUtil::CullVisitor& cv );
         virtual void update( osg::NodeVisitor& uv );
         virtual void handleevent( osg::NodeVisitor& ev );
-
-        virtual void checkTraversalModules();
-
-        virtual ProcessorBin* newProcessorBin() const = 0;
-
+        virtual void checkCallbacks();
         virtual Context* getOrCreateContext( osg::State& state );
-        virtual ProcessorBin* getOrCreateProcessorBin( osg::NodeVisitor& nv );
-     
+
+        bool                                _enabled;
         LaunchCallback*                     _launchCallback; 
         ModuleList                          _modules;
         HandleToParamMap                    _paramHandles;
+        ComputeOrder                        _computeOrder;
 
         mutable OpenThreads::Mutex          _mutex;
-        mutable BinMap                      _bins;
 
     private:
         // copy constructor and operator should not be called
-        Processor( const Processor& ) {}
-        Processor &operator=(const Processor &) { return *this; }
+        Computation( const Computation& ) {}
+        Computation &operator=(const Computation &) { return *this; }
     };
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    inline void Processor::setLaunchCallback( LaunchCallback* lc ) 
+    inline void Computation::setLaunchCallback( LaunchCallback* lc ) 
     { 
         if( lc == _launchCallback )
             return;
 
         _launchCallback = lc; 
-        clearBins();
     }
 
     //------------------------------------------------------------------------------
-    inline LaunchCallback* Processor::getLaunchCallback() 
+    inline LaunchCallback* Computation::getLaunchCallback() 
     { 
         return _launchCallback; 
     }
 
     //------------------------------------------------------------------------------
-    inline const LaunchCallback* Processor::getLaunchCallback() const 
+    inline const LaunchCallback* Computation::getLaunchCallback() const 
     { 
         return _launchCallback; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline void Computation::setComputeOrder( Computation::ComputeOrder co )
+    {
+        _computeOrder = co;
+    }
+
+    //------------------------------------------------------------------------------
+    inline Computation::ComputeOrder Computation::getComputeOrder()
+    {
+        return _computeOrder;
+    }
+
+
+    //------------------------------------------------------------------------------
+    inline void Computation::enable() 
+    { 
+        _enabled = true; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline void Computation::disable() 
+    { 
+        _enabled = false; 
+    }
+
+    //------------------------------------------------------------------------------
+    inline bool Computation::isEnabled() const
+    {
+        return _enabled;
     }
 }
 
-#endif //OSGCOMPUTE_PROCESSOR
+#endif //OSGCOMPUTE_COMPUTATION

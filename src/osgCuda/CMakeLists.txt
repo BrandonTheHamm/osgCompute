@@ -50,7 +50,7 @@ SET(TARGET_H
 	${HEADER_PATH}/Context
 	${HEADER_PATH}/Export
 	${HEADER_PATH}/Module
-	${HEADER_PATH}/Processor
+	${HEADER_PATH}/Computation
 	${HEADER_PATH}/IntOpBuffer
 )
 
@@ -59,7 +59,7 @@ SET(TARGET_H
 SET(TARGET_SRC
 	Context.cpp
 	Module.cpp
-	Processor.cpp
+	Computation.cpp
 )
 
 

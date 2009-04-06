@@ -16,7 +16,10 @@
 #include <osg/NodeVisitor>
 #include <osg/OperationThread>
 #include <osgUtil/CullVisitor>
-#include "osgCompute/Processor"
+#include "osgCompute/Computation"
+
+#define COMPUTATIONBIN_NUMBER 1111
+#define COMPUTATIONBIN_NAME "osgCompute::ComputationBin"
 
 namespace osgCompute
 {
@@ -24,73 +27,41 @@ namespace osgCompute
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------ 
-    Processor::Processor() 
-        :   osg::Node() 
+    Computation::Computation() 
+        :   osg::Group() 
     { 
         clearLocal(); 
     }
 
     //------------------------------------------------------------------------------   
-    void Processor::clearLocal()
+    void Computation::clearLocal()
     {
         _launchCallback = NULL;
         _modules.clear();
-        _bins.clear();
+        _computeOrder = PRE_COMPUTE;
         _paramHandles.clear();
+        _enabled = true;
+
+        osg::Group::removeChildren(0,osg::Group::getNumChildren());
     }
 
     //------------------------------------------------------------------------------   
-    void Processor::clear()
+    void Computation::clear()
     {
         clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    void Processor::accept(osg::NodeVisitor& nv) 
+    void Computation::accept(osg::NodeVisitor& nv) 
     { 
         if( nv.validNodeMask(*this) ) 
-        { 
-            nv.pushOntoNodePath(this); 
+        {  
+            nv.pushOntoNodePath(this);
 
-            if( nv.getVisitorType() == osg::NodeVisitor::CULL_VISITOR )
+            osgUtil::CullVisitor* cv = dynamic_cast<osgUtil::CullVisitor*>( &nv );
+            if( cv && _enabled )
             {
-                osgUtil::CullVisitor* cv = dynamic_cast<osgUtil::CullVisitor*>( &nv );
-                if( !cv )
-                {
-                    osg::notify(osg::FATAL)  << "Processor::accept() for \""
-                        << getName()<<"\": NodeVisitor is not a CullVisitor."
-                        << std::endl;
-
-                    return;
-                }
-
-                if( !cv->getState() )
-                {
-                    osg::notify(osg::FATAL)  << "Processor::accept() for \""
-                        << getName()<<"\": CullVisitor has no valid state."
-                        << std::endl;
-                    return;
-                }
-
-                ///////////////////////
-                // SETUP REDIRECTION //
-                ///////////////////////
-                Context* ctx = getOrCreateContext( *cv->getState() );
-                ProcessorBin* bin = getOrCreateProcessorBin( nv );
-                
-                if( ctx && bin )
-                {
-                    
-                    bin->setContext( *ctx );
-                    cv->addDrawable( bin, NULL );
-                }
-                else
-                {
-                    osg::notify(osg::FATAL)  
-                        << "Processor::accept(\"CULL_VISITOR\") for \""<<getName()<<"\": Redirection could not be created."
-                        << std::endl;
-                    return;
-                }
+                addBin( *cv );
             }
             else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
             {
@@ -101,66 +72,62 @@ namespace osgCompute
                 handleevent( nv );
             }
 
+            traverse( nv );
+
             nv.popFromNodePath(); 
         } 
     }
 
     //------------------------------------------------------------------------------
-    void Processor::loadModule( const std::string& modName )
+    void Computation::loadModule( const std::string& modName )
     {
         // not implemented yet
     }
     
     //------------------------------------------------------------------------------
-    void Processor::addModule( Module& module )
+    void Computation::addModule( Module& module )
     {
         if( hasModule(module) )
             return;
 
         _modules.push_back( &module );
 
-        checkTraversalModules();
+        checkCallbacks();
 
         for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
             module.acceptParam( (*itr).first, *(*itr).second );
-
-        clearBins();
     }
 
     //------------------------------------------------------------------------------
-    void Processor::removeModule( Module& module )
+    void Computation::removeModule( Module& module )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
         {
             if( (*itr) == &module )
             {
                 _modules.erase( itr );
-                checkTraversalModules();
+                checkCallbacks();
                 return;
             }
         }
-
-        clearBins();
     }
 
     //------------------------------------------------------------------------------
-    void Processor::removeModule( const std::string& moduleName )
+    void Computation::removeModule( const std::string& moduleName )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
         {
             if( (*itr)->getName() == moduleName )
             {
                 _modules.erase( itr );
-                checkTraversalModules();
+                checkCallbacks();
                 return;
             }
         }
-
-        clearBins();
     }
 
     //------------------------------------------------------------------------------
-    bool Processor::hasModule( const std::string& moduleName ) const
+    bool Computation::hasModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName )
@@ -170,7 +137,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool Processor::hasModule( Module& module ) const
+    bool Computation::hasModule( Module& module ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr) == &module )
@@ -180,13 +147,13 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool Processor::hasModules() const 
+    bool Computation::hasModules() const 
     { 
         return !_modules.empty(); 
     }
 
     //-----------------------------------------------------------------------------
-    Module* Processor::getModule( const std::string& moduleName )
+    Module* Computation::getModule( const std::string& moduleName )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName && (*itr).valid() )
@@ -196,7 +163,7 @@ namespace osgCompute
     }
 
     //-----------------------------------------------------------------------------
-    const Module* Processor::getModule( const std::string& moduleName ) const
+    const Module* Computation::getModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             if( (*itr)->getName() == moduleName && (*itr).valid() )
@@ -206,25 +173,25 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    ModuleList* Processor::getModules() 
+    ModuleList* Computation::getModules() 
     { 
         return &_modules; 
     }
 
     //------------------------------------------------------------------------------
-    const ModuleList* Processor::getModules() const 
+    const ModuleList* Computation::getModules() const 
     { 
         return &_modules; 
     }
 
     //------------------------------------------------------------------------------
-    unsigned int Processor::getNumModules() const 
+    unsigned int Computation::getNumModules() const 
     { 
         return _modules.size(); 
     }
 
     //------------------------------------------------------------------------------
-    bool osgCompute::Processor::hasParamHandle( const std::string& handle ) const
+    bool osgCompute::Computation::hasParamHandle( const std::string& handle ) const
     {
         HandleToParamMapCnstItr itr = _paramHandles.find( handle );
         if( itr != _paramHandles.end() )
@@ -234,120 +201,167 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void osgCompute::Processor::addParamHandle( const std::string& handle, Param& param )
+    void osgCompute::Computation::addParamHandle( const std::string& handle, Param& param )
     {
-        if( hasParamHandle( handle ) )
-            return;
-
         _paramHandles.insert( std::make_pair< std::string, osg::ref_ptr<Param> >( handle, &param ) );
+        checkCallbacks();
 
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             (*itr)->acceptParam( handle, param );
-
-        clearBins();
     }
 
     //------------------------------------------------------------------------------
-    void osgCompute::Processor::removeParamHandle( const std::string& handle )
+    void osgCompute::Computation::removeParamHandles( const std::string& handle )
     {
+        bool found = false;
         HandleToParamMapItr itr = _paramHandles.find( handle );
-        if( itr != _paramHandles.end() )
+        while( itr != _paramHandles.end() )
+        {
+            for( ModuleListItr modItr = _modules.begin(); modItr != _modules.end(); ++modItr )
+                (*modItr)->removeParam( handle, (*itr).second.get() );
+
             _paramHandles.erase( itr );
+            itr = _paramHandles.find( handle );
+            found = true;
+        }
 
-        for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            (*itr)->removeParam( handle );
-
-        clearBins();
+        if( found )
+            checkCallbacks();
     }
 
     //------------------------------------------------------------------------------
-    HandleToParamMap* osgCompute::Processor::getParamHandles()
+    void Computation::removeParamHandle( const osgCompute::Param& param )
+    {
+        for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
+        {
+            if( (*itr).second == &param )
+            {
+                for( ModuleListItr modItr = _modules.begin(); modItr != _modules.end(); ++modItr )
+                    (*modItr)->removeParam( (*itr).first, (*itr).second.get() );
+
+                _paramHandles.erase( itr );
+                checkCallbacks();
+                return;
+            }
+        }
+    }
+
+    //------------------------------------------------------------------------------
+    HandleToParamMap* osgCompute::Computation::getParamHandles()
     {
         return &_paramHandles;
     }
 
     //------------------------------------------------------------------------------
-    const HandleToParamMap* osgCompute::Processor::getParamHandles() const
+    const HandleToParamMap* osgCompute::Computation::getParamHandles() const
     {
         return &_paramHandles;
-    }
-
-    //------------------------------------------------------------------------------
-    void Processor::clearBins() 
-    { 
-        BinMapItr itr = _bins.begin();
-        for(; itr != _bins.end(); ++itr) 
-            if( (*itr).second.valid() )
-                (*itr).second->clear(); 
-    }
-
-    //------------------------------------------------------------------------------
-    void Processor::enableBins() 
-    { 
-        BinMapItr itr = _bins.begin();
-        for(; itr != _bins.end(); ++itr) 
-            if( (*itr).second.valid() )
-                (*itr).second->enable(); 
-    }
-
-    //------------------------------------------------------------------------------
-    void Processor::disableBins() 
-    { 
-        BinMapItr itr = _bins.begin();
-        for(; itr != _bins.end(); ++itr) 
-            if( (*itr).second.valid() )
-                (*itr).second->disable(); 
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void Processor::update( osg::NodeVisitor& uv )
+    void Computation::addBin( osgUtil::CullVisitor& cv )
+    {
+        if( !cv.getState() )
+        {
+            osg::notify(osg::FATAL)  << "Computation::addBin() for \""
+                << getName()<<"\": CullVisitor has no valid state."
+                << std::endl;
+
+            return;
+        }
+
+        osgUtil::RenderBin* curRB = cv.getCurrentRenderBin();
+        if( !curRB )
+        {
+            osg::notify(osg::FATAL)  
+                << "Computation::addBin() for \""<<getName()<<"\": current CullVisitor has no active RenderBin."
+                << std::endl;
+
+            return;
+        }
+
+        Context* ctx = getOrCreateContext( *cv.getState() );
+        if( !ctx )
+        {
+            osg::notify(osg::FATAL)  
+                << "Computation::addBin() for \""<<getName()<<"\": cannot create Context."
+                << std::endl;
+
+            return;
+        }
+
+        ///////////////////////
+        // SETUP REDIRECTION //
+        ///////////////////////
+        unsigned int rbNum = 0;
+        if( _computeOrder == POST_COMPUTE )
+            rbNum = COMPUTATIONBIN_NUMBER;
+        else
+            rbNum = -COMPUTATIONBIN_NUMBER;
+
+        ComputationBin* pb = 
+            dynamic_cast<ComputationBin*>( curRB->find_or_insert(rbNum,COMPUTATIONBIN_NAME) );
+
+        if( !pb )
+        {
+            osg::notify(osg::FATAL)  
+                << "Computation::addBin() for \""<<getName()<<"\": cannot create ComputationBin."
+                << std::endl;
+
+            return;
+        }
+
+        pb->init( *this );
+        pb->setContext( *ctx );
+    }
+    
+    //------------------------------------------------------------------------------
+    void Computation::update( osg::NodeVisitor& uv )
     {
         if( getUpdateCallback() )
             (*getUpdateCallback())( this, &uv );
         else
         {
-            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            {
-                if( (*itr)->getUpdateCallback() )
-                    (*itr)->getUpdateCallback()->update( *(*itr), uv );
-            }
-
             for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
             {
                 if( (*itr).second->getUpdateCallback() )
-                    (*itr).second->getUpdateCallback()->update( *(*itr).second, uv );
+                    (*(*itr).second->getUpdateCallback())( *(*itr).second, uv );
+            }
+
+            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+            {
+                if( (*itr)->getUpdateCallback() )
+                    (*(*itr)->getUpdateCallback())( *(*itr), uv );
             }
         }
     }
 
     //------------------------------------------------------------------------------
-    void Processor::handleevent( osg::NodeVisitor& ev )
+    void Computation::handleevent( osg::NodeVisitor& ev )
     {
         if( getEventCallback() )
             (*getEventCallback())( this, &ev );
         else
         {
-            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            {
-                if( (*itr)->getEventCallback() )
-                    (*itr)->getEventCallback()->handleevent( *(*itr), ev );
-            }
-
-
-
             for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
             {
                 if( (*itr).second->getEventCallback() )
-                    (*itr).second->getEventCallback()->handleevent( *(*itr).second, ev );
+                    (*(*itr).second->getEventCallback())( *(*itr).second, ev );
+            }
+
+            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+            {
+                if( (*itr)->getEventCallback() )
+                    (*(*itr)->getEventCallback())( *(*itr), ev );
             }
         }
     }
 
     //------------------------------------------------------------------------------
-    void Processor::checkTraversalModules()
+    void Computation::checkCallbacks()
     {
         unsigned int numUpdates = 0;
         unsigned int numEvents = 0;
@@ -375,7 +389,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    Context* Processor::getOrCreateContext( osg::State& state )
+    Context* Computation::getOrCreateContext( osg::State& state )
     {
         Context* context = osgCompute::Context::instance( state );
         if( context == NULL )
@@ -384,34 +398,7 @@ namespace osgCompute
         // In case a object is not defined 
         // NULL will be returned
         return context;
-    }
-
-    //------------------------------------------------------------------------------
-    ProcessorBin* Processor::getOrCreateProcessorBin( osg::NodeVisitor& nv )
-    {
-        // lock mutex to prevent distinct threads from
-        // changing each others cache. Note that each 
-        // thread must occupy a different object
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
-        ProcessorBin* pb = NULL;
-        BinMapItr itr = _bins.find( &nv );
-        if( itr == _bins.end() )
-        {   
-            pb = newProcessorBin();
-            if( pb )
-                _bins[&nv] = pb;
-        }
-        else
-        {
-            pb = (*itr).second.get();
-        }
-
-        if( pb->isDirty() )
-            pb->init( *this );
-
-        // In case a object is not defined 
-        // NULL will be returned
-        return pb;
-    }
+    }    
+    
+    osgUtil::RegisterRenderBinProxy registerComputationBinProxy(COMPUTATIONBIN_NAME, new osgCompute::ComputationBin );
 }

@@ -59,7 +59,7 @@ namespace osgCompute
 
         virtual void acceptParam( const std::string& handle, osgCompute::Param& param );
         virtual bool usesParam( const std::string& handle ) const;
-        virtual void removeParam( const std::string& handle );
+        virtual void removeParam( const std::string& handle, const osgCompute::Param* param = NULL );
         virtual Param* getParam( const std::string& handle );
         virtual const Param* getParam( const std::string& handle ) const;
 

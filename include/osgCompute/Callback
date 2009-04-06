@@ -16,6 +16,8 @@
 #ifndef OSGCOMPUTE_CALLBACK
 #define OSGCOMPUTE_CALLBACK 1
 
+#include <osg/Object>
+
 namespace osg
 {
     class NodeVisitor;
@@ -30,10 +32,10 @@ namespace osgCompute
 
     /**
     */
-    class LIBRARY_EXPORT SubloadCallback
+    class LIBRARY_EXPORT SubloadCallback : public virtual osg::Object
     {
     public:
-        inline SubloadCallback() { clearLocal(); }
+        inline SubloadCallback() : osg::Object() { clearLocal(); }
 
         virtual void clear() { clearLocal(); }
 
@@ -50,8 +52,8 @@ namespace osgCompute
 
     private:
         // copy constructor and operator should not be called
-        SubloadCallback(const SubloadCallback& copy) {}
-        SubloadCallback &operator=(const SubloadCallback &) { return *this; }
+        SubloadCallback(const SubloadCallback&, const osg::CopyOp&) {}
+        SubloadCallback &operator=(const SubloadCallback&) { return *this; }
     };
 
     /**
@@ -77,8 +79,8 @@ namespace osgCompute
 
     private:
         // copy constructor and operator should not be called
-        ConstantSubloadCallback(const ConstantSubloadCallback& copy) {}
-        ConstantSubloadCallback &operator=(const ConstantSubloadCallback &) { return *this; }
+        ConstantSubloadCallback(const ConstantSubloadCallback&, const osg::CopyOp&) {}
+        ConstantSubloadCallback &operator=(const ConstantSubloadCallback&) { return *this; }
     };
 
     /**
@@ -104,22 +106,22 @@ namespace osgCompute
 
     private:
         // copy constructor and operator should not be called
-        BufferSubloadCallback(const BufferSubloadCallback& copy) {}
-        BufferSubloadCallback &operator=(const BufferSubloadCallback &) { return *this; }
+        BufferSubloadCallback(const BufferSubloadCallback&, const osg::CopyOp&) {}
+        BufferSubloadCallback &operator=(const BufferSubloadCallback&) { return *this; }
     };
 
     /**
     */
-    class LIBRARY_EXPORT LaunchCallback
+    class LIBRARY_EXPORT LaunchCallback : public virtual osg::Object
     {
     public:
-        inline LaunchCallback() { clearLocal(); }
+        inline LaunchCallback() : osg::Object() { clearLocal(); }
 
         virtual void clear() { clearLocal(); }
         virtual void clear( const Context& context ) const {}
 
         /** do customized callback code.*/
-        virtual void launch( const osg::Object& object, const Context& context ) const = 0;
+        virtual void operator()( const osg::Object& object, const Context& context ) const = 0;
 
     protected:
         virtual ~LaunchCallback() { clearLocal(); }
@@ -127,21 +129,21 @@ namespace osgCompute
 
     private:
         // copy constructor and operator should not be called
-        LaunchCallback( const LaunchCallback& ) {}
+        LaunchCallback( const LaunchCallback&, const osg::CopyOp& ) {}
         LaunchCallback &operator=(const LaunchCallback &) { return *this; }
     };
 
     /**
     */
-    class LIBRARY_EXPORT UpdateCallback
+    class LIBRARY_EXPORT UpdateCallback : public virtual osg::Object
     {
     public:
-        inline UpdateCallback() { clearLocal(); }
+        inline UpdateCallback() : Object() { clearLocal(); }
 
         virtual void clear() { clearLocal(); }
 
         /** do customized callback code.*/
-        virtual void update( osg::Object& object, osg::NodeVisitor& visitor ) const = 0;
+        virtual void operator()( osg::Object& object, osg::NodeVisitor& visitor ) = 0;
 
     protected:
         virtual ~UpdateCallback() { clearLocal(); }
@@ -149,21 +151,21 @@ namespace osgCompute
 
     private:
         // copy constructor and operator should not be called
-        UpdateCallback( const UpdateCallback& ) {}
+        UpdateCallback( const UpdateCallback&, const osg::CopyOp& ) {}
         UpdateCallback &operator=(const UpdateCallback &) { return *this; }
     };
 
     /**
     */
-    class LIBRARY_EXPORT EventCallback
+    class LIBRARY_EXPORT EventCallback : public virtual osg::Object
     {
     public:
-        inline EventCallback() { clearLocal(); }
+        inline EventCallback() : osg::Object() { clearLocal(); }
 
         virtual void clear() { clearLocal(); }
 
         /** do customized callback code.*/
-        virtual void handleevent( osg::Object& object, osg::NodeVisitor& visitor ) const = 0;
+        virtual void operator()( osg::Object& object, osg::NodeVisitor& visitor ) = 0;
 
     protected:
         virtual ~EventCallback() { clearLocal(); }
@@ -171,8 +173,8 @@ namespace osgCompute
 
     private:
         // copy constructor and operator should not be called
-        EventCallback( const EventCallback& ) {}
-        EventCallback &operator=(const EventCallback&) { return *this; }
+        EventCallback( const EventCallback&, const osg::CopyOp& ) {}
+        EventCallback &operator=(const EventCallback& ) { return *this; }
     };
 }
 
