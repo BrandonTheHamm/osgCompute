@@ -66,13 +66,14 @@ namespace osgCompute
             else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
             {
                 update( nv );
+                traverse( nv );
             }
             else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
             {
                 handleevent( nv );
+                traverse( nv );
             }
 
-            traverse( nv );
 
             nv.popFromNodePath(); 
         } 
