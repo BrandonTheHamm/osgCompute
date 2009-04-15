@@ -40,7 +40,7 @@ namespace osgCompute
         ContextMapItr itr = s_contexts.find( id );
         if( itr != s_contexts.end() )
         {
-            context = (*itr).second;
+            context = (*itr).second.get();
 
             if( erase )
             {

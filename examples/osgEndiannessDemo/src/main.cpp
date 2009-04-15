@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     if( !module.valid() )
         return -1;
 
-    module->setBuffer( buffer );
+    module->setBuffer( buffer.get() );
     module->init();
 
 

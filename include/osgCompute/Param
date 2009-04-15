@@ -81,13 +81,13 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     inline SubloadCallback* Param::getSubloadCallback() 
     { 
-        return _subloadCallback; 
+        return _subloadCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
     inline const SubloadCallback* Param::getSubloadCallback() const 
     { 
-        return _subloadCallback; 
+        return _subloadCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
@@ -99,13 +99,13 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     inline UpdateCallback* Param::getUpdateCallback() 
     { 
-        return _updateCallback; 
+        return _updateCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
     inline const UpdateCallback* Param::getUpdateCallback() const 
     { 
-        return _updateCallback; 
+        return _updateCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
@@ -117,13 +117,13 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     inline EventCallback* Param::getEventCallback() 
     { 
-        return _eventCallback; 
+        return _eventCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
     inline const EventCallback* Param::getEventCallback() const 
     { 
-        return _eventCallback; 
+        return _eventCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
