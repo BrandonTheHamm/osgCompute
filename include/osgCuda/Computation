@@ -29,8 +29,7 @@ namespace osgCuda
     public:
         Computation();
 
-        META_Computation( this, this, osgCuda, Context )
-        META_Object( osgCuda, Computation )
+        META_Computation( osgCuda, Computation, osgCuda, Context )
 
         virtual void clear();
 

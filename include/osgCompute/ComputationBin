@@ -33,6 +33,7 @@ namespace osgCompute
     typedef std::multimap< std::string, osg::ref_ptr<osgCompute::Param> >::const_iterator         HandleToParamMapCnstItr;
 
     /**
+    mist
     */
     class LIBRARY_EXPORT ComputationBin : public osgUtil::RenderBin 
     {

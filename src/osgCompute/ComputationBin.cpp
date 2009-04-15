@@ -94,8 +94,8 @@ namespace osgCompute
                 (*itr)->init();
 
         // OBJECT 
-        setName( _computation->asObject()->getName() );
-        setDataVariance( _computation->asObject()->getDataVariance() );
+        setName( _computation->getName() );
+        setDataVariance( _computation->getDataVariance() );
 
         // CALLBACK 
         _launchCallback = _computation->getLaunchCallback();

@@ -1,3 +1,9 @@
+2009-04-15 15:46  svt group
+
+	* [r12]
+      - ref pointer problem with older osg versions solved
+      - documentation started
+
 2009-04-07 15:46  svt group
 
 	* [r7]

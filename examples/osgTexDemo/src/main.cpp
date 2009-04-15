@@ -166,7 +166,8 @@ int main(int argc, char *argv[])
     osgViewer::Viewer viewer(arguments);
     viewer.setUpViewInWindow( 50, 50, 640, 480);
 
-    // if you have the current OSG SVN Version (2.9.1 or later) then try to run it multi-threaded
+    // if you have OSG Version 2.8.1 or the current OSG SVN Version (2.9.1 or later)
+    // then try to run it multi-threaded
     // otherwise the application will finish with segmentation fault
     //viewer.setThreadingModel(osgViewer::Viewer::DrawThreadPerContext);
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);

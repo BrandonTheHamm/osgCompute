@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
     osg::setNotifyLevel( osg::WARN );
 
     ///////////////
-    // RESOURCEN //
+    // RESOURCES //
     ///////////////
     // BBOX
     osg::Vec3 bbmin(0,0,0);
@@ -262,9 +262,10 @@ int main(int argc, char *argv[])
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.setUpViewInWindow( 50, 50, 640, 480);
 
-    // if you have the current OSG SVN Version (2.9.1 or later) then try multithreaded
+    // if you have OSG Version 2.8.1 or the current OSG SVN Version (2.9.1 or later)
+    // then try multithreaded
     // otherwise the application will finish with segmentation fault
-    //viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
+    // viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
     viewer.setSceneData( scene );

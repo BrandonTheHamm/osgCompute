@@ -30,26 +30,29 @@ namespace osgUtil
     class CullVisitor;
 }
 
-/**
-Helper macro
-*/
-#define META_Computation( asobject, asnode, ctxlibrary, ctxclass )               \
-    virtual osg::Object*                asObject() { return asobject; }                             \
-    virtual const osg::Object*          asObject() const { return asobject; }                       \
-    virtual osg::Node*                  asNode() { return asnode; }                                 \
-    virtual const osg::Node*            asNode() const { return asnode; }                           \
-    virtual bool                        isNode() const { return (asnode != NULL); }                 \
+#define META_Computation( libraryname, classname, ctxlibrary, ctxclass )                            \
+    META_Object( libraryname, classname )                                                           \
     virtual std::string                 contextLibraryName() const { return #ctxlibrary; }          \
     virtual std::string                 contextClassName() const { return #ctxclass; }
 
-
 namespace osgCompute
 {
+    //! Abstract base node of any computation
     /**
-    */
+    * A computation node allows you to execute your own parallel code during the rendering within                   <br>
+    * a scene graph. Your code should be encapsulated by modules which are added to                                 <br>
+    * a computation by addModule() and is executed in the order they were added. Please use a                       <br>
+    * launch callback to change the order in which the modules are executed or derive from                          <br>
+    * a computation in order to define your own computations.                                                       <br>
+    * Please note that the rendering of the computation's sub graph is enabled by default.                          <br> 
+    * ( see xxx to disable the traversal of the sub-graph in order to remove the sub-graph from rendering ).        <br>
+    * Parameters that should be shared throughout modules can be added via addParamHandle(). Please note            <br>
+    * that each param is referenced by a handle and modules comparing these handles in order to accept parameters.  <br>
+    **/                                                                                                         
     class LIBRARY_EXPORT Computation : public osg::Group
     {
     public: 
+
         enum ComputeOrder
         {
             PRE_COMPUTE = 0,
@@ -57,31 +60,54 @@ namespace osgCompute
         };
 
     public:
+
+        /** Constructor. The object will be initialized with default values. */
         Computation();
 
+        /** 
+        * Is called during the traversal of the graph. Overwrite this method
+        * in a derived class to design your own traversal.
+        */
         virtual void accept( osg::NodeVisitor& nv );
 
-        virtual osg::Object* asObject() = 0;
-        virtual const osg::Object* asObject() const = 0;
-        virtual osg::Node* asNode() = 0;
-        virtual const osg::Node* asNode() const = 0;
-        virtual bool isNode() const = 0;
+        /** The derived class must provide a valid library name of the required context. */
         virtual std::string contextLibraryName() const = 0;
+        /** The derived class must provide a valid class name of the required context. */
         virtual std::string contextClassName() const = 0;
 
+        /** Load a module dynamically (not implemented yet) */
         virtual void loadModule( const std::string& modName );
+
+        /** Add a module to the computation. */
         virtual void addModule( Module& module );
+
+        /** Remove the module by providing a reference to the module. */
         virtual void removeModule( Module& module );
+
+        /** Remove the module by providing the module's name. */
         virtual void removeModule( const std::string& moduleName );
+
+        /** Returns true if the computation uses a module of module name. */
         virtual bool hasModule( const std::string& moduleName ) const;
+
+        /** Returns true if the computation uses the module. */
         virtual bool hasModule( Module& module ) const;
+
+        /** Returns true if the computation has modules at all. */
         virtual bool hasModules() const;
+
+        /** Returns the module with name moduleName. */
         virtual Module* getModule( const std::string& moduleName );
         virtual const Module* getModule( const std::string& moduleName ) const;
+
+        /** Return all modules. */
         virtual ModuleList* getModules();
         virtual const ModuleList* getModules() const;
+
+        /** Return the number of modules. */
         virtual unsigned int getNumModules() const;
 
+        /** Return the number of modules. */
         virtual void addParamHandle( const std::string& handle, osgCompute::Param& param );
         virtual void removeParamHandles( const std::string& handle );
         virtual void removeParamHandle( const osgCompute::Param& param );
@@ -93,17 +119,32 @@ namespace osgCompute
         inline LaunchCallback* getLaunchCallback();
         inline const LaunchCallback* getLaunchCallback() const;
 
+        /** 
+        * The compute order is used to decide when to execute the computation 
+        * during the rendering ( see osgCompute::osgComputationBin for further information )
+        */
         inline void setComputeOrder( ComputeOrder co );
+
+        /** Returns the compute order */
         inline ComputeOrder getComputeOrder();
 
+        /** Activates the computation (a computation is enabled by default) */
         inline void enable();
+
+        /** If the computation is disabled its modules won't be executed during rendering */
         inline void disable();
+
+        /** check whether the module is enabled */
         inline bool isEnabled() const;
 
+        /** Restore object to default state. Calls clearLocal(). */
         virtual void clear();
 
     protected:
+
+        /** Destructor. Release the memory by calling clearLocal(). */
         virtual ~Computation() { clearLocal(); }
+
         void clearLocal();
 
         virtual void addBin( osgUtil::CullVisitor& cv );
@@ -121,8 +162,11 @@ namespace osgCompute
         mutable OpenThreads::Mutex          _mutex;
 
     private:
-        // copy constructor and operator should not be called
+
+        /** Copy constructor. This constructor should not be called.*/
         Computation( const Computation& ) {}
+
+        /** Copy operator. This operator should not be called.*/
         Computation &operator=(const Computation &) { return *this; }
     };
 
