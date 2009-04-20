@@ -41,6 +41,7 @@ namespace osgCompute
         _computeOrder = PRE_COMPUTE;
         _paramHandles.clear();
         _enabled = true;
+        _resourcesChanged = false;
 
         osg::Group::removeChildren(0,osg::Group::getNumChildren());
     }
@@ -89,9 +90,10 @@ namespace osgCompute
         if( hasModule(module) )
             return;
 
+        _resourcesChanged = true;
         _modules.push_back( &module );
 
-        checkCallbacks();
+        resourcesChanged();
 
         for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
             module.acceptParam( (*itr).first, *(*itr).second );
@@ -105,7 +107,7 @@ namespace osgCompute
             if( (*itr) == &module )
             {
                 _modules.erase( itr );
-                checkCallbacks();
+                resourcesChanged();
                 return;
             }
         }
@@ -119,7 +121,7 @@ namespace osgCompute
             if( (*itr)->getName() == moduleName )
             {
                 _modules.erase( itr );
-                checkCallbacks();
+                resourcesChanged();
                 return;
             }
         }
@@ -203,7 +205,7 @@ namespace osgCompute
     void osgCompute::Computation::addParamHandle( const std::string& handle, Param& param )
     {
         _paramHandles.insert( std::make_pair< std::string, osg::ref_ptr<Param> >( handle, &param ) );
-        checkCallbacks();
+        resourcesChanged();
 
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             (*itr)->acceptParam( handle, param );
@@ -225,7 +227,7 @@ namespace osgCompute
         }
 
         if( found )
-            checkCallbacks();
+            resourcesChanged();
     }
 
     //------------------------------------------------------------------------------
@@ -239,7 +241,7 @@ namespace osgCompute
                     (*modItr)->removeParam( (*itr).first, (*itr).second.get() );
 
                 _paramHandles.erase( itr );
-                checkCallbacks();
+                resourcesChanged();
                 return;
             }
         }
@@ -320,6 +322,23 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Computation::update( osg::NodeVisitor& uv )
     {
+        if( _resourcesChanged )
+        {
+            // init params if not done so far 
+            for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
+                if( (*itr).second->isDirty() )
+                    (*itr).second->init();
+
+            // init modules if not done so far 
+            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+                if( (*itr)->isDirty() )
+                    (*itr)->init();
+
+            // decrement update counter when all resources have been initialized
+            osg::Node::setNumChildrenRequiringUpdateTraversal( 
+                osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
+        }
+
         if( getUpdateCallback() )
             (*getUpdateCallback())( this, &uv );
         else
@@ -336,6 +355,8 @@ namespace osgCompute
                     (*(*itr)->getUpdateCallback())( *(*itr), uv );
             }
         }
+
+        _resourcesChanged = false;
     }
 
     //------------------------------------------------------------------------------
@@ -360,9 +381,11 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Computation::checkCallbacks()
+    void Computation::resourcesChanged()
     {
-        unsigned int numUpdates = 0;
+        // we have to check the dirty flag of all resources in the update traversal 
+        // whenever a resource has been added 
+        unsigned int numUpdates = 1;
         unsigned int numEvents = 0;
 
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
@@ -385,6 +408,7 @@ namespace osgCompute
 
         osg::Node::setNumChildrenRequiringUpdateTraversal( numUpdates );
         osg::Node::setNumChildrenRequiringEventTraversal( numEvents );
+        _resourcesChanged = true;
     }
 
     //------------------------------------------------------------------------------

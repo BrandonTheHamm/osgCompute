@@ -174,6 +174,8 @@ namespace osgCompute
                 ctx->unregisterResource( const_cast<ContextResource&>(*this) );
         }
         _contexts.clear();
+
+        osg::Object::setUserData( NULL );
     }
 
     //------------------------------------------------------------------------------

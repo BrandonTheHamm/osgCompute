@@ -81,17 +81,9 @@ namespace osgCompute
         if( _computation->getParamHandles() )
             _paramHandles = *_computation->getParamHandles();
 
-        for( HandleToParamMapItr itr = _paramHandles.begin(); itr != _paramHandles.end(); ++itr )
-            if( (*itr).second->isDirty() )
-                (*itr).second->init();
-
         // MODULES 
         if( _computation->hasModules())
             _modules = *_computation->getModules();
-
-        for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isDirty() )
-                (*itr)->init();
 
         // OBJECT 
         setName( _computation->getName() );

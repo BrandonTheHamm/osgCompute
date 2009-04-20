@@ -82,14 +82,6 @@ namespace osgCompute
         ALLOC_DYNAMIC = 0x1
     };
 
-    enum SETUP_HINT
-    {
-        NO_SETUP_HINT                   = 0x0,
-        REMOVE_SETUP_IMAGES             = 0x1,
-        REMOVE_SETUP_VECTORS            = 0x2,
-        REMOVE_SETUP_IMAGES_AND_VECTORS = 0x3
-    };
-
     /**
     */
     template< class DATATYPE >
@@ -100,6 +92,7 @@ namespace osgCompute
         unsigned int                    _streamIdx;
         osg::ref_ptr<Context>           _context;
         unsigned int                    _allocHint;
+        bool                            _needsSetup;
 
         BufferStream();
         virtual ~BufferStream();
@@ -118,7 +111,8 @@ namespace osgCompute
     BufferStream<DATATYPE>::BufferStream() 
         :   _mapping( UNMAPPED ),
             _streamIdx(UINT_MAX),
-            _allocHint(0)
+            _allocHint(0),
+            _needsSetup(true)
     {
     }
 
@@ -143,11 +137,11 @@ namespace osgCompute
         virtual DATATYPE* map( const Context& context, unsigned int mapping, unsigned int streamIdx = 0 ) const = 0;
         virtual void unmap( const Context& context, unsigned int streamIdx = 0 ) const = 0;
 
-        virtual void setImage( osg::Image& streamImage, unsigned int streamIdx = 0 ) = 0;
+        virtual void setImage( osg::Image* streamImage, unsigned int streamIdx = 0 ) = 0;
         virtual osg::Image* getImage( unsigned int streamIdx = 0 ) = 0;
         virtual const osg::Image* getImage( unsigned int streamIdx = 0 ) const = 0;
 
-        virtual void setVector( std::vector<DATATYPE>& streamVector, unsigned int streamIdx = 0 ) = 0;
+        virtual void setVector( std::vector<DATATYPE>* streamVector, unsigned int numElements = UINT_MAX, unsigned int offset = 0, unsigned int streamIdx = 0 ) = 0;
         virtual std::vector<DATATYPE>* getVector( unsigned int streamIdx = 0 ) = 0;
         virtual const std::vector<DATATYPE>* getVector( unsigned int streamIdx = 0 ) const = 0;
 
@@ -160,11 +154,10 @@ namespace osgCompute
         inline unsigned int getDimension( unsigned int dimIdx ) const;
         inline unsigned int getNumDimensions() const;
 
+        inline unsigned int getNumElements() const;
+
         inline void setAllocHint( unsigned int allocHint );
         inline unsigned int getAllocHint() const;
-
-        inline void setSetupHint( unsigned int setupHint );
-        inline unsigned int getSetupHint() const;
 
         virtual unsigned int getMapping( Context& context, unsigned int streamIdx = 0 ) const;
 
@@ -178,12 +171,14 @@ namespace osgCompute
         virtual BufferStream<DATATYPE>* newStream( const Context& context, unsigned int streamIdx ) const = 0;
         inline BufferStream<DATATYPE>* lookupStream( const Context& context, unsigned int streamIdx ) const;
 
-        unsigned int                                    _setupHint;
+        virtual void setNeedsSetup( bool needsSetup, unsigned int streamIdx ) const;
+
         unsigned int                                    _allocHint;
 		unsigned int							        _byteSize;
         unsigned int                                    _numStreams;
         unsigned int                                    _streamSize;
         std::vector<unsigned int>                       _dimensions;
+        unsigned int                                    _numElements;
 
         mutable OpenThreads::Mutex                      _mutex;
         mutable std::vector<BufferStream<DATATYPE>**>   _streams;
@@ -193,7 +188,6 @@ namespace osgCompute
         Buffer( const Buffer&, const osg::CopyOp& ) {}
         Buffer& operator=( const Buffer& copy ) { return (*this); }
     };
-
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
@@ -242,11 +236,11 @@ namespace osgCompute
 		///////////////////////
 		// COMPUTE BYTE SIZE //
 		///////////////////////
-		unsigned int numElements = 1;
+		_numElements = 1;
 		for( unsigned int d=0; d<_dimensions.size(); ++d )
-			numElements *= _dimensions[d];
+			_numElements *= _dimensions[d];
 
-		_streamSize = sizeof(DATATYPE) * numElements;
+		_streamSize = sizeof(DATATYPE) * _numElements;
 		_byteSize = _streamSize * _numStreams;
 
 		return Param::init();
@@ -315,6 +309,13 @@ namespace osgCompute
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
+    unsigned int osgCompute::Buffer<DATATYPE>::getNumElements() const
+    {
+        return _numElements;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
     inline void osgCompute::Buffer<DATATYPE>::setAllocHint( unsigned int allocHint )
     {
         if( !isDirty() )
@@ -328,23 +329,6 @@ namespace osgCompute
     inline unsigned int osgCompute::Buffer<DATATYPE>::getAllocHint() const
     {
         return _allocHint;
-    }
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    inline void osgCompute::Buffer<DATATYPE>::setSetupHint( unsigned int setupHint )
-    {
-        if( !isDirty() )
-            return;
-
-        _setupHint = (_setupHint | setupHint);
-    }
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    inline unsigned int osgCompute::Buffer<DATATYPE>::getSetupHint() const
-    {
-        return _setupHint;
     }
 
     //------------------------------------------------------------------------------
@@ -393,10 +377,10 @@ namespace osgCompute
 
         // Clear other members
         _dimensions.clear();
+        _numElements = 0;
         _numStreams = 1;
         _byteSize = 0;
         _allocHint = NO_ALLOC_HINT;
-        _setupHint = NO_SETUP_HINT;
     }
 
     //------------------------------------------------------------------------------
@@ -512,6 +496,19 @@ namespace osgCompute
 
         
         return ctxStreams[ streamIdx ];
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Buffer<DATATYPE>::setNeedsSetup( bool needsSetup, unsigned int streamIdx ) const
+    {
+        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+        for( unsigned int c=0; c<_streams.size(); ++c )
+        {
+            BufferStream<DATATYPE>**& ctxStreams = _streams[c];
+            if( ctxStreams[streamIdx] )
+                ctxStreams[streamIdx]->_needsSetup = needsSetup;
+        }
     }
 }
 

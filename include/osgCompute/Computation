@@ -150,7 +150,7 @@ namespace osgCompute
         virtual void addBin( osgUtil::CullVisitor& cv );
         virtual void update( osg::NodeVisitor& uv );
         virtual void handleevent( osg::NodeVisitor& ev );
-        virtual void checkCallbacks();
+        virtual void resourcesChanged();
         virtual Context* getOrCreateContext( osg::State& state );
 
         bool                                _enabled;
@@ -158,6 +158,7 @@ namespace osgCompute
         ModuleList                          _modules;
         HandleToParamMap                    _paramHandles;
         ComputeOrder                        _computeOrder;
+        bool                                _resourcesChanged;
 
         mutable OpenThreads::Mutex          _mutex;
 

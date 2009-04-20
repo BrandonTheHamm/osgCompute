@@ -1,3 +1,10 @@
+2009-04-20 09:43  svt group
+
+	* [r13]
+      - buffer init in update stage of computation
+      - buffer handling extended
+
+
 2009-04-15 15:46  svt group
 
 	* [r12]

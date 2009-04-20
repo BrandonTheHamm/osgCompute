@@ -46,7 +46,7 @@ osgCuda::Computation* getComputation( osg::Image& srcImage, osg::Texture2D& outT
     srcArray->setChannelFormatDesc( srcDesc );
     srcArray->setDimension( 0, srcImage.s() );
     srcArray->setDimension( 1, srcImage.t() );
-    srcArray->setImage( srcImage, 0 );
+    srcArray->setImage( &srcImage, 0 );
 
     osgCuda::Vec4ubIntOpBuffer* trgBuffer = new osgCuda::Vec4ubIntOpBuffer;
     trgBuffer->setName( "trgBuffer" );
