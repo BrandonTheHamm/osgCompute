@@ -1,12 +1,12 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
+ *
  * This library is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation; either version 3 of
  * the License, or (at your option) any later version.
- *                                                                     
+ *
  * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesse General Public License for more details.
  *
@@ -169,8 +169,8 @@ int main(int argc, char *argv[])
     // if you have OSG Version 2.8.1 or the current OSG SVN Version (2.9.1 or later)
     // then try to run it multi-threaded
     // otherwise the application will finish with segmentation fault
-    //viewer.setThreadingModel(osgViewer::Viewer::DrawThreadPerContext);
-    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    viewer.setThreadingModel(osgViewer::Viewer::DrawThreadPerContext);
+    //viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);
