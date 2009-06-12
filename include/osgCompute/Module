@@ -19,17 +19,17 @@
 #include <vector>
 #include <osg/Object>
 #include <osg/NodeVisitor>
-#include "osgCompute/Export"
-#include "osgCompute/Param"
-#include "osgCompute/Callback"
-#include "osgCompute/Context"
+#include <osgCompute/Export>
+#include <osgCompute/Resource>
+#include <osgCompute/Callback>
 
-#define META_Module( libraryname, classname )                      \
-        META_Object( libraryname, classname )                      
+#define META_Module( libraryname, classname )                           \
+    META_Resource( libraryname, classname, this )                       \
 
-
+    
 namespace osgCompute
 {
+    class Context;
     class Module;
 
     typedef std::vector<osg::ref_ptr<osgCompute::Module> >                          ModuleList;
@@ -38,10 +38,10 @@ namespace osgCompute
 
     /**
     */
-    class LIBRARY_EXPORT Module : public ContextResource
+    class LIBRARY_EXPORT Module : public Resource, public osg::Object
     {
     public:
-        Module() : ContextResource() { clearLocal(); }
+        Module() : Resource(), osg::Object() { clearLocal(); }
 
         virtual bool init();
         virtual void clear();
@@ -50,20 +50,14 @@ namespace osgCompute
         inline void setLaunchCallback( LaunchCallback* pc );
         inline LaunchCallback* getLaunchCallback();
         inline const LaunchCallback* getLaunchCallback() const;
-        inline void setUpdateCallback( UpdateCallback* uc );
-        inline UpdateCallback* getUpdateCallback();
-        inline const UpdateCallback* getUpdateCallback() const;
-        inline void setEventCallback( EventCallback* ec );
-        inline EventCallback* getEventCallback();
-        inline const EventCallback* getEventCallback() const;
 
-        virtual void acceptParam( const std::string& handle, osgCompute::Param& param );
-        virtual bool usesParam( const std::string& handle ) const;
-        virtual void removeParam( const std::string& handle, const osgCompute::Param* param = NULL );
-        virtual Param* getParam( const std::string& handle );
-        virtual const Param* getParam( const std::string& handle ) const;
+        virtual void acceptResource( Resource& resource );
+        virtual bool usesResource( const std::string& handle ) const;
+        virtual void removeResource( const Resource& resource );
+        virtual void removeResource( const std::string& handle );
+        virtual Resource* getResource( const std::string& handle );
+        virtual const Resource* getResource( const std::string& handle ) const;
 
-        inline bool isDirty() const;
         inline void enable();
         inline void disable();
         inline bool isEnabled() const;
@@ -75,11 +69,8 @@ namespace osgCompute
         virtual bool init( const Context& context ) const;
         virtual void clear( const Context& context ) const;
 
-        LaunchCallback*                _launchCallback;
-        UpdateCallback*                _updateCallback;
-        EventCallback*                 _eventCallback;
+        osg::ref_ptr<LaunchCallback>   _launchCallback;
         bool                           _enabled;
-        bool                           _dirty;
 
     private:
         // copy constructor and operator should not be called
@@ -103,48 +94,6 @@ namespace osgCompute
     inline const LaunchCallback* Module::getLaunchCallback() const 
     { 
         return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Module::setUpdateCallback( UpdateCallback* uc ) 
-    { 
-        _updateCallback = uc; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline UpdateCallback* Module::getUpdateCallback() 
-    { 
-        return _updateCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const UpdateCallback* Module::getUpdateCallback() const 
-    { 
-        return _updateCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Module::setEventCallback( EventCallback* ec ) 
-    { 
-        _eventCallback = ec; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline EventCallback* Module::getEventCallback() 
-    { 
-        return _eventCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const EventCallback* Module::getEventCallback() const 
-    { 
-        return _eventCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool Module::isDirty() const
-    { 
-        return _dirty; 
     }
 
     //------------------------------------------------------------------------------

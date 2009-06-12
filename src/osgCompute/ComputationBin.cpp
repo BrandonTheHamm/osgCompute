@@ -46,22 +46,66 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ComputationBin::drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
     { 
-        // render sub-graph
-        osgUtil::RenderBin::drawImplementation(renderInfo, previous );
+        osg::State& state = *renderInfo.getState();
+        unsigned int numToPop = (previous ? osgUtil::StateGraph::numToPop(previous->_parent) : 0);
+        if (numToPop>1) --numToPop;
+        unsigned int insertStateSetPosition = state.getStateSetStackSize() - numToPop;
 
-        if( _context.valid() )
+        if (_stateset.valid())
         {
-            // Apply context 
-            _context->apply();
+            state.insertStateSet(insertStateSetPosition, _stateset.get());
+        }
 
-            // Launch Modules
+        ///////////////////
+        // DRAW PRE BINS //
+        ///////////////////
+        osgUtil::RenderBin::RenderBinList::iterator rbitr;
+        for(rbitr = _bins.begin();
+            rbitr!=_bins.end() && rbitr->first<0;
+            ++rbitr)
+        {
+            rbitr->second->draw(renderInfo,previous);
+        }
+
+
+        if( (_computeOrder & Computation::PRE_TRAVERSAL ) == Computation::PRE_TRAVERSAL )
+        {
             if( _launchCallback ) 
                 (*_launchCallback)( *this, *_context ); 
             else launch(); 
+
+            // don't forget to decrement dynamic object count
+            renderInfo.getState()->decrementDynamicObjectCount();
         }
 
-        // don't forget to decrement dynamic object count
-        renderInfo.getState()->decrementDynamicObjectCount();
+        // render sub-graph leafs
+        drawLeafs(renderInfo, previous );
+
+        if( (_computeOrder & Computation::PRE_TRAVERSAL ) != Computation::PRE_TRAVERSAL )
+        {
+            if( _launchCallback ) 
+                (*_launchCallback)( *this, *_context ); 
+            else launch();  
+
+            // don't forget to decrement dynamic object count
+            renderInfo.getState()->decrementDynamicObjectCount();
+        }
+
+        ////////////////////
+        // DRAW POST BINS //
+        ////////////////////
+        for(;
+            rbitr!=_bins.end();
+            ++rbitr)
+        {
+            rbitr->second->draw(renderInfo,previous);
+        }
+
+
+        if (_stateset.valid())
+        {
+            state.removeStateSet(insertStateSetPosition);
+        }
     }
 
     //------------------------------------------------------------------------------
@@ -76,14 +120,11 @@ namespace osgCompute
     {
         // COMPUTATION 
         _computation = &computation;
-
-        // PARAMS
-        if( _computation->getParamHandles() )
-            _paramHandles = *_computation->getParamHandles();
+        _computeOrder = computation.getComputeOrder();
 
         // MODULES 
         if( _computation->hasModules())
-            _modules = *_computation->getModules();
+            _modules = _computation->getModules();
 
         // OBJECT 
         setName( _computation->getName() );
@@ -116,7 +157,7 @@ namespace osgCompute
     bool ComputationBin::hasModule( Module& module ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr) == &module )
+            if( (*itr)->getName() == module.getName() )
                 return true;
 
         return false;
@@ -173,11 +214,11 @@ namespace osgCompute
     void ComputationBin::clearLocal()
     {
         _computation = NULL;
+        _computeOrder = osgCompute::Computation::PRE_COMPUTE_POST_TRAVERSAL;
         _context = NULL;
         _dirty = true;
         _launchCallback = NULL;
         _modules.clear();
-        _paramHandles.clear();
 
         osgUtil::RenderBin::reset();
     }
@@ -187,6 +228,9 @@ namespace osgCompute
     {
         if( _dirty || !_computation || !_context.valid() )
             return;
+
+        // Apply context 
+        _context->apply();
 
         ////////////////////
         // LAUNCH MODULES //
@@ -203,4 +247,36 @@ namespace osgCompute
         }
     }
 
+    //------------------------------------------------------------------------------
+    void ComputationBin::drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
+    {
+        // draw fine grained ordering.
+        for(osgUtil::RenderBin::RenderLeafList::iterator rlitr= _renderLeafList.begin();
+            rlitr!= _renderLeafList.end();
+            ++rlitr)
+        {
+            osgUtil::RenderLeaf* rl = *rlitr;
+            rl->render(renderInfo,previous);
+            previous = rl;
+        }
+
+        // draw coarse grained ordering.
+        for(osgUtil::RenderBin::StateGraphList::iterator oitr=_stateGraphList.begin();
+            oitr!=_stateGraphList.end();
+            ++oitr)
+        {
+
+            for(osgUtil::StateGraph::LeafList::iterator dw_itr = (*oitr)->_leaves.begin();
+                dw_itr != (*oitr)->_leaves.end();
+                ++dw_itr)
+            {
+                osgUtil::RenderLeaf* rl = dw_itr->get();
+                rl->render(renderInfo,previous);
+                previous = rl;
+
+            }
+        }
+    }
+
+    osgUtil::RegisterRenderBinProxy registerComputationBinProxy("osgCompute::ComputationBin", new osgCompute::ComputationBin );
 }

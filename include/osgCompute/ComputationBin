@@ -24,13 +24,19 @@
 #include "osgCompute/Callback"
 #include "osgCompute/Module"
 
+namespace osg
+{
+    class RenderInfo;
+}
+
+namespace osgUtil
+{
+    class RenderLeaf;
+}
+
 namespace osgCompute
 {
     class Computation;
-
-    typedef std::multimap< std::string, osg::ref_ptr<osgCompute::Param> >                         HandleToParamMap;
-    typedef std::multimap< std::string, osg::ref_ptr<osgCompute::Param> >::iterator               HandleToParamMapItr;
-    typedef std::multimap< std::string, osg::ref_ptr<osgCompute::Param> >::const_iterator         HandleToParamMapCnstItr;
 
     /**
     mist
@@ -76,13 +82,14 @@ namespace osgCompute
 
 
         virtual void launch() const;
+        virtual void drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
 
         // members
-        Computation*                         _computation;  
+        Computation*                         _computation; 
+        unsigned int                         _computeOrder; 
         bool                                 _dirty;
         LaunchCallback*                      _launchCallback;
         ModuleList                           _modules;
-        HandleToParamMap                     _paramHandles; 
         mutable osg::ref_ptr<Context>        _context;               
 
     private:
@@ -141,6 +148,7 @@ namespace osgCompute
     {
         return _context.get();
     }
+
 }
 
 #endif //OSGCOMPUTE_COMPUTATIONBIN

@@ -29,8 +29,7 @@
 #include <osgDB/Registry>
 #include <osgCuda/Computation>
 #include <osgCuda/Buffer>
-#include <osgCuda/IntOpBuffer>
-#include <osgCuda/Constant>
+#include <osgCuda/Geometry>
 
 #include <iostream>
 #include <sstream>
@@ -40,6 +39,7 @@
 
 #include "PtclMover"
 #include "PtclEmitter"
+#include "PtclMapper"
 
 float frand( float minf, float maxf )
 {
@@ -122,30 +122,17 @@ osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     return bbox;
 }
 
-osgCuda::Computation* getComputation( osg::Geometry& ptclGeom, osg::Vec3& bbmin, osg::Vec3& bbmax )
+osgCuda::Computation* getComputation( unsigned int numParticles, osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
-    if( ptclGeom.getVertexArray() == NULL )
-        return NULL;
-
     ////////////
     // BUFFER //
     ////////////
     // particle buffer
-    osgCuda::Vec4fIntOpBuffer* ptclBuffer = new osgCuda::Vec4fIntOpBuffer;
-    ptclBuffer->setName( "ptclBuffer" );
-    ptclBuffer->setNumStreams( 2 );
-    ptclBuffer->setIntOpObject( ptclGeom, 0 );
-    ptclBuffer->setDimension(0,ptclGeom.getVertexArray()->getNumElements());
-
-    // bbox min
-    osgCuda::Vec3fConstant* ptclSeedBoxMin = new osgCuda::Vec3fConstant;
-    ptclSeedBoxMin->setName( "ptclSeedBoxMin" );
-    ptclSeedBoxMin->setData( bbmin );
-
-    // bbox max
-    osgCuda::Vec3fConstant* ptclSeedBoxMax = new osgCuda::Vec3fConstant;
-    ptclSeedBoxMin->setName( "ptclSeedBoxMax" );
-    ptclSeedBoxMax->setData( bbmax );
+    osgCuda::Vec4fBuffer* ptclBuffer = new osgCuda::Vec4fBuffer;
+    ptclBuffer->setName( "ptclCUDABuffer" );
+    ptclBuffer->setDimension(0,numParticles);
+    ptclBuffer->addHandle( "PTCL_BUFFER" );
+    ptclBuffer->addHandle( "PTCL_CUDA_BUFFER" );
 
     /////////////
     // MODULES //
@@ -156,29 +143,48 @@ osgCuda::Computation* getComputation( osg::Geometry& ptclGeom, osg::Vec3& bbmin,
 
     PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
     ptclEmitter->setName( "ptclEmitter" );
+    ptclEmitter->setSeedBox( bbmin, bbmax );
+
+    PtclDemo::PtclMapper* ptclMapper = new PtclDemo::PtclMapper;
+    ptclMapper->setSyncType( PtclDemo::PtclMapper::SYNC_GL_WITH_CUDA_DEVICE );
+    ptclMapper->setName( "ptclMapper" );
 
     /////////////////
     // COMPUTATION //
     /////////////////
     osgCuda::Computation* computation = new osgCuda::Computation;
+    computation->setName("computation");
+    computation->addModule( *ptclEmitter );    
     computation->addModule( *ptclMover );
-    computation->addModule( *ptclEmitter );
-    computation->addParamHandle( "PTCL_BUFFER", *ptclBuffer );
-    computation->addParamHandle( "PTCL_SEED_BOX_MIN", *ptclSeedBoxMin );
-    computation->addParamHandle( "PTCL_SEED_BOX_MAX", *ptclSeedBoxMax );
+    computation->addModule( *ptclMapper );
+    computation->addResource( *ptclBuffer );
 
     return computation;
 }
 
-osg::Geode* getGeode( osg::Geometry& ptclGeom )
+osg::Geode* getGeode( unsigned int numParticles )
 {
     osg::Geode* geode = new osg::Geode;
+
+    // GEOMETRY
+    osg::ref_ptr<osgCuda::Vec4fGeometry> ptclGeom = new osgCuda::Vec4fGeometry;
+
+    // initialize the vertices
+    osg::Vec4Array* coords = new osg::Vec4Array(numParticles);
+    coords->setName("particles");
+    for( unsigned int v=0; v<coords->size(); ++v )
+        (*coords)[v].set(0,0,0,1);
+
+    //ptclGeom->setUseVertexBufferObjects( true );
+    ptclGeom->setVertexArray(coords);
+    ptclGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
+    ptclGeom->addHandle( "PTCL_GL_BUFFER" );
 
     //////////
     // GEOM //
     //////////
     // add particles
-    geode->addDrawable( &ptclGeom );
+    geode->addDrawable( ptclGeom.get() );
 
     ////////////
     // SPRITE //
@@ -218,6 +224,7 @@ osg::Geode* getGeode( osg::Geometry& ptclGeom )
     pixelsize->setType( osg::Uniform::FLOAT_VEC2 );
     pixelsize->set( osg::Vec2(1.0f,40.0f) );
     geode->getOrCreateStateSet()->addUniform( pixelsize );
+    geode->setCullingActive( false );
 
     return geode;
 }
@@ -226,32 +233,19 @@ int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
 
-    ///////////////
-    // RESOURCES //
-    ///////////////
-    // BBOX
     osg::Vec3 bbmin(0,0,0);
     osg::Vec3 bbmax(4,4,4);
-
-    // GEOMETRY
-    osg::Geometry* ptclGeom = new osg::Geometry;
-
-    // initialize the vertices
-    osg::Vec4Array* coords = new osg::Vec4Array(12800);
-    for( unsigned int v=0; v<coords->size(); ++v )
-        (*coords)[v].set(frand(bbmin.x(),bbmax.x()),frand(bbmin.y(),bbmax.y()),frand(bbmin.z(),bbmax.z()),1);
-
-    ptclGeom->setUseVertexBufferObjects( true );
-    ptclGeom->setVertexArray(coords);
-    ptclGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
+    unsigned int numParticles = 128000;
 
     /////////////////
     // SETUP SCENE //
     /////////////////
     osg::Group* scene = new osg::Group;
+
+    osgCompute::Computation* computation = getComputation( numParticles, bbmin, bbmax );
+    computation->addChild( getGeode( numParticles ) );
+    scene->addChild( computation );
     scene->addChild( getBBox( bbmin, bbmax ) );
-    scene->addChild( getComputation( *ptclGeom, bbmin, bbmax ) );
-    scene->addChild( getGeode( *ptclGeom ) );
 
     ////////////
     // VIEWER //
@@ -265,8 +259,8 @@ int main(int argc, char *argv[])
     // if you have OSG Version 2.8.1 or the current OSG SVN Version (2.9.1 or later)
     // then try multithreaded
     // otherwise the application will finish with segmentation fault
-    // viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
-    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
+    //viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);

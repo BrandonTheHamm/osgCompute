@@ -14,7 +14,7 @@
 */
 
 #include <osg/Notify>
-#include "osgCompute/Param"
+#include <osgCompute/Resource>
 
 namespace osgCompute
 {   
@@ -22,43 +22,95 @@ namespace osgCompute
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    bool Param::init()
+    Resource::Resource()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    bool Resource::init()
     {
         if( !isDirty() )
             return true;
+
+        if( _handles.empty() )
+        {
+            addHandle( "notaddressed" );
+        }
 
         _dirty = false;
         return true;
     }
 
     //------------------------------------------------------------------------------
-    void Param::clear()
+    unsigned int osgCompute::Resource::getByteSize() const
+    {
+        return 0;
+    }
+
+    //------------------------------------------------------------------------------
+    void Resource::clear()
     {
         clearLocal();
-        ContextResource::clear();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void Param::clearLocal()
+    Resource::~Resource()
     {
-        _subloadCallback = NULL;
-        _updateCallback = NULL;
-        _eventCallback = NULL;
-        _dirty = true;
+        clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    bool Param::init( const Context& context ) const
+    void Resource::clearLocal()
     {
-        return ContextResource::init( context );
-    }
-    
+        while( !_contexts.empty() )
+        {
+            ContextSetItr itr = _contexts.begin();
+
+            if( (*itr) != NULL )
+                clear( *(*itr) );
+        }
+        _contexts.clear();
+        _updateCallback = NULL;
+        _eventCallback = NULL;
+        _dirty = true;
+    } 
+
     //------------------------------------------------------------------------------
-    void Param::clear( const Context& context ) const
+    bool Resource::init( const Context& context ) const
     {
-        return ContextResource::clear( context );
+        if( context.isRegistered(const_cast<Resource&>(*this)) )
+            return true;
+
+        context.registerResource(const_cast<Resource&>(*this));
+
+        ContextSetCnstItr itr = _contexts.find( &context );
+        if( itr == _contexts.end() || (*itr) == NULL )
+            _contexts.insert( &context );
+
+        return true;
+    }
+
+    //------------------------------------------------------------------------------
+    void Resource::clear( const Context& context ) const
+    {
+        context.unregisterResource(const_cast<Resource&>(*this));
+
+        ContextSetItr itr = _contexts.find( &context );
+        if( itr != _contexts.end() && (*itr) != NULL )
+            _contexts.erase( itr );
+    }
+
+    //------------------------------------------------------------------------------
+    const Context* Resource::getContext( unsigned int ctxId ) const
+    {
+        for( ContextSetCnstItr itr = _contexts.begin(); itr != _contexts.end(); ++itr )
+            if( (*itr) != NULL && (*itr)->getId() == ctxId )
+                return (*itr);
+
+        return NULL;
     }
 }

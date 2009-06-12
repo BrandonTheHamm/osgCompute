@@ -56,9 +56,8 @@ void SwapModule::launch( const osgCompute::Context& context ) const
         _numBlocks > static_cast<unsigned int>( cudaContext->getDeviceProperties()->maxGridSize[1] ) )
         return;
 
-    unsigned int* bufferPtr = _buffer->map( context, osgCompute::MAP_DEVICE );
+    unsigned int* bufferPtr = (unsigned int*)_buffer->map( context, osgCompute::MAP_DEVICE );
     swapEndianness( _numBlocks, _numThreads, bufferPtr );
-    _buffer->unmap( context );
 }
 
 bool SwapModule::init()
@@ -81,9 +80,10 @@ int main(int argc, char *argv[])
     unsigned int numEndians = sizeof(bigEndians)/sizeof(unsigned int);
 
     // create context
-    osg::ref_ptr<osgCompute::Context> context = osgCompute::Context::createInstance( 0, "osgCuda", "Context" );
+    osg::ref_ptr<osgCompute::Context> context = new osgCuda::Context;
     if( !context.valid() )
         return -1;
+    context->setId( 0 );
 
     // activate context
     context->apply();
@@ -110,9 +110,8 @@ int main(int argc, char *argv[])
         osg::notify(osg::INFO)<<std::hex<< bigEndians[v] <<std::endl;
 
 
-    unsigned int* bufferPtr = buffer->map( *context, osgCompute::MAP_HOST_TARGET );
+    unsigned int* bufferPtr = (unsigned int*)buffer->map( *context, osgCompute::MAP_HOST_TARGET );
     memcpy( bufferPtr, bigEndians, sizeof(bigEndians) );
-    buffer->unmap( *context );
 
 
     ///////////////////
@@ -122,7 +121,7 @@ int main(int argc, char *argv[])
 
 
     // print result
-    bufferPtr = buffer->map( *context, osgCompute::MAP_HOST_SOURCE );
+    bufferPtr = (unsigned int*)buffer->map( *context, osgCompute::MAP_HOST_SOURCE );
     osg::notify(osg::INFO)<<std::endl<<"After conversion: "<<std::endl;
     for( unsigned int v=0; v<buffer->getDimension(0); ++v )
         osg::notify(osg::INFO)<<std::hex<< bufferPtr[v] <<std::endl;

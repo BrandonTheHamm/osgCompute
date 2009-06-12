@@ -20,7 +20,6 @@
 #include <osgCuda/Module>
 #include <osgCuda/Export>
 #include <osgCuda/Buffer>
-#include <osgCuda/Constant>
 
 namespace PtclDemo
 {
@@ -36,7 +35,7 @@ namespace PtclDemo
 
         virtual void launch( const osgCompute::Context& context ) const;
 
-        virtual void acceptParam( const std::string& handle, osgCompute::Param& param );
+        virtual void acceptResource( osgCompute::Resource& resource );
 
     protected:
         virtual ~PtclMover();

@@ -13,13 +13,13 @@
 
 namespace osgCuda
 {
-    class ContextRegisterProto
-    {
-    public:
-        ContextRegisterProto() { Context* context = new Context; osgCompute::Context::registerContext(*context); }
-    };
+    //class ContextRegisterProto
+    //{
+    //public:
+    //    ContextRegisterProto() { Context* context = new Context; osgCompute::Context::registerContext(*context); }
+    //};
 
-    ContextRegisterProto registerProto;
+    //ContextRegisterProto registerProto;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
     // DECLARATIONS //////////////////////////////////////////////////////////////////////////////////

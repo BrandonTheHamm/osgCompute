@@ -32,6 +32,13 @@ void reseed( unsigned int numBlocks,
 
 namespace PtclDemo
 {
+    float frand( float minf, float maxf )
+    {
+        float unit = float(rand()) / RAND_MAX;
+        float diff = maxf - minf;
+        return minf + unit * diff;
+    }
+
     //------------------------------------------------------------------------------
     PtclEmitter::~PtclEmitter()
     {
@@ -41,7 +48,7 @@ namespace PtclDemo
     //------------------------------------------------------------------------------
     bool PtclEmitter::init()
     {
-        if( !_particles.valid() || !_seedBoxMax.valid() || !_seedBoxMin.valid() )
+        if( !_particles.valid() )
         {
             osg::notify( osg::WARN )
                 << "ParticleDemo::ParticleMover::init(): params are missing."
@@ -50,7 +57,7 @@ namespace PtclDemo
             return false;
         }
 
-        _seedCount = 1024;
+        _seedCount = 128000;
 
         /////////////////////////
         // COMPUTE KERNEL SIZE //
@@ -80,14 +87,11 @@ namespace PtclDemo
         /////////////
         // MAPPING //
         /////////////
-        osg::Vec4f* ptcls = _particles->map( context, osgCompute::MAP_DEVICE, 0 );
-        osg::Vec3f* seedBoxMin = _seedBoxMin->data( context );
-        osg::Vec3f* seedBoxMax = _seedBoxMax->data( context );
+        osg::Vec4f* ptcls = (osg::Vec4f*)_particles->map( context, osgCompute::MAP_DEVICE );
 
         ///////////////
         // RESEEDING //
         ///////////////
-
         reseed(
             _numBlocks,
             _numThreads,
@@ -95,21 +99,17 @@ namespace PtclDemo
             _seeds,
             _seedCount,
             seedIdx,
-            *seedBoxMin,
-            *seedBoxMax );
+            _seedBoxMin,
+            _seedBoxMax );
 
-        _particles->unmap( context );
+        //_particles->unmap( context );
     }
 
     //------------------------------------------------------------------------------
-    void PtclEmitter::acceptParam( const std::string& handle, osgCompute::Param& param )
+    void PtclEmitter::acceptResource( osgCompute::Resource& resource )
     {
-        if( handle == "PTCL_BUFFER" )
-            _particles = dynamic_cast<osgCuda::Vec4fBuffer*>( &param );
-        else if( handle == "PTCL_SEED_BOX_MIN" )
-            _seedBoxMin = dynamic_cast<osgCuda::Vec3fConstant*>( &param );
-        else if( handle == "PTCL_SEED_BOX_MAX" )
-            _seedBoxMax = dynamic_cast<osgCuda::Vec3fConstant*>( &param );
+        if( resource.isAddressedByHandle("PTCL_BUFFER") )
+            _particles = dynamic_cast<osgCuda::Vec4fBuffer*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,8 +122,8 @@ namespace PtclDemo
         _numThreads = 1;
 
         _particles = NULL;
-        _seedBoxMin = NULL;
-        _seedBoxMax = NULL;
+        _seedBoxMin = osg::Vec3f(0,0,0);
+        _seedBoxMax = osg::Vec3f(0,0,0);
 
         // clear seeds
         if( _context != NULL && _seeds != NULL )
@@ -142,14 +142,14 @@ namespace PtclDemo
         ////////////////////
         // GENERATE SEEDS //
         ////////////////////
-        float maxf = 1.0f;
-        float minf = 0.0f;
+        //float maxf = 1.0f;
+        //float minf = 0.0f;
         float* tmpPtr = new float[_seedCount];
         for( unsigned int s=0; s<_seedCount; ++s )
         {
-            float unit = float(rand()) / RAND_MAX;
-            float diff = maxf - minf;
-            tmpPtr[s] = minf + unit * diff;
+            //float unit = float(rand()) / RAND_MAX;
+            //float diff = maxf - minf;
+            tmpPtr[s] = frand(0.0f,1.0f);//minf + unit * diff;
         }
 
         ///////////////////
@@ -187,6 +187,16 @@ namespace PtclDemo
             _context = NULL;
             return false;
         }
+
+        ////////////////
+        // INIT PTCLS //
+        ////////////////
+        osg::Vec4f* ptcls = (osg::Vec4f*)_particles->map( context, osgCompute::MAP_HOST_TARGET );
+
+        for( unsigned int v=0; v<_particles->getDimension(0); ++v )
+            ptcls[v].set(-1,-1,-1,1);
+
+        _particles->unmap( context );
 
         return true;
     }

@@ -1,0 +1,493 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCUDA_TEXTURE2D
+#define OSGCUDA_TEXTURE2D 1
+
+#include <osg/Texture2D>
+#include <osgCuda/Texture>
+
+namespace osgCuda
+{
+    template<class T>
+    class Texture2D;
+
+    typedef Texture2D<unsigned char>                                      UByteTexture2D;
+    typedef Texture2D<osg::Vec4ub>                                        Vec4ubTexture2D;
+    typedef Texture2D<char>                                               ByteTexture2D;
+    typedef Texture2D<osg::Vec2b>                                         Vec2bTexture2D;
+    typedef Texture2D<osg::Vec3b>                                         Vec3bTexture2D;
+    typedef Texture2D<osg::Vec4b>                                         Vec4bTexture2D;
+    typedef Texture2D<unsigned short>                                     UShortTexture2D;
+    typedef Texture2D<short>                                              ShortTexture2D;
+    typedef Texture2D<osg::Vec2s>                                         Vec2sTexture2D;
+    typedef Texture2D<osg::Vec3s>                                         Vec3sTexture2D;
+    typedef Texture2D<osg::Vec4s>                                         Vec4sTexture2D;
+    typedef Texture2D<unsigned int>                                       UIntTexture2D;
+    typedef Texture2D<int>                                                IntTexture2D;
+    typedef Texture2D<float>                                              FloatTexture2D;
+    typedef Texture2D<osg::Vec2f>                                         Vec2fTexture2D;
+    typedef Texture2D<osg::Vec3f>                                         Vec3fTexture2D;
+    typedef Texture2D<osg::Vec4f>                                         Vec4fTexture2D;
+    typedef Texture2D<double>                                             DoubleTexture2D;
+    typedef Texture2D<osg::Vec2d>                                         Vec2dTexture2D;
+    typedef Texture2D<osg::Vec3d>                                         Vec3dTexture2D;
+    typedef Texture2D<osg::Vec4d>                                         Vec4dTexture2D;
+
+    /**
+    */
+    template< class DATATYPE >
+    class Texture2D : public Texture<DATATYPE>, public osg::Texture2D
+    {
+    public:
+        Texture2D();
+
+        META_Texture( osgCuda, Texture2D )
+
+        virtual bool init();
+
+        virtual void apply(osg::State& state) const;
+        virtual void releaseGLObjects(osg::State* state=0) const;
+
+        virtual void clear();
+
+    protected:
+        virtual ~Texture2D();
+        void clearLocal();
+
+        virtual bool initDimension();
+
+        virtual bool allocPBO( TextureStream<DATATYPE>& stream ) const;
+        virtual void syncPBO( TextureStream<DATATYPE>& stream ) const;
+        virtual void syncTexture( TextureStream<DATATYPE>& stream ) const;
+
+        virtual osgCompute::BufferStream<DATATYPE>* newStream( const osgCompute::Context& context ) const;
+    private:
+        // copy constructor and operator should not be called
+        Texture2D( const Texture2D& , const osg::CopyOp& ) {}
+        Texture2D& operator=(const Texture2D&) { return (*this); }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    Texture2D<DATATYPE>::Texture2D()
+        : Texture<DATATYPE>(),
+          osg::Texture2D()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    Texture2D<DATATYPE>::~Texture2D()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture2D<DATATYPE>::clear()
+    {
+        Buffer<DATATYPE>::clear();
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture2D<DATATYPE>::init()
+    {
+        return Texture<DATATYPE>::init();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture2D<DATATYPE>::releaseGLObjects( osg::State* state/*=0*/ ) const
+    {
+        if( state != NULL )
+        {
+            const osgCompute::Context* curCtx = getContext( state->getContextID() );
+            if( curCtx )
+            {
+                if( osgCompute::Buffer<DATATYPE>::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+                    unmap( *curCtx );
+            }
+        }
+
+        osg::Texture2D::releaseGLObjects( state ); 
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture2D<DATATYPE>::apply( osg::State& state ) const
+    {
+        const osgCompute::Context* curCtx = getContext( state.getContextID() );
+        if( curCtx )
+        {
+            if( osgCompute::Buffer<DATATYPE>::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+                unmap( *curCtx );
+        }
+
+        osg::Texture2D::apply( state );
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture2D<DATATYPE>::initDimension()
+    {
+        if( osgCompute::Buffer<DATATYPE>::getNumDimensions() != 0 )
+        {
+            setTextureWidth( osgCompute::Buffer<DATATYPE>::getDimension(0) );
+            setTextureHeight( osgCompute::Buffer<DATATYPE>::getDimension(1) );
+        }
+        else 
+        {
+            if( getImage(0) && getTextureWidth() == 0)
+                setTextureWidth( getImage(0)->s() );
+
+            if( getImage(0) && getTextureHeight() == 0)
+                setTextureHeight( getImage(0)->t() );
+
+            osgCompute::Buffer<DATATYPE>::setDimension(0, getTextureWidth() );
+            osgCompute::Buffer<DATATYPE>::setDimension(1, getTextureHeight() );
+        }
+
+        return Texture<DATATYPE>::initDimension();
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture2D<DATATYPE>::clearLocal()
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture2D<DATATYPE>::syncTexture( TextureStream<DATATYPE>& stream ) const
+    {
+        if( stream._bo == UINT_MAX )
+            return;
+
+        osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getId(),true );
+        if( !bufferExt )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::syncTexture() for texture \""
+                << osg::Object::getName()<< "\": cannot find required extension for context \""<<stream._context->getId()<<"\"."
+                << std::endl;
+
+            return;
+        }
+
+        osg::Texture::TextureObject* tex = osg::Texture::getTextureObject( stream._context->getId() );
+        if( !tex )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::syncTexture() for texture \""
+                << osg::Object::getName()<< "\": texture object not allocated for context \""<<stream._context->getId()<<"\"."
+                << std::endl;
+
+            return;
+        }
+
+        GLenum texType = GL_NONE;
+        if( osg::Texture::getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT )
+        {
+            if( !getImage() )
+                return;
+
+            texType = getImage()->getDataType();
+        }
+        else
+        {
+            texType = osg::Texture::getSourceType();
+        }
+
+        bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB,  stream._bo );
+        glBindTexture( GL_TEXTURE_2D, tex->_id );
+
+        // UNPACK the PBO data
+        glTexSubImage2D(
+                    GL_TEXTURE_2D, 0, 0, 0, 
+                    osgCompute::Buffer<DATATYPE>::getDimension(0), 
+                    osgCompute::Buffer<DATATYPE>::getDimension(1), 
+                    tex->_internalFormat, 
+                    texType, 
+                    NULL );
+
+        GLenum errorStatus = glGetError();
+        if( errorStatus != GL_NO_ERROR )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::syncTexture() for buffer \""
+                << osg::Object::getName()<< "\": something goes wrong on glTex(Sub)ImageXD() for context \""
+                << stream._context->getId()<<"\". Returned code is "
+                << std::hex<<errorStatus<<"."
+                << std::endl;
+        }
+
+
+        glBindTexture( GL_TEXTURE_2D, 0 );
+        bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture2D<DATATYPE>::syncPBO( TextureStream<DATATYPE>& stream ) const
+    {
+        if( stream._bo == UINT_MAX )
+            return;
+
+        osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getId(),true );
+        if( !bufferExt )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::syncPBO() for texture \""
+                << osg::Object::getName()<< "\": cannot find required extension for context \""<<stream._context->getId()<<"\"."
+                << std::endl;
+
+            return;
+        }
+
+        osg::Texture::TextureObject* tex = osg::Texture::getTextureObject( stream._context->getId() );
+        if( !tex )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::syncPBO() for texture \""
+                << osg::Object::getName()<< "\": texture object not allocated for context \""<<stream._context->getId()<<"\"."
+                << std::endl;
+
+            return;
+        }
+
+        GLenum texType = GL_NONE;
+        if( osg::Texture::getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
+            getImage() )
+        {
+            texType = getImage()->getDataType();
+        }
+        else
+        {
+            texType = osg::Texture::getSourceType();
+        }
+
+        if( texType == GL_NONE )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::syncPBO() for texture \""
+                << osg::Object::getName()<< "\": texture type unknown."
+                << std::endl;
+
+            return;
+        }
+
+        ////////////////////
+        // UNREGISTER PBO //
+        ////////////////////
+        cudaError res = cudaGLUnregisterBufferObject( stream._bo );
+        if( cudaSuccess != res )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::syncPBO() for texture \""
+                << osg::Object::getName()<< "\": something goes wrong on cudaGLUnregisterBufferObject() for context \""
+                << stream._context->getId()<<"\". Returned code is "
+                << std::hex<<res<<"."
+                << std::endl;
+
+            return;
+        }
+
+        ///////////////
+        // COPY DATA //
+        ///////////////
+        glBindTexture( GL_TEXTURE_2D, tex->_id );
+        bufferExt->glBindBuffer( GL_PIXEL_PACK_BUFFER_ARB,  stream._bo );
+
+        // PACK the data for the PBO
+        glGetTexImage( GL_TEXTURE_2D, 0, tex->_internalFormat, texType, NULL );
+
+        GLenum errorStatus = glGetError();
+        if( errorStatus != GL_NO_ERROR )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::syncPBO() for texture \""
+                << osg::Object::getName()<< "\": something goes wrong on glGetTexImage() for context \""
+                << stream._context->getId()<<"\". Returned code is "
+                << std::hex<<errorStatus<<"."
+                << std::endl;
+        }
+
+        bufferExt->glBindBuffer( GL_PIXEL_PACK_BUFFER_ARB, 0 );
+        glBindTexture( GL_TEXTURE_2D, 0 );
+
+        ////////////////////////
+        // REGISTER PBO AGAIN //
+        ////////////////////////
+        res = cudaGLRegisterBufferObject( stream._bo );
+        if( cudaSuccess != res )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::syncPBO() for texture \""
+                << osg::Object::getName()<< "\": something goes wrong on cudaGLRegisterBufferObject() for context \""
+                << stream._context->getId()<<"\". Returned code is "
+                << std::hex<<res<<"."
+                << std::endl;
+        }
+
+        stream._syncHost = true;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture2D<DATATYPE>::allocPBO( TextureStream<DATATYPE>& stream ) const
+    {
+        /////////////////////
+        // COMPILE TEXTURE //
+        /////////////////////
+        osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getId(), true );
+        if( !bufferExt )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::allocPBO() for texture \""
+                << osg::Object::getName()<< "\": cannot find required extension for context \""<<stream._context->getId()<<"\"."
+                << std::endl;
+
+            return false;
+        }
+
+        osg::Texture::TextureObject* tex = osg::Texture::getTextureObject( stream._context->getId() );
+        if( !tex )
+        {
+            apply( *stream._context->getState() );
+            glBindTexture( GL_TEXTURE_2D, 0 );
+        }
+
+        // second chance
+        tex = osg::Texture::getTextureObject( stream._context->getId() ); 
+        if( !tex )
+        {
+
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::allocPBO() for texture \""
+                << osg::Object::getName()<< "\": texture object not allocated for context \""<<stream._context->getId()<<"\"."
+                << std::endl;
+
+            return false;
+        }
+
+        GLenum texType = GL_NONE;
+        if( osg::Texture::getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
+            getImage() )
+        {
+            texType = getImage()->getDataType();
+        }
+        else
+        {
+            texType = osg::Texture::getSourceType();
+        }
+
+        if( texType == GL_NONE )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::allocPBO() for texture \""
+                << osg::Object::getName()<< "\": texture type unknown."
+                << std::endl;
+
+            return false;
+        }
+
+        ///////////////
+        // SETUP PBO //
+        ///////////////
+        stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( osgCompute::Buffer<DATATYPE>::getByteSize() );
+        if( UINT_MAX == stream._bo )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture2D::allocPBO() for Buffer \""
+                << osg::Object::getName()<< "\": Could not generate buffer object (glGenBuffers()) for context \""
+                << stream._context->getId()<<"\"."
+                << std::endl;
+
+            return false;
+        }
+        stream._boRegistered = true;
+
+        ///////////////////
+        // SETUP TEXTURE //
+        ///////////////////
+        if( tex->isAllocated() )
+        {
+            //////////////
+            // SYNC PBO //
+            //////////////
+            // Sync PBO with Texture-Data if Texture is allocated
+            syncPBO( stream );
+        }
+        else
+        {
+            /////////////////////////////
+            // ALLOCATE TEXTURE MEMORY //
+            /////////////////////////////
+            // else allocate the memory.
+            glBindTexture( GL_TEXTURE_2D, tex->_id );
+
+            // Allocate memory for texture if not done so far in order to allow slot
+            // to call glTexSubImage() during runtime
+            glTexImage2D(
+                GL_TEXTURE_2D, 0,
+                tex->_internalFormat,
+                tex->_width, tex->_height,
+                tex->_border,
+                tex->_internalFormat, texType, NULL );
+                
+            GLenum errorNo = glGetError();
+            if( errorNo != GL_NO_ERROR )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Texture2D::allocPBO() for buffer \""
+                    << osg::Object::getName()<< "\": something goes wrong on glTexImageXD() for context \""
+                    << stream._context->getId()<<"\". Returned code is "
+                    << std::hex<<errorNo<<"."
+                    << std::endl;
+
+                glBindTexture( GL_TEXTURE_2D, 0 );
+                bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
+                return false;
+            }
+
+            glBindTexture( GL_TEXTURE_2D, 0 );
+
+            // Mark context based Texture-Object as allocated
+            tex->setAllocated( true );
+        }
+
+        return true;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    osgCompute::BufferStream<DATATYPE>* Texture2D<DATATYPE>::newStream( const osgCompute::Context& context ) const
+    {
+        return new TextureStream<DATATYPE>;
+    }
+}
+
+
+#endif //OSGCUDA_TEXTURE2D

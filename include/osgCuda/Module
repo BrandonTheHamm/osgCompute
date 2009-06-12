@@ -17,8 +17,8 @@
 #define OSGCUDA_MODULE 1
 
 #include <osgCompute/Module>
-#include "osgCuda/Export"
-#include "osgCuda/Context"
+#include <osgCuda/Export>
+#include <osgCuda/Context>
 
 namespace osgCuda
 {

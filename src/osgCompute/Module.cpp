@@ -13,7 +13,8 @@
  * The full license is in LICENSE file included with this distribution.
 */
 
-#include "osgCompute/Module"
+#include <osgCompute/Module>
+#include <osgCompute/Context>
 
 namespace osgCompute
 {   
@@ -24,43 +25,44 @@ namespace osgCompute
     void Module::clear()
     {
         clearLocal();
-        ContextResource::clear();
+        Resource::clear();
     }
 
     //------------------------------------------------------------------------------
     bool Module::init()
     {
-        if( !isDirty() )
-            return true;
-
-        _dirty = false;
-        return true;
+        return Resource::init();
     }
 
     //------------------------------------------------------------------------------
-    inline void Module::acceptParam( const std::string& handle, osgCompute::Param& param ) 
+    inline void Module::acceptResource( Resource& resource ) 
     {
     }
 
     //------------------------------------------------------------------------------
-    inline bool Module::usesParam( const std::string& handle ) const 
+    inline bool Module::usesResource( const std::string& handle ) const 
     { 
         return false; 
     }
 
     //------------------------------------------------------------------------------
-    inline void Module::removeParam( const std::string& handle, const osgCompute::Param* param /*= NULL*/ ) 
+    inline void Module::removeResource( const std::string& handle ) 
     {
     }
 
     //------------------------------------------------------------------------------
-    inline Param* Module::getParam( const std::string& handle ) 
+    inline void Module::removeResource( const Resource& resource ) 
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    inline Resource* Module::getResource( const std::string& handle ) 
     { 
         return NULL; 
     }
 
     //------------------------------------------------------------------------------
-    inline const Param* Module::getParam( const std::string& handle ) const 
+    inline const Resource* Module::getResource( const std::string& handle ) const 
     { 
         return NULL; 
     }
@@ -72,8 +74,6 @@ namespace osgCompute
     void Module::clearLocal()
     {
         _launchCallback = NULL;
-        _updateCallback = NULL;
-        _eventCallback = NULL;
         _enabled = true;
         _dirty = true;
     }
@@ -81,7 +81,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     bool Module::init( const Context& context ) const
     {
-        return ContextResource::init( context );
+        return Resource::init( context );
     }
 
     //------------------------------------------------------------------------------
@@ -90,6 +90,6 @@ namespace osgCompute
         if( _launchCallback )
             _launchCallback->clear( context );
 
-        return ContextResource::clear( context );
+        return Resource::clear( context );
     }
 }

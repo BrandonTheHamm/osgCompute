@@ -31,7 +31,7 @@ namespace TexDemo
     //------------------------------------------------------------------------------  
     bool TexStreamer::init() 
     { 
-        if( !_trgBuffer.valid() || !_srcArray.valid() )
+        if( !_trgBuffer.valid() || !_trgTmpBuffer.valid() || !_srcArray.valid() )
         {
             osg::notify( osg::WARN ) << "TexDemo::TexStreamer::init(): params are missing."
                                      << std::endl;
@@ -59,75 +59,84 @@ namespace TexDemo
         cudaArray* srcArray = _srcArray->mapArray( context, osgCompute::MAP_DEVICE_SOURCE );
         cudaChannelFormatDesc srcDesc = _srcArray->getChannelFormatDesc();
 
-        osg::Vec4ub* trgBuffer0 = _trgBuffer->map( context, osgCompute::MAP_DEVICE, 0 );
-        osg::Vec4ub* trgBuffer1 = _trgBuffer->map( context, osgCompute::MAP_DEVICE_TARGET, 1 );
+        osg::Vec4ub* trgTmpBuffer = (osg::Vec4ub*)_trgTmpBuffer->map( context, osgCompute::MAP_DEVICE );
+        osg::Vec4ub* trgBuffer = (osg::Vec4ub*)_trgBuffer->map( context, osgCompute::MAP_DEVICE_TARGET );
 
         // KERNEL CALL 0 
         filter(  _numBlocks, 
                  _numThreads,
-                 trgBuffer0,
+                 trgTmpBuffer,
                  srcArray,
                  srcDesc );
 
         // KERNEL CALL 1 
         swap( _numBlocks, 
               _numThreads, 
-              trgBuffer1, 
-              trgBuffer0 );
+              trgBuffer, 
+              trgTmpBuffer );
 
         // unmap params
-        _trgBuffer->unmap( context, 1 );
-        _trgBuffer->unmap( context, 0 );
-        _srcArray->unmap( context );
+        //_trgBuffer->unmap( context );
+        //_trgTmpBuffer->unmap( context );
+        //_srcArray->unmap( context );
 
     }
 
     //------------------------------------------------------------------------------
-    void TexStreamer::acceptParam( const std::string& handle, osgCompute::Param& param )
+    void TexStreamer::acceptResource( osgCompute::Resource& resource )
     {
-        if( handle == "TRG_BUFFER" )
-            _trgBuffer = dynamic_cast<osgCuda::Vec4ubBuffer*>( &param );
-        if( handle == "SRC_ARRAY" )
-            _srcArray = dynamic_cast<osgCuda::Vec4ubArray*>( &param );
+        if( resource.isAddressedByHandle( "TRG_BUFFER" ) )
+            _trgBuffer = dynamic_cast<osgCuda::Vec4ubTexture2D*>( &resource );
+        if( resource.isAddressedByHandle( "TRG_TMP_BUFFER" ) )
+            _trgTmpBuffer = dynamic_cast<osgCuda::Vec4ubBuffer*>( &resource );
+        if( resource.isAddressedByHandle( "SRC_ARRAY" ) )
+            _srcArray = dynamic_cast<osgCuda::Vec4ubArray*>( &resource );
     }
 
     //------------------------------------------------------------------------------
-    bool TexStreamer::usesParam( const std::string& handle ) const
+    bool TexStreamer::usesResource( const std::string& handle ) const
     {
         if( handle == "TRG_BUFFER" ||
-            handle == "SRC_ARRAY" )
+            handle == "SRC_ARRAY" ||
+            handle == "TRG_TMP_BUFFER" )
             return true;
 
         return false;
     }
 
     //------------------------------------------------------------------------------
-    void TexStreamer::removeParam( const std::string& handle )
+    void TexStreamer::removeResource( const std::string& handle )
     {
         if( handle == "TRG_BUFFER" )
             _trgBuffer = NULL;
         if( handle == "SRC_ARRAY" )
             _srcArray = NULL;
+        if( handle == "TRG_TMP_BUFFER" )
+            _trgTmpBuffer = NULL;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::Param* TexStreamer::getParam( const std::string& handle )
+    osgCompute::Resource* TexStreamer::getResource( const std::string& handle )
     {
         if( handle == "TRG_BUFFER" )
             return _trgBuffer.get();
         if( handle == "SRC_ARRAY" )
-            return _srcArray.get();
+            return _srcArray.get(); 
+        if( handle == "TRG_TMP_BUFFER" )
+            return _trgTmpBuffer.get();
 
         return NULL;
     }
 
     //------------------------------------------------------------------------------
-    const osgCompute::Param* TexStreamer::getParam( const std::string& handle ) const
+    const osgCompute::Resource* TexStreamer::getResource( const std::string& handle ) const
     {
         if( handle == "TRG_BUFFER" )
             return _trgBuffer.get();
         if( handle == "SRC_ARRAY" )
             return _srcArray.get();
+        if( handle == "TRG_TMP_BUFFER" )
+            return _trgTmpBuffer.get();
 
         return NULL;
     }
@@ -143,6 +152,7 @@ namespace TexDemo
         _numThreads[0] = 1;
         _numThreads[1] = 1;
         _trgBuffer = NULL;
+        _trgTmpBuffer = NULL;
         _srcArray = NULL;
     }
 

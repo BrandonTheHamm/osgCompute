@@ -26,64 +26,45 @@
 namespace osgCompute
 {
     class Context;
-    class ContextResource;
+    class Resource;
 
-    typedef std::set< unsigned int >                                           ContextSet;
-    typedef std::set< unsigned int >::iterator                                 ContextSetItr;
-    typedef std::set< unsigned int >::const_iterator                           ContextSetCnstItr;
+    typedef std::set< const Context* >                                         ContextSet;
+    typedef std::set< const Context* >::iterator                               ContextSetItr;
+    typedef std::set< const Context* >::const_iterator                         ContextSetCnstItr;
 
-    typedef std::vector< ContextResource* >                                    ResourceList;
-    typedef std::vector< ContextResource* >::iterator                          ResourceListItr;
-    typedef std::vector< ContextResource* >::const_iterator                    ResourceListCnstItr;
+    typedef std::map< Resource*, osg::ref_ptr<osg::Object> >                   ResourceMap;
+    typedef std::map< Resource*, osg::ref_ptr<osg::Object> >::iterator         ResourceMapItr;
+    typedef std::map< Resource*, osg::ref_ptr<osg::Object> >::const_iterator   ResourceMapCnstItr;
+
+    typedef std::set< Resource* >                                              ResourceSet;
+    typedef std::set< Resource* >::iterator                                    ResourceSetItr;
+    typedef std::set< Resource* >::const_iterator                              ResourceSetCnstItr;
+
+    typedef std::vector< Resource* >                                           ResourceList;
+    typedef std::vector< Resource* >::iterator                                 ResourceListItr;
+    typedef std::vector< Resource* >::const_iterator                           ResourceListCnstItr;
 
     typedef std::map<unsigned int, osg::ref_ptr<Context> >                     ContextMap;
     typedef std::map<unsigned int, osg::ref_ptr<Context> >::iterator           ContextMapItr;
     typedef std::map<unsigned int, osg::ref_ptr<Context> >::const_iterator     ContextMapCnstItr;
 
-
-    /**
-    */
-    class LIBRARY_EXPORT ContextResource : public osg::Object
-    {
-    public:
-        ContextResource();
-
-        virtual void clear();
-
-    protected:
-        friend class Context;
-        virtual ~ContextResource();
-        
-        virtual void clearLocal();
-
-        virtual bool init( const Context& context ) const;
-        virtual void clear( const Context& context ) const;
-
-        mutable ContextSet _contexts;
-
-    private:
-        // copy constructor and operator should not be called
-        ContextResource(const ContextResource& ,const osg::CopyOp& ) {}
-        ContextResource &operator=(const ContextResource&) { return *this; }
-    };
-
+    typedef std::set< std::string >                                            HandleSet;
+    typedef std::set< std::string >::iterator                                  HandleSetItr;
+    typedef std::set< std::string >::const_iterator                            HandleSetCnstItr;
 
     /**
     */
     class LIBRARY_EXPORT Context : public osg::Object
     {
     public:
-        static void registerContext( Context& contextProto );
-        static Context* instance( unsigned int id, bool erase = false );
-        static Context* instance( osg::State& state, bool erase = false );
-        static Context* createInstance( unsigned int id, std::string libraryName, std::string className );
-        static Context* createInstance( osg::State& state, std::string libraryName, std::string className );
+        Context();
 
         virtual bool init();
         virtual void clear();
         virtual void apply();
 
         inline bool isDirty() const;
+        inline void setId( unsigned int id );
         inline unsigned int getId() const;
         inline void setState( osg::State& state );
         inline osg::State* getState();
@@ -92,18 +73,15 @@ namespace osgCompute
         inline bool isStateValid() const;
 
     protected:
-        friend class ContextResource;
+        friend class Resource;
 
-        Context();
         virtual ~Context();
         inline void clearLocal();
         virtual void clearResources() const;
 
-        inline void setId( unsigned int id );
-
-        virtual bool isRegistered( ContextResource& resource ) const;
-        virtual void registerResource( ContextResource& resource ) const;
-        virtual void unregisterResource( ContextResource& resource ) const;
+        virtual bool isRegistered( Resource& resource ) const;
+        virtual void registerResource( Resource& resource ) const;
+        virtual void unregisterResource( Resource& resource ) const;
 
         unsigned int                        _id;
         osg::ref_ptr<osg::State>            _state;

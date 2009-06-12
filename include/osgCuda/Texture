@@ -1,0 +1,886 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCUDA_TEXTURE
+#define OSGCUDA_TEXTURE 1
+
+#include <string.h>
+#include <osg/GL>
+#include <cuda_runtime.h>
+#include <driver_types.h>
+#include <cuda_gl_interop.h>
+#include <osg/Texture>
+#include <osg/Image>
+#include <osgCompute/Buffer>
+#include <osgCuda/Context>
+
+
+namespace osgCuda
+{
+#define META_Texture( libraryname, classname )                            \
+    META_Buffer( libraryname, classname )                                 \
+    virtual osg::Texture* asTexture() { return this; }                    \
+    virtual const osg::Texture* asTexture() const { return this; }
+
+    template<class T>
+    class Texture;
+
+    typedef Texture<unsigned char>                                      UByteTexture;
+    typedef Texture<osg::Vec4ub>                                        Vec4ubTexture;
+    typedef Texture<char>                                               ByteTexture;
+    typedef Texture<osg::Vec2b>                                         Vec2bTexture;
+    typedef Texture<osg::Vec3b>                                         Vec3bTexture;
+    typedef Texture<osg::Vec4b>                                         Vec4bTexture;
+    typedef Texture<unsigned short>                                     UShortTexture;
+    typedef Texture<short>                                              ShortTexture;
+    typedef Texture<osg::Vec2s>                                         Vec2sTexture;
+    typedef Texture<osg::Vec3s>                                         Vec3sTexture;
+    typedef Texture<osg::Vec4s>                                         Vec4sTexture;
+    typedef Texture<unsigned int>                                       UIntTexture;
+    typedef Texture<int>                                                IntTexture;
+    typedef Texture<float>                                              FloatTexture;
+    typedef Texture<osg::Vec2f>                                         Vec2fTexture;
+    typedef Texture<osg::Vec3f>                                         Vec3fTexture;
+    typedef Texture<osg::Vec4f>                                         Vec4fTexture;
+    typedef Texture<double>                                             DoubleTexture;
+    typedef Texture<osg::Vec2d>                                         Vec2dTexture;
+    typedef Texture<osg::Vec3d>                                         Vec3dTexture;
+    typedef Texture<osg::Vec4d>                                         Vec4dTexture;
+
+    /**
+    */
+    template< class DATATYPE >
+    class TextureStream : public osgCompute::BufferStream<DATATYPE>
+    {
+    public:
+        DATATYPE*                _hostPtr;
+        bool                     _hostPtrAllocated;
+        bool                     _syncHost;
+        DATATYPE*                _devPtr;
+        bool                     _syncDevice;
+        GLuint                   _bo;
+        bool                     _boRegistered;
+
+        TextureStream();
+        virtual ~TextureStream();
+
+    private:
+        // not allowed to call copy-constructor or copy-operator
+        TextureStream( const TextureStream& ) {}
+        TextureStream& operator=( const TextureStream& ) { return *this; }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    TextureStream<DATATYPE>::TextureStream()
+        : osgCompute::BufferStream<DATATYPE>(),
+        _devPtr(NULL),
+        _hostPtr(NULL),
+        _syncDevice(false),
+        _syncHost(false),
+        _hostPtrAllocated(false),
+        _bo( UINT_MAX ),
+        _boRegistered(false)
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    TextureStream<DATATYPE>::~TextureStream()
+    {
+        if( _boRegistered && _bo != UINT_MAX )
+            static_cast<Context*>( osgCompute::BufferStream<DATATYPE>::_context.get() )->freeBufferObject( _bo );
+        if( _hostPtrAllocated && NULL != _hostPtr)
+            static_cast<Context*>(osgCompute::BufferStream<DATATYPE>::_context.get())->freeMemory( _hostPtr );
+    }
+
+    /**
+    */
+    template< class DATATYPE >
+    class Texture : public osgCompute::Buffer<DATATYPE>
+    {
+    public:
+        Texture();
+
+        virtual bool init();
+
+        virtual osg::Texture* asTexture() = 0;
+        virtual const osg::Texture* asTexture() const = 0;
+
+        virtual bool setMemory( const osgCompute::Context& context, int value, unsigned int mapping ) const;
+        virtual void* map( const osgCompute::Context& context, unsigned int mapping ) const;
+        virtual void unmap( const osgCompute::Context& context ) const;
+
+        inline void setIsRenderTarget( bool isRenderTarget );
+        inline bool getIsRenderTarget() const;
+
+        virtual void clear();
+
+    protected:
+        virtual ~Texture();
+        void clearLocal();
+
+        virtual bool initDimension();
+        virtual bool initFormatAndType();
+
+        virtual DATATYPE* mapStream( TextureStream<DATATYPE>& stream, unsigned int mapping ) const;
+        virtual void unmapStream( TextureStream<DATATYPE>& stream ) const;
+
+        bool allocStream( unsigned int mapping, TextureStream<DATATYPE>& stream ) const;
+        bool syncStream( unsigned int mapping, TextureStream<DATATYPE>& stream ) const;
+
+        virtual bool allocPBO( TextureStream<DATATYPE>& stream ) const = 0;
+        virtual void syncPBO( TextureStream<DATATYPE>& stream ) const = 0;
+        virtual void syncTexture( TextureStream<DATATYPE>& stream ) const = 0;
+
+        virtual void clear( const osgCompute::Context& context ) const;
+
+        bool    _isRenderTarget;
+
+    private:
+        // copy constructor and operator should not be called
+        Texture( const Texture& , const osg::CopyOp& ) {}
+        Texture& operator=(const Texture&) { return (*this); }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    Texture<DATATYPE>::Texture()
+        : osgCompute::Buffer<DATATYPE>()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    Texture<DATATYPE>::~Texture()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture<DATATYPE>::clear()
+    {
+        osgCompute::Buffer<DATATYPE>::clear();
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture<DATATYPE>::init()
+    {
+        if( !osgCompute::Resource::isDirty() )
+            return true;
+
+        if( !asTexture() )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture::init() for buffer \""
+                << asObject()->getName() <<"\": object must be of type osg::Texture."
+                << std::endl;
+
+            clear();
+            return false;
+        }
+
+        // some flags for textures are not available right now
+        // like resize to a power of two and mipmaps
+        asTexture()->setResizeNonPowerOfTwoHint( false );
+        asTexture()->setUseHardwareMipMapGeneration( false );
+
+        if( !initDimension() )
+        {
+            clear();
+            return false;
+        }
+
+        if( !initFormatAndType() )
+        {
+            clear();
+            return false;
+        }
+
+        return osgCompute::Buffer<DATATYPE>::init();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture<DATATYPE>::initDimension()
+    {
+        unsigned int dim[3];
+        if( asTexture()->getImage(0) )
+        {
+            dim[0] = asTexture()->getImage(0)->s();
+            dim[1] = asTexture()->getImage(0)->t();
+            dim[2] = asTexture()->getImage(0)->r();
+        }
+        else
+        {
+            dim[0] = asTexture()->getTextureWidth();
+            dim[1] = asTexture()->getTextureHeight();
+            dim[2] = asTexture()->getTextureDepth();
+        }
+
+        if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 0 )
+        {
+            if( dim[0] == 0 )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Texture::initDimension() for texture \""
+                    << asObject()->getName()<< "\": no dimensions defined for texture! Call setDimension() first."
+                    << std::endl;
+
+                return false;
+            }
+
+            unsigned int d = 0;
+            while( dim[d] > 0 )
+            {
+                osgCompute::Buffer<DATATYPE>::setDimension( d, dim[d] );
+                ++d;
+            }
+        }
+        else
+        {
+            for( unsigned int d=0; d<osgCompute::Buffer<DATATYPE>::getNumDimensions(); ++d )
+            {
+                if( dim[d] > 0 && dim[d] != osgCompute::Buffer<DATATYPE>::getDimension(d) )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Texture::initDimension() for texture \""
+                        << asObject()->getName()<< "\": different dimensions for cuda context and rendering context specified!"
+                        << std::endl;
+
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture<DATATYPE>::initFormatAndType()
+    {
+        ///////////////////////
+        // COMPUTE BYTE SIZE //
+        ///////////////////////
+        unsigned int numElements = 1;
+        for( unsigned int d=0; d<osgCompute::Buffer<DATATYPE>::_dimensions.size(); ++d )
+            numElements *= osgCompute::Buffer<DATATYPE>::_dimensions[d];
+
+        unsigned int compByteSize = sizeof(DATATYPE) * numElements;
+
+        //////////////////////
+        // RENDER BYTE SIZE //
+        //////////////////////
+        GLenum texType = GL_NONE;
+        GLenum texFormat = GL_NONE;
+        if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT )
+        {
+            osg::Image* image = asTexture()->getImage(0);
+            if(!image)
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Texture::initFormatAndType() for texture \""
+                    << asObject()->getName()<< "\": could not find promised image data."
+                    << std::endl;
+
+                return false;
+            }
+
+            texType = image->getDataType();
+        }
+        else
+        {
+            texType = (asTexture()->getSourceType() != GL_NONE)? asTexture()->getSourceType() : GL_UNSIGNED_BYTE;
+        }
+
+        if( asTexture()->getInternalFormat() == GL_NONE )
+            asTexture()->computeInternalFormat();
+
+        unsigned int renderBitSize = osg::Image::computePixelSizeInBits( asTexture()->getInternalFormat(), texType );
+        unsigned int renderByteSize = ((renderBitSize % 8) == 0)? (renderBitSize/8) : (renderBitSize/8+1);
+
+        if( renderByteSize != compByteSize )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture::initFormatAndType() for texture \""
+                << asObject()->getName()<< "\": Different byte size specified for compute context and rendering context."
+                << std::endl;
+
+            return false;
+        }
+
+        return true;
+    }
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<unsigned char>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec4ub>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    bool LIBRARY_EXPORT Texture<unsigned char>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    bool LIBRARY_EXPORT Texture<osg::Vec4ub>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<char>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec2b>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec3b>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec4b>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<unsigned short>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<short>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec2s>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec3s>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec4s>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<unsigned int>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<int>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<float>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec2f>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec3f>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec4f>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<double>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec2d>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec3d>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template<>
+    bool LIBRARY_EXPORT Texture<osg::Vec4d>::initFormatAndType();
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void* Texture<DATATYPE>::map( const osgCompute::Context& context, unsigned int mapping ) const
+    {
+        if( osgCompute::Resource::isDirty() )
+        {
+            osg::notify(osg::FATAL)
+                << "Texture::map() for texture \""
+                << asObject()->getName() <<"\": buffer is dirty."
+                << std::endl;
+
+            return NULL;
+        }
+
+        if( getIsRenderTarget() && 
+            ( ((mapping & osgCompute::MAP_DEVICE)  == osgCompute::MAP_DEVICE_TARGET )  || 
+              ((mapping & osgCompute::MAP_HOST)  == osgCompute::MAP_HOST_TARGET) ) )
+        {
+            osg::notify(osg::WARN)
+                << "Texture::map() for texture \""<< asObject()->getName()
+                << "\": texture is target of a compute context and target of a render context. This is not allowed."
+                << std::endl;
+
+            return NULL;
+        }
+
+        if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
+        {
+            osg::notify(osg::FATAL)
+                << "Texture::map() for texture \""
+                << asObject()->getName() <<"\": calling thread differs from the context's thread."
+                << std::endl;
+
+            return NULL;
+        }
+
+        TextureStream<DATATYPE>* stream = static_cast<TextureStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context) );
+        if( NULL == stream )
+        {
+            osg::notify(osg::FATAL)
+                << "Texture::map() for texture \""
+                << asObject()->getName() <<"\": could not receive TextureStream for context \""
+                << context.getId() << "\"."
+                << std::endl;
+
+            return NULL;
+        }
+
+
+        DATATYPE* ptr = NULL;
+        if( mapping != osgCompute::UNMAPPED )
+            ptr = mapStream( *stream, mapping );
+        else
+            unmapStream( *stream );
+
+        return ptr;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture<DATATYPE>::unmap( const osgCompute::Context& context ) const
+    {
+        if( osgCompute::Resource::isDirty() )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture::map() for texture \""
+                << asObject()->getName() <<"\": buffer is dirty."
+                << std::endl;
+
+            return;
+        }
+
+        if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture::map() for texture \""
+                << asObject()->getName() <<"\": calling thread differs from the context's thread."
+                << std::endl;
+
+            return;
+        }
+
+        TextureStream<DATATYPE>* stream = static_cast<TextureStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context) );
+        if( NULL == stream )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Texture::map() for texture \""
+                << asObject()->getName() <<"\": could not receive TextureStream for context \""
+                << context.getId() << "\"."
+                << std::endl;
+
+            return;
+        }
+
+        unmapStream( *stream );
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool osgCuda::Texture<DATATYPE>::setMemory( const osgCompute::Context& context, int value, unsigned int mapping ) const
+    {
+        void* data = map( context, mapping );
+        if( NULL == data )
+            return false;
+
+        if( mapping & osgCompute::MAP_HOST_TARGET )
+        {
+            if( NULL == memset( data, value, getByteSize() ) )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Texture::setMemory() for texture \""
+                    << asObject()->getName() <<"\": memset() failed for host data within context \""
+                    << context.getId() << "\"."
+                    << std::endl;
+
+                unmap( context );
+                return false;
+            }
+
+            return true;
+        }
+        else if( mapping & osgCompute::MAP_DEVICE_TARGET )
+        {
+            cudaError res = cudaMemset( data, value, getByteSize() );
+            if( res != cudaSuccess )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Texture::setMemory() for texture \""
+                    << asObject()->getName() <<"\": cudaMemset() failed for device data within context \""
+                    << context.getId() << "\"."
+                    << std::endl;
+
+                unmap( context );
+                return false;
+            }
+
+            return true;
+        }
+
+        unmap( context );
+        return false;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture<DATATYPE>::clearLocal()
+    {
+        _isRenderTarget = false;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture<DATATYPE>::clear( const osgCompute::Context& context ) const
+    {
+        if( osgCompute::Buffer<DATATYPE>::getMapping( context ) != osgCompute::UNMAPPED )
+            unmap( context );
+
+        osgCompute::Buffer<DATATYPE>::clear( context );
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    DATATYPE* Texture<DATATYPE>::mapStream( TextureStream<DATATYPE>& stream, unsigned int mapping ) const
+    {
+        ///////////////////
+        // PROOF MAPPING //
+        ///////////////////
+        if( stream._mapping == mapping )
+        {
+            if( (stream._mapping & osgCompute::MAP_DEVICE) )
+                return stream._devPtr;
+            else
+                return stream._hostPtr;
+        }
+        else if( stream._mapping != osgCompute::UNMAPPED )
+        {
+            unmapStream( stream );
+        }
+
+        stream._mapping = mapping;
+
+
+        bool firstLoad = false;
+
+        ////////////////////////////
+        // ALLOCATE DEVICE-MEMORY //
+        ////////////////////////////
+        // create dynamic texture device memory
+        // for each type of mapping
+        if( UINT_MAX == stream._bo )
+        {
+            if( !allocStream( osgCompute::MAP_DEVICE, stream ) )
+                return NULL;
+
+            firstLoad = true;
+        }
+
+        ////////////////
+        // UPDATE PBO //
+        ////////////////
+        // if necessary sync dynamic texture with PBO
+        if( getIsRenderTarget() )
+        {
+            // synchronize PBO with texture
+            syncPBO( stream );
+            stream._syncHost = true;
+        }
+
+        /////////////
+        // MAP PBO //
+        /////////////
+        if( NULL == stream._devPtr )
+        {
+            cudaError res = cudaGLMapBufferObject( reinterpret_cast<void**>(&stream._devPtr), stream._bo );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::WARN)
+                    << "CUDA::Texture::mapStream() for texture \""<< asObject()->getName()
+                    << "\": something goes wrong on cudaGLMapBufferObject() for context \""
+                    << stream._context->getId()<<"\". Returned code is "<<std::hex<<res<<"."
+                    << std::endl;
+
+                return NULL;
+            }
+        }
+
+        //////////////
+        // MAP DATA //
+        //////////////
+        DATATYPE* ptr = NULL;
+        if( mapping & osgCompute::MAP_HOST )
+        {
+            if( NULL == stream._hostPtr )
+            {
+                ////////////////////////////
+                // ALLOCATE DEVICE-MEMORY //
+                ////////////////////////////
+                if( !allocStream( mapping, stream ) )
+                    return NULL;
+            }
+
+            /////////////////
+            // SYNC STREAM //
+            /////////////////
+            if( stream._syncHost && NULL != stream._devPtr )
+                if( !syncStream( mapping, stream ) )
+                    return NULL;
+
+            ptr = stream._hostPtr;
+        }
+        else if( (stream._mapping & osgCompute::MAP_DEVICE) )
+        {
+            /////////////////
+            // SYNC STREAM //
+            /////////////////
+            if( stream._syncDevice && NULL != stream._hostPtr )
+                if( !syncStream( mapping, stream ) )
+                    return NULL;
+
+            ptr = stream._devPtr;
+        }
+        else
+        {
+            osg::notify(osg::WARN)
+                << "CUDA::Texture::mapStream() for texture \""<< asObject()->getName()<<"\": wrong mapping type. Use one of the following types: "
+                << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
+                << std::endl;
+
+            return NULL;
+        }
+
+        //////////////////
+        // LOAD/SUBLOAD //
+        //////////////////
+        if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != ptr )
+        {
+            const osgCompute::BufferSubloadCallback* callback = 
+                dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback());
+            if( callback )
+            {
+                // load or subload data before returning the host pointer
+                if( firstLoad )
+                    callback->load( ptr, mapping, *this, *stream._context );
+                else
+                    callback->subload( ptr, mapping, *this, *stream._context );
+            }
+        }
+
+        return ptr;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture<DATATYPE>::unmapStream( TextureStream<DATATYPE>& stream ) const
+    {
+        ///////////
+        // UNMAP //
+        ///////////
+        if( stream._devPtr != NULL )
+        {
+            cudaError res = cudaGLUnmapBufferObject( stream._bo );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::WARN)
+                    << "CUDA::Texture::unmapStream() for texture \""<< asObject()->getName()
+                    <<"\": something goes wrong on cudaGLUnmapBufferObject() for context \""
+                    << stream._context->getId()<<"\". Returned code is "<<std::hex<<res<<"."
+                    << std::endl;
+                return;
+            }
+            stream._devPtr = NULL;
+        }
+
+        ////////////////////
+        // UPDATE TEXTURE //
+        ////////////////////
+        if( stream._mapping == osgCompute::MAP_DEVICE_TARGET )
+        {
+            // sync texture object as required
+            syncTexture( stream );
+            stream._syncHost = true;
+        }
+        else if( (stream._mapping & osgCompute::MAP_HOST_TARGET) )
+        {
+            stream._syncDevice = true;
+        }
+
+        stream._mapping = osgCompute::UNMAPPED;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture<DATATYPE>::allocStream( unsigned int mapping, TextureStream<DATATYPE>& stream ) const
+    {
+        if( mapping & osgCompute::MAP_HOST )
+        {
+            if( stream._hostPtr != NULL )
+                return true;
+
+            if( (stream._allocHint & osgCompute::ALLOC_DYNAMIC) == osgCompute::ALLOC_DYNAMIC )
+            {
+                stream._hostPtr = reinterpret_cast<DATATYPE*>(
+                    static_cast<Context*>(stream._context.get())->mallocDeviceHostMemory( osgCompute::Buffer<DATATYPE>::getByteSize() ) );
+                if( NULL == stream._hostPtr )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Texture::allocStream() for texture \""
+                        << asObject()->getName()<<"\": something goes wrong within mallocDeviceHost() within context \""<<stream._context->getId()
+                        << "\"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else
+            {
+                stream._hostPtr = reinterpret_cast<DATATYPE*>(
+                    static_cast<Context*>(stream._context.get())->mallocHostMemory( osgCompute::Buffer<DATATYPE>::getByteSize() ) );
+                if( NULL == stream._hostPtr )
+                {
+                    osg::notify(osg::FATAL)
+                        << "CUDA::Texture::allocStream() for texture \""
+                        << asObject()->getName()<<"\": something goes wrong within mallocHost() within context \""<<stream._context->getId()
+                        << "\"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+
+            stream._hostPtrAllocated = true;
+            if( stream._devPtr != NULL )
+                stream._syncHost = true;
+            return true;
+        }
+        else if( mapping & osgCompute::MAP_DEVICE )
+        {
+            if( stream._bo != UINT_MAX )
+                return true;
+
+            allocPBO( stream );
+
+            //////////////
+            // INIT PBO //
+            //////////////
+            syncPBO( stream );
+
+            if( stream._hostPtr != NULL )
+                stream._syncDevice = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture<DATATYPE>::syncStream( unsigned int mapping, TextureStream<DATATYPE>& stream ) const
+    {
+        cudaError res;
+        if( mapping & osgCompute::MAP_DEVICE )
+        {
+            res = cudaMemcpy( stream._devPtr, stream._hostPtr, osgCompute::Buffer<DATATYPE>::getByteSize(), cudaMemcpyHostToDevice );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Texture::syncStream() for texture \""<< asObject()->getName()
+                    << "\": something goes wrong on cudaMemcpy() to device within context \""
+                    << stream._context->getId() << "\". Returned code is "
+                    << std::hex<<res<<"."
+                    << std::endl;
+                return false;
+            }
+
+            stream._syncDevice = false;
+            return true;
+        }
+        else if( mapping & osgCompute::MAP_HOST )
+        {
+            res = cudaMemcpy( stream._hostPtr, stream._devPtr, osgCompute::Buffer<DATATYPE>::getByteSize(), cudaMemcpyDeviceToHost );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Texture::syncStream() for texture \""
+                    << asObject()->getName()<<"\": something goes wrong within cudaMemcpy() to host within context \""
+                    << stream._context->getId() << "\". Returned code is "
+                    << std::hex<<res<<"."
+                    << std::endl;
+
+                return false;
+            }
+
+            stream._syncHost = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture<DATATYPE>::getIsRenderTarget() const
+    {
+        return _isRenderTarget;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture<DATATYPE>::setIsRenderTarget( bool isRenderTarget )
+    {
+        _isRenderTarget = isRenderTarget;
+    }
+}
+
+
+#endif //OSGCUDA_TEXTURE

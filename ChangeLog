@@ -1,3 +1,13 @@
+2009-06-12 13:30  svt group
+
+	* [r21]
+      - IntOpBuffer replaced by geometry and texture classes
+        which fit better into the osg concept
+      - visitors added for context propagation and resource collection
+      - computations can be nested
+      - particle and texture examples enhanced
+      - buffer handling improved
+
 2009-04-20 10:45  svt group
 
 	* [r16]

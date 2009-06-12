@@ -43,23 +43,24 @@ SET(HEADER_PATH ${osgCompute_SOURCE_DIR}/include/${LIB_NAME})
 SET(TARGET_H
 	${HEADER_PATH}/Buffer	
 	${HEADER_PATH}/Callback
-	${HEADER_PATH}/Constant	
 	${HEADER_PATH}/Context
 	${HEADER_PATH}/Export	
 	${HEADER_PATH}/Module
-	${HEADER_PATH}/Param
+	${HEADER_PATH}/Resource
 	${HEADER_PATH}/Computation
 	${HEADER_PATH}/ComputationBin
+	${HEADER_PATH}/Visitor
 )
 
 
 # collect the sources
 SET(TARGET_SRC
 	Module.cpp
-	Param.cpp
+	Resource.cpp
 	Context.cpp
 	Computation.cpp
 	ComputationBin.cpp	
+	Visitor.cpp
 )
 
 

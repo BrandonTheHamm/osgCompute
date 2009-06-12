@@ -30,12 +30,14 @@ float4 reseed( float* seeds, unsigned int seedCount, unsigned int seedIdx, unsig
     // random seed idx
     unsigned int idx1 = (seedIdx + ptclIdx) % seedCount;
     unsigned int idx2 = (idx1 + ptclIdx) % seedCount;
+    unsigned int idx3 = (idx2 + ptclIdx) % seedCount;
 
     // seeds are within the range [0,1]
     float intFac1 = seeds[idx1];
     float intFac2 = seeds[idx2];
+    float intFac3 = seeds[idx3];
 
-    return make_float4(lerp(bbmin.x,bbmax.x,intFac1), 0,
+    return make_float4(lerp(bbmin.x,bbmax.x,intFac1), lerp(bbmin.y,bbmax.y,intFac3),
                        lerp(bbmin.z,bbmax.z,intFac2), 1);
 }
 
@@ -82,13 +84,13 @@ void k_reseed( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int
 //------------------------------------------------------------------------------
 extern "C" __host__
 void reseed( unsigned int numBlocks, 
-                      unsigned int numThreads, 
-                      osg::Vec4f* ptcls, 
-                      float* seeds, 
-                      unsigned int seedCount, 
-                      unsigned int seedIdx, 
-                      osg::Vec3f bbmin, 
-                      osg::Vec3f bbmax )
+             unsigned int numThreads, 
+             osg::Vec4f* ptcls, 
+             float* seeds, 
+             unsigned int seedCount, 
+             unsigned int seedIdx, 
+             osg::Vec3f bbmin, 
+             osg::Vec3f bbmax )
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );

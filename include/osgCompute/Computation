@@ -16,9 +16,11 @@
 #ifndef OSGCOMPUTE_COMPUTATION
 #define OSGCOMPUTE_COMPUTATION 1
 
-#include <map>
+#include <set>
 #include <osg/Group>
-#include "osgCompute/ComputationBin"
+#include <osgCompute/Resource>
+#include <osgCompute/Visitor>
+#include <osgCompute/ComputationBin>
 
 namespace osg
 {
@@ -30,10 +32,13 @@ namespace osgUtil
     class CullVisitor;
 }
 
-#define META_Computation( libraryname, classname, ctxlibrary, ctxclass )                            \
-    META_Object( libraryname, classname )                                                           \
-    virtual std::string                 contextLibraryName() const { return #ctxlibrary; }          \
-    virtual std::string                 contextClassName() const { return #ctxclass; }
+#define META_Computation( libraryname, classname, binlibrary, binclass, ctxlibrary, ctxclass )  \
+    META_Object( libraryname, classname )                                                       \
+    virtual std::string                 binLibraryName() const { return #binlibrary; }          \
+    virtual std::string                 binClassName() const { return #binclass; }              \
+    virtual std::string                 contextLibraryName() const { return #ctxlibrary; }      \
+    virtual std::string                 contextClassName() const { return #ctxclass; }          \
+    virtual osgCompute::Context*        newContext() const { return new ctxlibrary::ctxclass; }
 
 namespace osgCompute
 {
@@ -55,8 +60,14 @@ namespace osgCompute
 
         enum ComputeOrder
         {
-            PRE_COMPUTE = 0,
-            POST_COMPUTE = 1
+            POST_TRAVERSAL = 0x1,
+            PRE_TRAVERSAL = 0x2,
+            POST_COMPUTE = 0x4,
+            PRE_COMPUTE = 0x8,
+            PRE_COMPUTE_POST_TRAVERSAL = PRE_COMPUTE | POST_TRAVERSAL,
+            PRE_COMPUTE_PRE_TRAVERSAL = PRE_COMPUTE | PRE_TRAVERSAL,
+            POST_COMPUTE_POST_TRAVERSAL = POST_COMPUTE | POST_TRAVERSAL,
+            POST_COMPUTE_PRE_TRAVERSAL = POST_COMPUTE | PRE_TRAVERSAL,
         };
 
     public:
@@ -74,6 +85,13 @@ namespace osgCompute
         virtual std::string contextLibraryName() const = 0;
         /** The derived class must provide a valid class name of the required context. */
         virtual std::string contextClassName() const = 0;
+        /** The derived class must provide a method which allows to create new contexts*/
+        virtual osgCompute::Context* newContext() const = 0;
+
+        /** The derived class must provide a valid library name of the required computation bin. */
+        virtual std::string binLibraryName() const = 0;
+        /** The derived class must provide a valid class name of the required computation bin. */
+        virtual std::string binClassName() const = 0;
 
         /** Load a module dynamically (not implemented yet) */
         virtual void loadModule( const std::string& modName );
@@ -85,10 +103,10 @@ namespace osgCompute
         virtual void removeModule( Module& module );
 
         /** Remove the module by providing the module's name. */
-        virtual void removeModule( const std::string& moduleName );
+        virtual void removeModule( const std::string& moduleHandle );
 
         /** Returns true if the computation uses a module of module name. */
-        virtual bool hasModule( const std::string& moduleName ) const;
+        virtual bool hasModule( const std::string& moduleHandle ) const;
 
         /** Returns true if the computation uses the module. */
         virtual bool hasModule( Module& module ) const;
@@ -96,24 +114,29 @@ namespace osgCompute
         /** Returns true if the computation has modules at all. */
         virtual bool hasModules() const;
 
-        /** Returns the module with name moduleName. */
-        virtual Module* getModule( const std::string& moduleName );
-        virtual const Module* getModule( const std::string& moduleName ) const;
-
         /** Return all modules. */
-        virtual ModuleList* getModules();
-        virtual const ModuleList* getModules() const;
+        virtual ModuleList& getModules();
+        virtual const ModuleList& getModules() const;
 
         /** Return the number of modules. */
         virtual unsigned int getNumModules() const;
 
-        /** Return the number of modules. */
-        virtual void addParamHandle( const std::string& handle, osgCompute::Param& param );
-        virtual void removeParamHandles( const std::string& handle );
-        virtual void removeParamHandle( const osgCompute::Param& param );
-        virtual bool hasParamHandle( const std::string& handle ) const;
-        virtual HandleToParamMap* getParamHandles();
-        virtual const HandleToParamMap* getParamHandles() const;
+        virtual void removeModules();
+
+        /** Add a resource to the computation. */
+        virtual void addResource( Resource& resource );
+        virtual void removeResource( const std::string& handle );
+        virtual void removeResource( Resource& resource );
+        virtual bool hasResource( const std::string& handle ) const;
+        virtual bool hasResource( Resource& resource ) const;
+        virtual ResourceMap& getResources();
+        virtual const ResourceMap& getResources() const;
+
+        virtual void removeResources();
+
+        virtual void resourcesChanged();
+
+        inline Computation* getParentComputation() const;
 
         inline void setLaunchCallback( LaunchCallback* lc );
         inline LaunchCallback* getLaunchCallback();
@@ -128,6 +151,10 @@ namespace osgCompute
         /** Returns the compute order */
         inline ComputeOrder getComputeOrder();
 
+
+        inline void setAutoCollectResources( bool autoCollectResources );
+        inline bool getAutoCollectResources();
+
         /** Activates the computation (a computation is enabled by default) */
         inline void enable();
 
@@ -141,24 +168,38 @@ namespace osgCompute
         virtual void clear();
 
     protected:
-
+        friend class ContextVisitor;
+        friend class ResourceVisitor;
         /** Destructor. Release the memory by calling clearLocal(). */
         virtual ~Computation() { clearLocal(); }
 
         void clearLocal();
 
-        virtual void addBin( osgUtil::CullVisitor& cv );
+        virtual bool setContext( Context& context );
+        virtual void removeContext( unsigned int ctxId );
+        virtual Context* getOrCreateContext( unsigned int ctxId );
+        virtual Context* getContext( unsigned int ctxId );
+
+        virtual void setupBin( osgUtil::CullVisitor& cv );
+        virtual void distributeContext( Context& context );
         virtual void update( osg::NodeVisitor& uv );
+        virtual void collectResources();
         virtual void handleevent( osg::NodeVisitor& ev );
-        virtual void resourcesChanged();
-        virtual Context* getOrCreateContext( osg::State& state );
+
+        virtual void setParentComputation( Computation* parentComputation );
 
         bool                                _enabled;
         LaunchCallback*                     _launchCallback; 
         ModuleList                          _modules;
-        HandleToParamMap                    _paramHandles;
+        ResourceMap                         _resources;
         ComputeOrder                        _computeOrder;
         bool                                _resourcesChanged;
+        osg::ref_ptr<ResourceVisitor>       _resourceVisitor;
+        Computation*                        _parentComputation; 
+        bool                                _resourcesCollected;
+        bool                                _autoCollectResources;
+
+        ContextMap                          _contextMap;
 
         mutable OpenThreads::Mutex          _mutex;
 
@@ -207,6 +248,23 @@ namespace osgCompute
         return _computeOrder;
     }
 
+    //------------------------------------------------------------------------------
+    inline Computation* Computation::getParentComputation() const
+    {
+        return _parentComputation;
+    }
+
+    //------------------------------------------------------------------------------
+    inline void Computation::setAutoCollectResources( bool autoCollectResources )
+    {
+        _autoCollectResources = autoCollectResources;
+    }
+
+    //------------------------------------------------------------------------------
+    inline bool Computation::getAutoCollectResources()
+    {
+        return _autoCollectResources;
+    }
 
     //------------------------------------------------------------------------------
     inline void Computation::enable() 
@@ -225,6 +283,7 @@ namespace osgCompute
     {
         return _enabled;
     }
+
 }
 
 #endif //OSGCOMPUTE_COMPUTATION

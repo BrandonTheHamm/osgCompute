@@ -21,7 +21,7 @@
 #include <osgCuda/Module>
 #include <osgCuda/Buffer>
 #include <osgCuda/Array>
-#include <osgCuda/Constant>
+#include <osgCuda/Texture2D>
 
 namespace TexDemo
 {
@@ -38,11 +38,11 @@ namespace TexDemo
 
         virtual void launch( const osgCompute::Context& context ) const;
 
-        virtual void acceptParam( const std::string& handle, osgCompute::Param& param );
-        virtual bool usesParam( const std::string& handle ) const;
-        virtual void removeParam( const std::string& handle );
-        virtual osgCompute::Param* getParam( const std::string& handle );
-        virtual const osgCompute::Param* getParam( const std::string& handle ) const;
+        virtual void acceptResource( osgCompute::Resource& resource );
+        virtual bool usesResource( const std::string& handle ) const;
+        virtual void removeResource( const std::string& handle );
+        virtual osgCompute::Resource* getResource( const std::string& handle );
+        virtual const osgCompute::Resource* getResource( const std::string& handle ) const;
 
     protected:
         virtual ~TexStreamer() { clearLocal(); }
@@ -54,7 +54,8 @@ namespace TexDemo
         mutable osg::Vec2s                                _numBlocks;
         mutable osg::Vec2s                                _numThreads;
         osg::ref_ptr<osgCuda::Vec4ubArray>                _srcArray;
-        osg::ref_ptr<osgCuda::Vec4ubBuffer>               _trgBuffer;
+        osg::ref_ptr<osgCuda::Vec4ubBuffer>               _trgTmpBuffer;
+        osg::ref_ptr<osgCuda::Vec4ubTexture2D>            _trgBuffer;
 
     private:
         TexStreamer(const TexStreamer&, const osg::CopyOp& ) {} 

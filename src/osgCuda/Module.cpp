@@ -1,4 +1,4 @@
-#include "osgCuda/Module"
+#include <osgCuda/Module>
 
 namespace osgCuda
 {   

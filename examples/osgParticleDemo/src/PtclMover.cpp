@@ -76,7 +76,7 @@ namespace PtclDemo
         /////////////
         // MAPPING //
         /////////////
-        osg::Vec4f* ptcls = _particles->map( context, osgCompute::MAP_DEVICE );
+        osg::Vec4f* ptcls = (osg::Vec4f*)_particles->map( context, osgCompute::MAP_DEVICE );
 
         ///////////////
         // ADVECTION //
@@ -87,14 +87,14 @@ namespace PtclDemo
               ptcls, 
               etime );
 
-        _particles->unmap( context );
+        //_particles->unmap( context );
     }
 
     //------------------------------------------------------------------------------
-    void PtclMover::acceptParam( const std::string& handle, osgCompute::Param& param )
+    void PtclMover::acceptResource( osgCompute::Resource& resource )
     {
-        if( handle == "PTCL_BUFFER" )
-            _particles = dynamic_cast<osgCuda::Vec4fBuffer*>( &param );
+        if( resource.isAddressedByHandle("PTCL_BUFFER") )
+            _particles = dynamic_cast<osgCuda::Vec4fBuffer*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////

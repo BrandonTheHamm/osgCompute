@@ -18,6 +18,7 @@
 
 #include <osg/ArgumentParser>
 #include <osg/Texture2D>
+#include <osg/Vec4ub>
 #include <osg/BlendFunc>
 #include <osg/Geometry>
 #include <osgDB/ReadFile>
@@ -27,12 +28,11 @@
 #include <osgViewer/ViewerEventHandlers>
 
 #include <osgCuda/Computation>
-#include <osgCuda/IntOpBuffer>
-#include <osgCuda/Constant>
+#include <osgCuda/Texture2D>
 
 #include "TexStreamer"
 
-osgCuda::Computation* getComputation( osg::Image& srcImage, osg::Texture2D& outTexture )
+osgCuda::Computation* getComputation( osg::Image& srcImage )
 {
     cudaChannelFormatDesc srcDesc;
     srcDesc.f = cudaChannelFormatKindUnsigned;
@@ -46,20 +46,14 @@ osgCuda::Computation* getComputation( osg::Image& srcImage, osg::Texture2D& outT
     srcArray->setChannelFormatDesc( srcDesc );
     srcArray->setDimension( 0, srcImage.s() );
     srcArray->setDimension( 1, srcImage.t() );
-    srcArray->setImage( &srcImage, 0 );
+    srcArray->setImage( &srcImage );
+    srcArray->addHandle( "SRC_ARRAY" );
 
-    osgCuda::Vec4ubIntOpBuffer* trgBuffer = new osgCuda::Vec4ubIntOpBuffer;
-    trgBuffer->setName( "trgBuffer" );
-    trgBuffer->setNumStreams( 2 );
-    trgBuffer->setIntOpObject( outTexture, 1 );
-    trgBuffer->setDimension( 0, srcImage.s() );
-    trgBuffer->setDimension( 1, srcImage.t() );
-
-    // Value is used to scale pixel colors
-    osg::Vec4f scaleValue( 0.5,0.5,0.5,0.8 );
-    osgCuda::Vec4fConstant* scale = new osgCuda::Vec4fConstant;
-    scale->setName( "scale" );
-    scale->setData( scaleValue );
+    osgCuda::Vec4ubBuffer* trgTmpBuffer = new osgCuda::Vec4ubBuffer;
+    trgTmpBuffer->setName( "trgTmpBuffer" );
+    trgTmpBuffer->setDimension( 0, srcImage.s() );
+    trgTmpBuffer->setDimension( 1, srcImage.t() );
+    trgTmpBuffer->addHandle( "TRG_TMP_BUFFER" );
 
     TexDemo::TexStreamer* texStreamer = new TexDemo::TexStreamer;
     texStreamer->setName( "MyGoodOldTexStreamer" );
@@ -69,9 +63,8 @@ osgCuda::Computation* getComputation( osg::Image& srcImage, osg::Texture2D& outT
     ///////////
     osgCuda::Computation* computation = new osgCuda::Computation;
     computation->addModule( *texStreamer );
-    computation->addParamHandle( "TRG_BUFFER", *trgBuffer );
-    computation->addParamHandle( "SRC_ARRAY", *srcArray );
-    computation->addParamHandle( "SCALE", *scale );
+    computation->addResource( *trgTmpBuffer );
+    computation->addResource( *srcArray );
 
     return computation;
 }
@@ -79,6 +72,7 @@ osgCuda::Computation* getComputation( osg::Image& srcImage, osg::Texture2D& outT
 osg::Geode* getGeode( osg::Texture2D& trgTexture )
 {
     osg::Geode* geode = new osg::Geode;
+    geode->setName("quad");
 
     osg::Vec3 llCorner = osg::Vec3(-0.5,0,-0.5);
     osg::Vec3 width = osg::Vec3(1,0,0);
@@ -87,17 +81,7 @@ osg::Geode* getGeode( osg::Texture2D& trgTexture )
     //////////
     // QUAD //
     //////////
-    osg::Geometry* geom = new osg::Geometry;
-
-    osg::Vec3Array* coords = new osg::Vec3Array(4);
-    (*coords)[0] = llCorner;
-    (*coords)[1] = llCorner+width;
-    (*coords)[2] = llCorner+width+height;
-    (*coords)[3] = llCorner+height;
-
-    geom->setVertexArray(coords);
-    geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
-    geom->computeBound();
+    osg::Geometry* geom = osg::createTexturedQuadGeometry( llCorner, width, height );
     geode->addDrawable( geom );
 
     /////////////
@@ -129,6 +113,7 @@ int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
 
+
     ///////////////
     // RESOURCEN //
     ///////////////
@@ -140,24 +125,22 @@ int main(int argc, char *argv[])
         return NULL;
     }
 
-    // TARGET
-    osg::ref_ptr<osg::Texture2D> trgTexture = new osg::Texture2D;
-    trgTexture->setName("myTarget");
-    trgTexture->setTextureWidth(srcImage->s());
-    trgTexture->setTextureHeight(srcImage->t());
-    trgTexture->setInternalFormat( GL_RGBA );
-    trgTexture->setSourceType( GL_UNSIGNED_BYTE );
+    osg::ref_ptr< osgCuda::Vec4ubTexture2D > trgTexture = new osgCuda::Vec4ubTexture2D;
+    trgTexture->setName( "trgBuffer" );
+    trgTexture->setDimension(0,srcImage->s());
+    trgTexture->setDimension(1,srcImage->t());
     trgTexture->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
     trgTexture->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
+    trgTexture->addHandle( "TRG_BUFFER" );
 
     ///////////
     // SCENE //
     ///////////
     osg::Group* scene = new osg::Group;
-    // COMPUTATION
-    scene->addChild( getComputation( *srcImage, *trgTexture ) );
-    // QUAD
-    scene->addChild( getGeode( *trgTexture ) );
+
+    osgCompute::Computation* computation = getComputation( *srcImage );
+    computation->addChild( getGeode( *trgTexture ) );
+    scene->addChild( computation );
 
     ////////////
     // VIEWER //
@@ -165,12 +148,13 @@ int main(int argc, char *argv[])
     osg::ArgumentParser arguments(&argc, argv);
     osgViewer::Viewer viewer(arguments);
     viewer.setUpViewInWindow( 50, 50, 640, 480);
+    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
 
     // if you have OSG Version 2.8.1 or the current OSG SVN Version (2.9.1 or later)
     // then try to run it multi-threaded
     // otherwise the application will finish with segmentation fault
-    //viewer.setThreadingModel(osgViewer::Viewer::DrawThreadPerContext);
-    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    viewer.setThreadingModel(osgViewer::Viewer::DrawThreadPerContext);
+    //viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);

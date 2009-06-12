@@ -1,0 +1,200 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCOMPUTE_VISITOR
+#define OSGCOMPUTE_VISITOR 1
+
+#include <osg/NodeVisitor>
+#include <osgCompute/Export>
+#include <osgCompute/Context>
+
+namespace osgCompute
+{
+    class Computation;
+
+    /**
+    */
+    class LIBRARY_EXPORT ResourceVisitor : public osg::NodeVisitor
+    {
+    public:
+        ResourceVisitor();
+
+        META_NodeVisitor( osgCompute, ResourceVisitor )
+
+        virtual bool init();
+        virtual void setupForTraversal();
+        virtual void updateComputation();
+
+        virtual void apply( osg::Node& node );
+        virtual void apply( osg::Geode& node );
+        virtual void apply( Computation& computation );
+        virtual void apply( osg::Group& group );
+        inline Computation* getComputation();
+        inline const Computation* getComputation() const;
+
+        inline void addResource( Resource& resource );
+        inline void removeResource( Resource& resource );
+        inline bool hasResource( Resource& resource );
+        inline ResourceSet& getResources();
+        inline const ResourceSet& getResources() const;
+
+        inline bool isDirty() const;
+
+        virtual void reset();
+        virtual void clear();
+    protected:
+        friend class Computation;
+        virtual ~ResourceVisitor() { clearLocal(); }
+        void clearLocal();
+
+        inline void setComputation( Computation* computation );
+
+        Computation*                       _computation;
+
+        ResourceSet*                       _ptrResources;
+        ResourceSet*                       _ptrOldResources;
+        ResourceSet                        _resourcesA;
+        ResourceSet                        _resourcesB;
+
+        bool                               _dirty;
+
+    private:
+        // copy constructor and operator should not be called
+        ResourceVisitor( const ResourceVisitor&, const osg::CopyOp& ) {}
+        ResourceVisitor& operator=( const ResourceVisitor& copy ) { return (*this); }
+    };
+
+    //------------------------------------------------------------------------------
+    inline bool ResourceVisitor::isDirty() const
+    {
+        return _dirty;
+    }
+
+    //------------------------------------------------------------------------------
+    inline void ResourceVisitor::setComputation( Computation* computation )
+    {
+        _computation = computation;
+    }
+
+    //------------------------------------------------------------------------------
+    inline Computation* ResourceVisitor::getComputation()
+    {
+        return _computation;
+    }
+
+    //------------------------------------------------------------------------------
+    inline const Computation* ResourceVisitor::getComputation() const
+    {
+        return _computation;
+    }
+
+    //------------------------------------------------------------------------------
+    inline void ResourceVisitor::addResource( Resource& resource )
+    {
+        _ptrResources->insert( &resource );
+    }
+
+    //------------------------------------------------------------------------------
+    inline void ResourceVisitor::removeResource( Resource& resource )
+    {
+        ResourceSetItr itr = _ptrResources->find( &resource );
+        if( itr != _ptrResources->end() )
+            _ptrResources->erase( itr );
+    }
+
+    //------------------------------------------------------------------------------
+    inline bool ResourceVisitor::hasResource( Resource& resource )
+    {
+        ResourceSetItr itr = _ptrResources->find( &resource );
+        if( itr != _ptrResources->end() )
+                return true;
+
+        return false;
+    }
+
+    //------------------------------------------------------------------------------
+    inline ResourceSet& ResourceVisitor::getResources()
+    {
+        return *_ptrResources;
+    }
+
+    //------------------------------------------------------------------------------
+    inline const ResourceSet& ResourceVisitor::getResources() const
+    {
+        return *_ptrResources;
+    }
+
+
+    /**
+    */
+    class LIBRARY_EXPORT ContextVisitor : public osg::NodeVisitor
+    {
+    public:
+        ContextVisitor();
+
+        META_NodeVisitor( osgCompute, ContextVisitor )
+
+        virtual bool init();
+        virtual void reset();
+
+        virtual void apply(Computation& computation);
+
+        inline Context* getContext();
+        inline const Context* getContext() const;
+        inline bool isDirty() const;
+
+        virtual void clear();
+    protected:
+        friend class Computation;
+        virtual ~ContextVisitor() { clearLocal(); }
+        void clearLocal();
+
+        inline void setContext( Context* context );
+
+        osg::ref_ptr<osgCompute::Context>   _context;
+        bool                                _dirty;
+
+    private:
+        // copy constructor and operator should not be called
+        ContextVisitor( const ContextVisitor&, const osg::CopyOp& ) {}
+        ContextVisitor& operator=( const ContextVisitor& copy ) { return (*this); }
+    };
+
+    //------------------------------------------------------------------------------
+    inline void ContextVisitor::setContext( Context* context )
+    {
+        _context = context;
+    }
+
+    //------------------------------------------------------------------------------
+    inline Context* ContextVisitor::getContext()
+    {
+        return _context.get();
+    }
+
+    //------------------------------------------------------------------------------
+    inline const Context* ContextVisitor::getContext() const
+    {
+        return _context.get();
+    }
+
+    //------------------------------------------------------------------------------
+    inline bool ContextVisitor::isDirty() const
+    {
+        return _dirty;
+    }
+}
+
+#endif //OSGCOMPUTE_VISITOR

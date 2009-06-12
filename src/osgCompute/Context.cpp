@@ -15,194 +15,11 @@
 
 #include <sstream>
 #include <osg/Notify>
-#include "osgCompute/Context"
+#include <osgCompute/Context>
+#include <osgCompute/Resource>
 
 namespace osgCompute
 {
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    typedef std::map< std::string, osg::ref_ptr<Context> >                  ContextProtoMap;
-    typedef std::map< std::string, osg::ref_ptr<Context> >::iterator        ContextProtoMapItr;
-    typedef std::map< std::string, osg::ref_ptr<Context> >::const_iterator  ContextProtoMapCnstItr;
-
-    static OpenThreads::Mutex s_contextMutex;
-    static ContextMap s_contexts;
-    static ContextProtoMap s_contextProtos;
-
-    //------------------------------------------------------------------------------
-    Context* Context::instance( unsigned int id, bool erase /*= false*/ )
-    {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_contextMutex);
-
-        Context* context = NULL;
-
-        ContextMapItr itr = s_contexts.find( id );
-        if( itr != s_contexts.end() )
-        {
-            context = (*itr).second.get();
-
-            if( erase )
-            {
-                s_contexts.erase( itr );
-
-                if( context )
-                {
-                    delete context;
-                    context = NULL;
-                }
-            }
-        }
-
-        return context;
-    }
-
-    //------------------------------------------------------------------------------
-    Context* Context::instance( osg::State& state, bool erase /*= false*/ )
-    {
-        return Context::instance( state.getContextID(), erase );
-    }
-
-    //------------------------------------------------------------------------------
-    Context* Context::createInstance( unsigned int id, std::string libraryName, std::string className )
-    {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_contextMutex);
-
-        Context* context = NULL;
-
-        ContextMapItr itr = s_contexts.find( id );
-        if( itr != s_contexts.end() )
-        {
-            context = (*itr).second.get();
-        }
-        else
-        {
-            std::string contextSpec = libraryName;
-            contextSpec.append("::");
-            contextSpec.append( className );
-
-            ContextProtoMapItr protoItr = s_contextProtos.find( contextSpec );
-            if( protoItr != s_contextProtos.end() )
-            {
-                context = dynamic_cast<Context*>( (*protoItr).second->cloneType() );
-                if( context )
-                {
-                    context->setId( id );
-
-                    std::stringstream contextName;
-                    contextName << "Context " << id; 
-                    context->setName( contextName.str() );
-                    s_contexts.insert( std::make_pair< unsigned int, osg::ref_ptr<Context> >( id, context) );
-                }
-                else
-                {
-                    osg::notify(osg::FATAL)  << "Context::createContext(): cannot create context of type \""
-                        << contextSpec << "\"."
-                        << std::endl;
-                }
-            }
-            else
-            {
-                osg::notify(osg::FATAL)  << "Context::createContext(): cannot find a context of type \""
-                    << contextSpec << "\"."
-                    << std::endl;
-            }
-
-        }
-
-        return context;
-    }
-
-    //------------------------------------------------------------------------------
-    Context* Context::createInstance( osg::State& state, std::string libraryName, std::string className )
-    {
-        Context* context = Context::createInstance( state.getContextID(), libraryName, className );
-
-        if( context )
-            context->setState( state );
-
-        return context;
-    }
-
-    //------------------------------------------------------------------------------
-    void Context::registerContext( Context& contextProto )
-    {
-        std::string contextSpec = contextProto.libraryName();
-        contextSpec.append("::");
-        contextSpec.append( contextProto.className() );
-
-        ContextProtoMapItr protoItr = s_contextProtos.find( contextSpec );
-        if( protoItr == s_contextProtos.end() )
-        {
-            s_contextProtos.insert( std::make_pair< std::string, osg::ref_ptr<Context> >( contextSpec, &contextProto) );
-        }
-    }
-
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    ContextResource::ContextResource()
-        : osg::Object()
-    {
-    }
-
-    //------------------------------------------------------------------------------
-    void ContextResource::clear()
-    {
-        clearLocal();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    ContextResource::~ContextResource()
-    {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    void ContextResource::clearLocal()
-    {
-        for( ContextSetItr itr = _contexts.begin(); itr != _contexts.end(); ++itr )
-        {
-            Context* ctx = Context::instance( (*itr) );
-            if( ctx != NULL && 
-                ctx->isRegistered( const_cast<ContextResource&>(*this) ) )
-                ctx->unregisterResource( const_cast<ContextResource&>(*this) );
-        }
-        _contexts.clear();
-
-        osg::Object::setUserData( NULL );
-    }
-
-    //------------------------------------------------------------------------------
-    bool ContextResource::init( const Context& context ) const
-    {
-        if( context.isRegistered(const_cast<ContextResource&>(*this)) )
-            return true;
-
-        context.registerResource(const_cast<ContextResource&>(*this));
-
-        ContextSetItr itr = _contexts.find( context.getId() );
-        if( itr == _contexts.end() )
-            _contexts.insert( context.getId() );
-
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
-    void ContextResource::clear( const Context& context ) const
-    {
-        context.unregisterResource(const_cast<ContextResource&>(*this));
-
-        ContextSetItr itr = _contexts.find( context.getId() );
-        if( itr != _contexts.end() )
-            _contexts.erase( itr );
-    }
-
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -241,7 +58,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool osgCompute::Context::isRegistered( ContextResource& resource ) const
+    bool osgCompute::Context::isRegistered( Resource& resource ) const
     {
         OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 
@@ -253,7 +70,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Context::registerResource( ContextResource& resource ) const
+    void Context::registerResource( Resource& resource ) const
     {
         OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 
@@ -261,7 +78,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Context::unregisterResource( ContextResource& resource ) const
+    void Context::unregisterResource( Resource& resource ) const
     {
         OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 
@@ -294,9 +111,9 @@ namespace osgCompute
     {
         while( !_resources.empty() )
         {
-            ContextResource* curResource = _resources.front();
+            Resource* curResource = _resources.front();
 
-            // each of the resources calls unregisterParam()
+            // each of the resources calls unregisterResource()
             // within the clear(\"CONTEXT\") function
             if( curResource )
                 curResource->clear( *this );

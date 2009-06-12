@@ -20,7 +20,6 @@
 #include <osgCuda/Module>
 #include <osgCuda/Export>
 #include <osgCuda/Buffer>
-#include <osgCuda/Constant>
 
 namespace PtclDemo
 {
@@ -34,9 +33,10 @@ namespace PtclDemo
         virtual bool init();
         virtual void clear() { clearLocal(); osgCuda::Module::clear(); }
 
+        inline void setSeedBox( osg::Vec3f& seedMin, osg::Vec3f& seedMax ) { _seedBoxMin = seedMin; _seedBoxMax = seedMax; }
         virtual void launch( const osgCompute::Context& context ) const;
 
-        virtual void acceptParam( const std::string& handle, osgCompute::Param& param );
+        virtual void acceptResource( osgCompute::Resource& resource );
 
     protected:
         virtual ~PtclEmitter();
@@ -52,8 +52,8 @@ namespace PtclDemo
         unsigned int                                      _numBlocks;
         unsigned int                                      _numThreads;
 
-        osg::ref_ptr<osgCuda::Vec3fConstant>              _seedBoxMin;
-        osg::ref_ptr<osgCuda::Vec3fConstant>              _seedBoxMax;
+        osg::Vec3f                                        _seedBoxMin;
+        osg::Vec3f                                        _seedBoxMax;
         osg::ref_ptr<osgCuda::Vec4fBuffer>                _particles;
 
     private:
