@@ -440,7 +440,7 @@ namespace osgCuda
             // Sync PBO with Texture-Data if Texture is allocated
             syncPBO( stream );
         }
-        else
+        else if( !getIsRenderTarget() )
         {
             /////////////////////////////
             // ALLOCATE TEXTURE MEMORY //

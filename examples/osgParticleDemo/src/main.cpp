@@ -16,7 +16,7 @@
 #include <osg/ArgumentParser>
 #include <osg/Texture2D>
 #include <osg/Viewport>
-#include <osg/BlendFunc>
+#include <osg/AlphaFunc>
 #include <osg/PolygonMode>
 #include <osg/Geometry>
 #include <osg/Point>
@@ -40,13 +40,6 @@
 #include "PtclMover"
 #include "PtclEmitter"
 #include "PtclMapper"
-
-float frand( float minf, float maxf )
-{
-    float unit = float(rand()) / RAND_MAX;
-    float diff = maxf - minf;
-    return minf + unit * diff;
-}
 
 osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
@@ -175,7 +168,6 @@ osg::Geode* getGeode( unsigned int numParticles )
     for( unsigned int v=0; v<coords->size(); ++v )
         (*coords)[v].set(0,0,0,1);
 
-    //ptclGeom->setUseVertexBufferObjects( true );
     ptclGeom->setVertexArray(coords);
     ptclGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
     ptclGeom->addHandle( "PTCL_GL_BUFFER" );
@@ -192,22 +184,11 @@ osg::Geode* getGeode( unsigned int numParticles )
     // increase point size within shader
     geode->getOrCreateStateSet()->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
 
-    // use point sprites with alpha blending
-    osg::BlendFunc* blend = new osg::BlendFunc;
-    geode->getOrCreateStateSet()->setAttribute(blend);
-    geode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON );
-
     osg::PointSprite* sprite = new osg::PointSprite();
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, sprite, osg::StateAttribute::ON);
 
-    // The texture for the sprites
-    osg::Texture2D* tex = new osg::Texture2D();
-    tex->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::NEAREST);
-    tex->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::NEAREST);
-    tex->setImage(osgDB::readImageFile("osgParticleDemo/images/particle.rgb"));
-
-    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex, osg::StateAttribute::ON);
-    geode->getOrCreateStateSet()->addUniform(new osg::Uniform("texture",0));
+    geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
+    geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
 
     ////////////
     // SHADER //
@@ -222,7 +203,7 @@ osg::Geode* getGeode( unsigned int numParticles )
     osg::Uniform* pixelsize = new osg::Uniform();
     pixelsize->setName( "pixelsize" );
     pixelsize->setType( osg::Uniform::FLOAT_VEC2 );
-    pixelsize->set( osg::Vec2(1.0f,40.0f) );
+    pixelsize->set( osg::Vec2(1.0f,50.0f) );
     geode->getOrCreateStateSet()->addUniform( pixelsize );
     geode->setCullingActive( false );
 
@@ -235,7 +216,7 @@ int main(int argc, char *argv[])
 
     osg::Vec3 bbmin(0,0,0);
     osg::Vec3 bbmax(4,4,4);
-    unsigned int numParticles = 128000;
+    unsigned int numParticles = 64000;
 
     /////////////////
     // SETUP SCENE //
