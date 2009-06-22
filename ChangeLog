@@ -1,3 +1,7 @@
+In this file we only document the revisions which include major changes to the code.
+Please see the svn log for a more detailed ChangeLog.
+
+
 2009-06-12 13:30  svt group
 
 	* [r21]
@@ -12,28 +16,6 @@
 
 	* [r16]
       - this revision is tagged as osgCompute-0.2
-
-2009-04-20 10:40  svt group
-
-	* [r15]
-      - set default threading model in tex example
-
-2009-04-20 10:16  svt group
-
-	* [r14]
-      - scope fix for gcc
-
-2009-04-20 09:43  svt group
-
-	* [r13]
-      - buffer init in update stage of computation
-      - buffer handling extended
-
-2009-04-15 15:46  svt group
-
-	* [r12]
-      - ref pointer problem with older osg versions solved
-      - documentation started
 
 2009-04-07 15:46  svt group
 
