@@ -16,7 +16,7 @@
 #include <osgCompute/Param>
 
 include(Findosgcompute_functions)
-OSGCOMPUTE_FIND_PATH   (OSGCOMPUTE osgCompute/Param)
+OSGCOMPUTE_FIND_PATH   (OSGCOMPUTE osgCompute/Context)
 OSGCOMPUTE_FIND_LIBRARY(OSGCOMPUTE osgCompute)
 
 include(FindPackageHandleStandardArgs)
