@@ -395,15 +395,30 @@ namespace osgCuda
     template< class DATATYPE >
     DATATYPE* Geometry<DATATYPE>::mapStream( GeometryStream<DATATYPE>& stream, unsigned int mapping ) const
     {
+        DATATYPE* ptr = NULL;
+
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
         if( stream._mapping == mapping )
         {
             if( (stream._mapping & osgCompute::MAP_DEVICE) )
-                return stream._devPtr;
+                ptr = stream._devPtr;
             else
-                return stream._hostPtr;
+                ptr = stream._hostPtr;
+
+            if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != ptr )
+            {
+                const osgCompute::BufferSubloadCallback* callback = 
+                    dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback());
+                if( callback )
+                {
+                    // subload data before returning the pointer
+                    callback->subload( ptr, mapping, *this, *stream._context );
+                }
+            }
+
+            return ptr;
         }
         else if( stream._mapping != osgCompute::UNMAPPED )
         {
@@ -465,7 +480,6 @@ namespace osgCuda
         //////////////
         // MAP DATA //
         //////////////
-        DATATYPE* ptr = NULL;
         if( mapping & osgCompute::MAP_HOST )
         {
             if( NULL == stream._hostPtr )

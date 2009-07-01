@@ -464,11 +464,24 @@ namespace osgCuda
     template< class DATATYPE >
     cudaArray* Array<DATATYPE>::mapArrayStream( ArrayStream<DATATYPE>& stream, unsigned int mapping ) const
     {
+        cudaArray* ptr = NULL;
+
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
-        if( stream._mapping == mapping )
+        if( stream._mapping == mapping && !stream._needsSetup )
         {
+            if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != stream._devArray )
+            {
+                const osgCompute::BufferSubloadCallback* callback = 
+                    dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback());
+                if( callback )
+                {
+                    // load or subload data before returning the host pointer
+                    callback->subload( reinterpret_cast<void*>(stream._devArray), mapping, *this, *stream._context );
+                }
+            }
+
             return stream._devArray;
         }
         else if( stream._mapping != osgCompute::UNMAPPED )
@@ -482,7 +495,6 @@ namespace osgCuda
         // MAP DATA //
         //////////////
         bool firstLoad = false;
-        cudaArray* ptr = NULL;
         if( (stream._mapping & osgCompute::MAP_DEVICE) )
         {
             if( NULL == stream._devArray )
@@ -549,11 +561,24 @@ namespace osgCuda
     template< class DATATYPE >
     DATATYPE* Array<DATATYPE>::mapStream( ArrayStream<DATATYPE>& stream, unsigned int mapping ) const
     {
+        DATATYPE* ptr = NULL;
+
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
-        if( stream._mapping == mapping )
+        if( stream._mapping == mapping && !stream._needsSetup )
         {
+            if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != stream._hostPtr )
+            {
+                const osgCompute::BufferSubloadCallback* callback = 
+                    dynamic_cast<const osgCompute::BufferSubloadCallback*>( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() );
+                if( callback )
+                {
+                    // subload data before returning the pointer
+                    callback->subload( stream._hostPtr, mapping, *this, *stream._context );
+                }
+            }
+
             return stream._hostPtr;
         }
         else if( stream._mapping != osgCompute::UNMAPPED )
@@ -567,7 +592,6 @@ namespace osgCuda
         // MAP DATA //
         //////////////
         bool firstLoad = false;
-        DATATYPE* ptr = NULL;
         if( (stream._mapping & osgCompute::MAP_HOST) )
         {
             if( NULL == stream._hostPtr )

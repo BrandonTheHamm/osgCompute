@@ -399,6 +399,7 @@ namespace osgCompute
         _contextMap.clear();
 
         removeChildren(0,osg::Group::getNumChildren());
+        setDataVariance( osg::Object::DYNAMIC );
     }
 
     //------------------------------------------------------------------------------
