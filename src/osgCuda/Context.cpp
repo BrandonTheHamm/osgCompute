@@ -1,5 +1,6 @@
 #include <malloc.h>
 #include <map>
+#include <set>
 #include <string.h>
 #include <osg/Notify>
 #include <osg/GL>
@@ -13,13 +14,33 @@
 
 namespace osgCuda
 {
-    //class ContextRegisterProto
-    //{
-    //public:
-    //    ContextRegisterProto() { Context* context = new Context; osgCompute::Context::registerContext(*context); }
-    //};
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // STATIC FUNCTIONS //////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    static OpenThreads::Mutex           s_sharedMutex;
+    static std::set< int >              s_sharedDevices;
 
-    //ContextRegisterProto registerProto;
+    static bool setupSharedDevice( int device )
+    {
+        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
+        std::set< int >::iterator itr = s_sharedDevices.find( device );
+        if( itr != s_sharedDevices.end() )
+            return true;
+
+        cudaError res = cudaGLSetGLDevice( device );
+        if( cudaSuccess != res )
+        {
+            osg::notify(osg::FATAL)  
+                << "CUDA::Context::init(): cannot share device with render context."
+                << std::endl;
+
+            return false;
+        }
+
+        s_sharedDevices.insert( device );
+        return true;
+    }
+
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
     // DECLARATIONS //////////////////////////////////////////////////////////////////////////////////
@@ -205,11 +226,10 @@ namespace osgCuda
         // the current graphics thread.
         if( getState() != NULL )
         {
-            ///////////////////
-            // SETUP WITH GL //
-            ///////////////////
-            res = cudaGLSetGLDevice( _device );
-            if( cudaSuccess != res )
+            //////////////////
+            // SHARE DEVICE //
+            //////////////////
+            if( !setupSharedDevice(_device) )
             {
                 osg::notify(osg::FATAL)  
                     << "CUDA::Context::init(): cannot share device with render context."

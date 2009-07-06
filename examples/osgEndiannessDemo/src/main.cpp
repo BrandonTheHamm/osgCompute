@@ -17,7 +17,7 @@
 #include <osg/Notify>
 #include <osgCuda/Buffer>
 #include <osgCuda/Context>
-#include <osgCuda/Module>
+#include <osgCompute/Module>
 
 extern "C"
 void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* bytes );

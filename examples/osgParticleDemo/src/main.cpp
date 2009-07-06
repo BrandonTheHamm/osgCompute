@@ -239,8 +239,8 @@ int main(int argc, char *argv[])
     // if you have OSG Version 2.8.1 or the current OSG SVN Version (2.9.1 or later)
     // then try multithreaded
     // otherwise the application will finish with segmentation fault
-    //viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
-    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
+    //viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);
