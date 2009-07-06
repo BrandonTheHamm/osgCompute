@@ -20,18 +20,18 @@
 #include <osgCuda/Module>
 
 extern "C"
-void swapEndianness( unsigned int numBlocks, unsigned int numThreads, unsigned int* bytes );
+void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* bytes );
 
-class SwapModule : public osgCuda::Module
+class SwapModule : public osgCompute::Module
 {
 public:
-    SwapModule() : osgCuda::Module() {clearLocal();}
+    SwapModule() : osgCompute::Module() {clearLocal();}
 
     META_Module( , SwapModule )
     virtual bool init();
-    virtual void clear() { clearLocal(); osgCuda::Module::clear(); }
-    inline void setBuffer( osgCuda::UIntBuffer* buffer ) { _buffer = buffer; }
-    inline osgCuda::UIntBuffer* getBuffer() { return _buffer.get(); }
+    virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+    inline void setBuffer( osgCompute::Buffer* buffer ) { _buffer = buffer; }
+    inline osgCompute::Buffer* getBuffer() { return _buffer; }
 
     virtual void launch( const osgCompute::Context& context ) const;
 
@@ -41,7 +41,7 @@ protected:
 
     unsigned int                                     _numThreads;
     unsigned int                                     _numBlocks;
-    osg::ref_ptr<osgCuda::UIntBuffer>                _buffer;
+    osgCompute::Buffer*                              _buffer;
 
 private:
     SwapModule(const SwapModule&, const osg::CopyOp& ) {}
@@ -50,25 +50,19 @@ private:
 
 void SwapModule::launch( const osgCompute::Context& context ) const
 {
-    const osgCuda::Context* cudaContext = dynamic_cast<const osgCuda::Context*>( &context );
-    if( !cudaContext ||
-        !cudaContext->getDeviceProperties() ||
-        _numBlocks > static_cast<unsigned int>( cudaContext->getDeviceProperties()->maxGridSize[1] ) )
-        return;
-
-    unsigned int* bufferPtr = (unsigned int*)_buffer->map( context, osgCompute::MAP_DEVICE );
+    void* bufferPtr = _buffer->map( context, osgCompute::MAP_DEVICE );
     swapEndianness( _numBlocks, _numThreads, bufferPtr );
 }
 
 bool SwapModule::init()
 {
-    if( !_buffer.valid() )
+    if( !_buffer )
         return false;
 
     _numThreads = 1;
     _numBlocks = _buffer->getDimension(0) / _numThreads;
 
-    return osgCuda::Module::init();
+    return osgCompute::Module::init();
 }
 
 
@@ -101,8 +95,6 @@ int main(int argc, char *argv[])
 
     module->setBuffer( buffer.get() );
     module->init();
-
-
 
     // print numbers
     osg::notify(osg::INFO)<<"Before conversion: "<<std::endl;

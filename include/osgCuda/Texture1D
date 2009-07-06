@@ -72,7 +72,7 @@ namespace osgCuda
         virtual void syncPBO( TextureStream<DATATYPE>& stream ) const;
         virtual void syncTexture( TextureStream<DATATYPE>& stream ) const;
 
-        virtual osgCompute::BufferStream<DATATYPE>* newStream( const osgCompute::Context& context ) const;
+        virtual osgCompute::BufferStream* newStream( const osgCompute::Context& context ) const;
     private:
         // copy constructor and operator should not be called
         Texture1D( const Texture1D& , const osg::CopyOp& ) {}
@@ -102,7 +102,7 @@ namespace osgCuda
     template< class DATATYPE >
     void Texture1D<DATATYPE>::clear()
     {
-        Buffer<DATATYPE>::clear();
+        Texture<DATATYPE>::clear();
         clearLocal();
     }
 
@@ -123,7 +123,7 @@ namespace osgCuda
             const osgCompute::Context* curCtx = getContext( state->getContextID() );
             if( curCtx )
             {
-                if( osgCompute::Buffer<DATATYPE>::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+                if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
                     unmap( *curCtx );
             }
         }
@@ -138,7 +138,7 @@ namespace osgCuda
         const osgCompute::Context* curCtx = getContext( state.getContextID() );
         if( curCtx )
         {
-            if( osgCompute::Buffer<DATATYPE>::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+            if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
                 unmap( *curCtx );
         }
 
@@ -149,16 +149,16 @@ namespace osgCuda
     template< class DATATYPE >
     bool Texture1D<DATATYPE>::initDimension()
     {
-        if( osgCompute::Buffer<DATATYPE>::getNumDimensions() != 0 )
+        if( osgCompute::Buffer::getNumDimensions() != 0 )
         {
-            setTextureWidth( osgCompute::Buffer<DATATYPE>::getDimension(0) );
+            setTextureWidth( osgCompute::Buffer::getDimension(0) );
         }
         else 
         {
             if( getImage(0) && getTextureWidth() == 0)
                 setTextureWidth( getImage(0)->s() );
 
-            osgCompute::Buffer<DATATYPE>::setDimension(0, getTextureWidth() );
+            osgCompute::Buffer::setDimension(0, getTextureWidth() );
         }
 
         return Texture<DATATYPE>::initDimension();
@@ -221,7 +221,7 @@ namespace osgCuda
         // UNPACK the PBO data
         glTexSubImage1D(
             GL_TEXTURE_1D, 0, 0,
-            osgCompute::Buffer<DATATYPE>::getDimension(0), 
+            osgCompute::Buffer::getDimension(0), 
             tex->_internalFormat, 
             texType, 
             NULL );
@@ -410,7 +410,7 @@ namespace osgCuda
         ///////////////
         // SETUP PBO //
         ///////////////
-        stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( osgCompute::Buffer<DATATYPE>::getByteSize() );
+        stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( osgCompute::Buffer::getByteSize() );
         if( UINT_MAX == stream._bo )
         {
             osg::notify(osg::FATAL)
@@ -477,7 +477,7 @@ namespace osgCuda
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    osgCompute::BufferStream<DATATYPE>* Texture1D<DATATYPE>::newStream( const osgCompute::Context& context ) const
+    osgCompute::BufferStream* Texture1D<DATATYPE>::newStream( const osgCompute::Context& context ) const
     {
         return new TextureStream<DATATYPE>;
     }

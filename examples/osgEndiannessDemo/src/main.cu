@@ -62,13 +62,13 @@ void k_swapEndianness( unsigned int* bytes )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------
 extern "C"
-void swapEndianness( unsigned int numBlocks, unsigned int numThreads, unsigned int* bytes )
+void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* bytes )
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );
 
     // call kernel
-    k_swapEndianness<<< blocks, threads >>>( bytes );
+    k_swapEndianness<<< blocks, threads >>>( reinterpret_cast<unsigned int*>(bytes) );
 }
 
 #endif // ENDIANNESS_KERNEL_H

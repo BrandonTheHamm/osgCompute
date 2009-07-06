@@ -62,7 +62,7 @@ namespace osgCuda
     /**
     */
     template< class DATATYPE >
-    class TextureStream : public osgCompute::BufferStream<DATATYPE>
+    class TextureStream : public osgCompute::BufferStream
     {
     public:
         DATATYPE*                _hostPtr;
@@ -88,7 +88,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     template< class DATATYPE >
     TextureStream<DATATYPE>::TextureStream()
-        : osgCompute::BufferStream<DATATYPE>(),
+        : osgCompute::BufferStream(),
         _devPtr(NULL),
         _hostPtr(NULL),
         _syncDevice(false),
@@ -104,15 +104,15 @@ namespace osgCuda
     TextureStream<DATATYPE>::~TextureStream()
     {
         if( _boRegistered && _bo != UINT_MAX )
-            static_cast<Context*>( osgCompute::BufferStream<DATATYPE>::_context.get() )->freeBufferObject( _bo );
+            static_cast<Context*>( osgCompute::BufferStream::_context.get() )->freeBufferObject( _bo );
         if( _hostPtrAllocated && NULL != _hostPtr)
-            static_cast<Context*>(osgCompute::BufferStream<DATATYPE>::_context.get())->freeMemory( _hostPtr );
+            static_cast<Context*>(osgCompute::BufferStream::_context.get())->freeMemory( _hostPtr );
     }
 
     /**
     */
     template< class DATATYPE >
-    class Texture : public osgCompute::Buffer<DATATYPE>
+    class Texture : public osgCompute::Buffer
     {
     public:
         Texture();
@@ -125,6 +125,7 @@ namespace osgCuda
         virtual bool setMemory( const osgCompute::Context& context, int value, unsigned int mapping ) const;
         virtual void* map( const osgCompute::Context& context, unsigned int mapping ) const;
         virtual void unmap( const osgCompute::Context& context ) const;
+        virtual unsigned int getElementSize() const { return sizeof(DATATYPE); }
 
         inline void setIsRenderTarget( bool isRenderTarget );
         inline bool getIsRenderTarget() const;
@@ -164,7 +165,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     template< class DATATYPE >
     Texture<DATATYPE>::Texture()
-        : osgCompute::Buffer<DATATYPE>()
+        : osgCompute::Buffer()
     {
         clearLocal();
     }
@@ -180,7 +181,7 @@ namespace osgCuda
     template< class DATATYPE >
     void Texture<DATATYPE>::clear()
     {
-        osgCompute::Buffer<DATATYPE>::clear();
+        osgCompute::Buffer::clear();
         clearLocal();
     }
 
@@ -219,7 +220,7 @@ namespace osgCuda
             return false;
         }
 
-        return osgCompute::Buffer<DATATYPE>::init();
+        return osgCompute::Buffer::init();
     }
 
     //------------------------------------------------------------------------------
@@ -240,7 +241,7 @@ namespace osgCuda
             dim[2] = asTexture()->getTextureDepth();
         }
 
-        if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 0 )
+        if( osgCompute::Buffer::getNumDimensions() == 0 )
         {
             if( dim[0] == 0 )
             {
@@ -255,15 +256,15 @@ namespace osgCuda
             unsigned int d = 0;
             while( dim[d] > 0 )
             {
-                osgCompute::Buffer<DATATYPE>::setDimension( d, dim[d] );
+                osgCompute::Buffer::setDimension( d, dim[d] );
                 ++d;
             }
         }
         else
         {
-            for( unsigned int d=0; d<osgCompute::Buffer<DATATYPE>::getNumDimensions(); ++d )
+            for( unsigned int d=0; d<osgCompute::Buffer::getNumDimensions(); ++d )
             {
-                if( dim[d] > 0 && dim[d] != osgCompute::Buffer<DATATYPE>::getDimension(d) )
+                if( dim[d] > 0 && dim[d] != osgCompute::Buffer::getDimension(d) )
                 {
                     osg::notify(osg::FATAL)
                         << "CUDA::Texture::initDimension() for texture \""
@@ -286,8 +287,8 @@ namespace osgCuda
         // COMPUTE BYTE SIZE //
         ///////////////////////
         unsigned int numElements = 1;
-        for( unsigned int d=0; d<osgCompute::Buffer<DATATYPE>::_dimensions.size(); ++d )
-            numElements *= osgCompute::Buffer<DATATYPE>::_dimensions[d];
+        for( unsigned int d=0; d<osgCompute::Buffer::_dimensions.size(); ++d )
+            numElements *= osgCompute::Buffer::_dimensions[d];
 
         unsigned int compByteSize = sizeof(DATATYPE) * numElements;
 
@@ -461,7 +462,7 @@ namespace osgCuda
             return NULL;
         }
 
-        TextureStream<DATATYPE>* stream = static_cast<TextureStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context) );
+        TextureStream<DATATYPE>* stream = static_cast<TextureStream<DATATYPE>*>( osgCompute::Buffer::lookupStream(context) );
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)
@@ -507,7 +508,7 @@ namespace osgCuda
             return;
         }
 
-        TextureStream<DATATYPE>* stream = static_cast<TextureStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context) );
+        TextureStream<DATATYPE>* stream = static_cast<TextureStream<DATATYPE>*>( osgCompute::Buffer::lookupStream(context) );
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)
@@ -582,10 +583,10 @@ namespace osgCuda
     template< class DATATYPE >
     void Texture<DATATYPE>::clear( const osgCompute::Context& context ) const
     {
-        if( osgCompute::Buffer<DATATYPE>::getMapping( context ) != osgCompute::UNMAPPED )
+        if( osgCompute::Buffer::getMapping( context ) != osgCompute::UNMAPPED )
             unmap( context );
 
-        osgCompute::Buffer<DATATYPE>::clear( context );
+        osgCompute::Buffer::clear( context );
     }
 
     //------------------------------------------------------------------------------
@@ -605,10 +606,10 @@ namespace osgCuda
                 ptr = stream._hostPtr;
 
 
-            if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != ptr )
+            if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
             {
                 const osgCompute::BufferSubloadCallback* callback = 
-                    dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback());
+                    dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer::getSubloadResourceCallback());
                 if( callback )
                 {
                     // subload data before returning the pointer
@@ -718,10 +719,10 @@ namespace osgCuda
         //////////////////
         // LOAD/SUBLOAD //
         //////////////////
-        if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != ptr )
+        if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
         {
             const osgCompute::BufferSubloadCallback* callback = 
-                dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback());
+                dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer::getSubloadResourceCallback());
             if( callback )
             {
                 // load or subload data before returning the host pointer
@@ -786,7 +787,7 @@ namespace osgCuda
             if( (stream._allocHint & osgCompute::ALLOC_DYNAMIC) == osgCompute::ALLOC_DYNAMIC )
             {
                 stream._hostPtr = reinterpret_cast<DATATYPE*>(
-                    static_cast<Context*>(stream._context.get())->mallocDeviceHostMemory( osgCompute::Buffer<DATATYPE>::getByteSize() ) );
+                    static_cast<Context*>(stream._context.get())->mallocDeviceHostMemory( osgCompute::Buffer::getByteSize() ) );
                 if( NULL == stream._hostPtr )
                 {
                     osg::notify(osg::FATAL)
@@ -801,7 +802,7 @@ namespace osgCuda
             else
             {
                 stream._hostPtr = reinterpret_cast<DATATYPE*>(
-                    static_cast<Context*>(stream._context.get())->mallocHostMemory( osgCompute::Buffer<DATATYPE>::getByteSize() ) );
+                    static_cast<Context*>(stream._context.get())->mallocHostMemory( osgCompute::Buffer::getByteSize() ) );
                 if( NULL == stream._hostPtr )
                 {
                     osg::notify(osg::FATAL)
@@ -846,7 +847,7 @@ namespace osgCuda
         cudaError res;
         if( mapping & osgCompute::MAP_DEVICE )
         {
-            res = cudaMemcpy( stream._devPtr, stream._hostPtr, osgCompute::Buffer<DATATYPE>::getByteSize(), cudaMemcpyHostToDevice );
+            res = cudaMemcpy( stream._devPtr, stream._hostPtr, osgCompute::Buffer::getByteSize(), cudaMemcpyHostToDevice );
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
@@ -863,7 +864,7 @@ namespace osgCuda
         }
         else if( mapping & osgCompute::MAP_HOST )
         {
-            res = cudaMemcpy( stream._hostPtr, stream._devPtr, osgCompute::Buffer<DATATYPE>::getByteSize(), cudaMemcpyDeviceToHost );
+            res = cudaMemcpy( stream._hostPtr, stream._devPtr, osgCompute::Buffer::getByteSize(), cudaMemcpyDeviceToHost );
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)

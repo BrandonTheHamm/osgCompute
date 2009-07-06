@@ -17,21 +17,20 @@
 #define PTCLDEMO_PTCL_MOVER 1
 
 #include <osg/ref_ptr>
-#include <osgCuda/Module>
-#include <osgCuda/Export>
-#include <osgCuda/Buffer>
+#include <osgCompute/Module>
+#include <osgCompute/Buffer>
 
 namespace PtclDemo
 {
-    class PtclMover : public osgCuda::Module 
+    class PtclMover : public osgCompute::Module 
     {
     public:
-        PtclMover() : osgCuda::Module() {clearLocal();}
+        PtclMover() : osgCompute::Module() {clearLocal();}
         
         META_Module( PtclDemo, PtclMover )
 
         virtual bool init();
-        virtual void clear() { clearLocal(); osgCuda::Module::clear(); }
+        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
 
         virtual void launch( const osgCompute::Context& context ) const;
 
@@ -47,7 +46,7 @@ namespace PtclDemo
         unsigned int                                      _numBlocks;
         unsigned int                                      _numThreads;
 
-        osg::ref_ptr<osgCuda::Vec4fBuffer>                _particles;
+        osgCompute::Buffer*                               _ptcls;
 
     private:
         PtclMover(const PtclMover&, const osg::CopyOp& ) {} 

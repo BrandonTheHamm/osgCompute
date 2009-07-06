@@ -55,6 +55,7 @@ SET(TARGET_H
 
 # collect the sources
 SET(TARGET_SRC
+	Buffer.cpp
 	Module.cpp
 	Resource.cpp
 	Context.cpp

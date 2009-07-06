@@ -45,7 +45,6 @@ INCLUDE_DIRECTORIES(
 SET(TARGET_H
 	 ${HEADER_PATH}/PtclMover
 	 ${HEADER_PATH}/PtclEmitter
-     ${HEADER_PATH}/PtclMapper
 )
 
 
@@ -62,7 +61,6 @@ SET(TARGET_SRC
 	main.cpp
 	PtclMover.cpp
 	PtclEmitter.cpp
-    PtclMapper.cpp
 	${CUDA_FILES}
     ${MY_CUDA_SOURCE_FILES}
 )

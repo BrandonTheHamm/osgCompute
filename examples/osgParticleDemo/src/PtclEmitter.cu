@@ -85,8 +85,8 @@ void k_reseed( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int
 extern "C" __host__
 void reseed( unsigned int numBlocks, 
              unsigned int numThreads, 
-             osg::Vec4f* ptcls, 
-             float* seeds, 
+             void* ptcls, 
+             void* seeds, 
              unsigned int seedCount, 
              unsigned int seedIdx, 
              osg::Vec3f bbmin, 
@@ -97,7 +97,7 @@ void reseed( unsigned int numBlocks,
 
     k_reseed<<< blocks, threads >>>(
                         reinterpret_cast<float4*>(ptcls),
-                        seeds,
+                        reinterpret_cast<float*>(seeds),
                         seedCount,
                         seedIdx,
                         *reinterpret_cast<float3*>(&bbmin),

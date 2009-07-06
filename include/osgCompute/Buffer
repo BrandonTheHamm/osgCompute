@@ -18,7 +18,7 @@
 
 #include <osgCompute/Resource>
 
-#define META_Buffer( libraryname, classname )                           \
+#define META_Buffer( libraryname, classname )              \
     META_Resource( libraryname, classname, false )                      
 
 namespace osg
@@ -41,31 +41,7 @@ namespace osg
 
 namespace osgCompute
 {
-    template< class DATATYPE > class Buffer;
-
-    typedef Buffer<unsigned char>     UByteBuffer;
-    typedef Buffer<osg::Vec4ub>       Vec4ubBuffer;
-    typedef Buffer<char>              ByteBuffer;
-    typedef Buffer<osg::Vec2b>        Vec2bBuffer;
-    typedef Buffer<osg::Vec3b>        Vec3bBuffer;
-    typedef Buffer<osg::Vec4b>        Vec4bBuffer;
-    typedef Buffer<unsigned short>    UShortBuffer;
-    typedef Buffer<short>             ShortBuffer;
-    typedef Buffer<osg::Vec2s>        Vec2sBuffer;
-    typedef Buffer<osg::Vec3s>        Vec3sBuffer;
-    typedef Buffer<osg::Vec4s>        Vec4sBuffer;
-    typedef Buffer<unsigned int>      UIntBuffer;
-    typedef Buffer<int>               IntBuffer;
-    typedef Buffer<unsigned long>     ULongBuffer;
-    typedef Buffer<long>              LongBuffer;
-    typedef Buffer<float>             FloatBuffer;
-    typedef Buffer<osg::Vec2f>        Vec2fBuffer;
-    typedef Buffer<osg::Vec3f>        Vec3fBuffer;
-    typedef Buffer<osg::Vec4f>        Vec4fBuffer;
-    typedef Buffer<double>            DoubleBuffer;
-    typedef Buffer<osg::Vec2d>        Vec2dBuffer;
-    typedef Buffer<osg::Vec3d>        Vec3dBuffer;
-    typedef Buffer<osg::Vec4d>        Vec4dBuffer;
+    class Buffer;
 
     enum Mapping
     {
@@ -87,8 +63,7 @@ namespace osgCompute
 
     /**
     */
-    template< class DATATYPE >
-    class BufferStream
+    class LIBRARY_EXPORT BufferStream
     {
     public:
         unsigned int                    _mapping;
@@ -105,28 +80,9 @@ namespace osgCompute
         BufferStream& operator=( const BufferStream& ) { return *this; }
     };
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    BufferStream<DATATYPE>::BufferStream() 
-        :   _mapping( UNMAPPED ),
-            _allocHint(0),
-            _needsSetup(true)
-    {
-    }
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    BufferStream<DATATYPE>::~BufferStream() 
-    {
-    }
-
     /**
     */
-    template< class DATATYPE >
-    class Buffer : public Resource
+    class LIBRARY_EXPORT Buffer : public Resource
     {  
     public:
         Buffer();
@@ -137,9 +93,10 @@ namespace osgCompute
         virtual bool setMemory( const Context& context, int value, unsigned int mapping ) const = 0;
         virtual void* map( const Context& context, unsigned int mapping ) const = 0;
         virtual void unmap( const Context& context ) const = 0;
+        //virtual void* getDesc() const;
 
-        virtual unsigned int getByteSize() const;
-        virtual unsigned int getElementSize() const;
+        virtual unsigned int getElementSize() const = 0;
+        inline unsigned int getByteSize() const;
 
         inline void setDimension( unsigned int dimIdx, unsigned int dimSize );
         inline unsigned int getDimension( unsigned int dimIdx ) const;
@@ -163,19 +120,18 @@ namespace osgCompute
         virtual bool init( const Context& context ) const;
         virtual void clear( const Context& context ) const;
 
-        virtual BufferStream<DATATYPE>* newStream( const Context& context ) const = 0;
-        inline BufferStream<DATATYPE>* lookupStream( const Context& context ) const;
+        virtual BufferStream* newStream( const Context& context ) const = 0;
+        inline BufferStream* lookupStream( const Context& context ) const;
 
         virtual void setNeedsSetup( bool needsSetup ) const;
 
         unsigned int                                    _allocHint;
-		unsigned int							        _byteSize;
         std::vector<unsigned int>                       _dimensions;
         unsigned int                                    _numElements;
         osg::ref_ptr<SubloadCallback>                   _subloadCallback;
 
         mutable OpenThreads::Mutex                      _mutex;
-        mutable std::vector<BufferStream<DATATYPE>*>    _streams;
+        mutable std::vector<BufferStream*>              _streams;
 
     private:
         // copy constructor and operator should not be called
@@ -186,67 +142,14 @@ namespace osgCompute
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-	Buffer<DATATYPE>::Buffer() 
-		: Resource()
+	//------------------------------------------------------------------------------
+	inline unsigned int Buffer::getByteSize() const 
 	{ 
-		clearLocal();
-	}
-
-    //------------------------------------------------------------------------------
-    template<class DATATYPE >
-	void Buffer<DATATYPE>::clear()
-	{
-        Resource::clear();
-        clearLocal();
-	}
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-	bool Buffer<DATATYPE>::init()
-	{
-		if( !isDirty() )
-			return true;
-
-		if( _dimensions.empty() )
-		{
-			osg::notify(osg::FATAL)  
-                << "Buffer::init() for Buffer \""<<asObject()->getName()<<"\": No Dimensions specified."                  
-				<< std::endl;
-
-			return false;
-		}
-
-		///////////////////////
-		// COMPUTE BYTE SIZE //
-		///////////////////////
-		_numElements = 1;
-		for( unsigned int d=0; d<_dimensions.size(); ++d )
-			_numElements *= _dimensions[d];
-
-		_byteSize = sizeof(DATATYPE) * _numElements;
-
-		return Resource::init();
+		return getElementSize() * _numElements; 
 	}
 
 	//------------------------------------------------------------------------------
-	template< class DATATYPE >
-	unsigned int Buffer<DATATYPE>::getByteSize() const 
-	{ 
-		return _byteSize; 
-	}
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    unsigned int Buffer<DATATYPE>::getElementSize() const 
-    { 
-        return sizeof(DATATYPE); 
-    }
-
-	//------------------------------------------------------------------------------
-	template< class DATATYPE >
-    inline void Buffer<DATATYPE>::setDimension( unsigned int dimIdx, unsigned int dimSize )
+	inline void Buffer::setDimension( unsigned int dimIdx, unsigned int dimSize )
     {
         if( !isDirty() )
             return;
@@ -258,8 +161,7 @@ namespace osgCompute
     }
 
 	//------------------------------------------------------------------------------
-	template< class DATATYPE >
-    inline unsigned int Buffer<DATATYPE>::getDimension( unsigned int dimIdx ) const
+	inline unsigned int Buffer::getDimension( unsigned int dimIdx ) const
     { 
         if( dimIdx > (_dimensions.size()-1) )
             return 0;
@@ -268,22 +170,19 @@ namespace osgCompute
     }
 
 	//------------------------------------------------------------------------------
-	template< class DATATYPE >
-    inline unsigned int Buffer<DATATYPE>::getNumDimensions() const
+	inline unsigned int Buffer::getNumDimensions() const
     { 
         return _dimensions.size();
     }
 
     //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    unsigned int osgCompute::Buffer<DATATYPE>::getNumElements() const
+    inline unsigned int osgCompute::Buffer::getNumElements() const
     {
         return _numElements;
     }
 
     //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    inline void osgCompute::Buffer<DATATYPE>::setAllocHint( unsigned int allocHint )
+    inline void osgCompute::Buffer::setAllocHint( unsigned int allocHint )
     {
         if( !isDirty() )
             return;
@@ -292,51 +191,25 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    inline unsigned int osgCompute::Buffer<DATATYPE>::getAllocHint() const
+    inline unsigned int osgCompute::Buffer::getAllocHint() const
     {
         return _allocHint;
     }
 
     //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    unsigned int Buffer<DATATYPE>::getMapping( const osgCompute::Context& context ) const
-    {
-        if( isDirty() )
-            return osgCompute::UNMAPPED;
-
-        BufferStream<DATATYPE>* stream = lookupStream( context );
-        if( NULL == stream )
-        {
-            osg::notify(osg::FATAL)  
-                << "Buffer::getMapping() for Buffer \""
-                << asObject()->getName() <<"\": Could not receive BufferStream for Context \""
-                << context.getId() << "\"."
-                << std::endl;
-
-            return osgCompute::UNMAPPED;
-        }
-
-        return stream->_mapping;
-    }
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    inline void Buffer<DATATYPE>::setSubloadResourceCallback( SubloadCallback* sc ) 
+    inline void Buffer::setSubloadResourceCallback( SubloadCallback* sc ) 
     { 
         _subloadCallback = sc; 
     }
 
     //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    inline SubloadCallback* Buffer<DATATYPE>::getSubloadResourceCallback() 
+    inline SubloadCallback* Buffer::getSubloadResourceCallback() 
     { 
         return _subloadCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    inline const SubloadCallback* Buffer<DATATYPE>::getSubloadResourceCallback() const 
+    inline const SubloadCallback* Buffer::getSubloadResourceCallback() const 
     { 
         return _subloadCallback.get(); 
     }
@@ -345,68 +218,17 @@ namespace osgCompute
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    void Buffer<DATATYPE>::clearLocal()
+    inline void Buffer::clearLocal()
     {
         _streams.clear();
         _dimensions.clear();
         _numElements = 0;
-        _byteSize = 0;
         _allocHint = NO_ALLOC_HINT;
         _subloadCallback = NULL;
     }
 
     //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    bool Buffer<DATATYPE>::init( const Context& context ) const
-    {
-        if( _streams.size()<=context.getId() )
-            _streams.resize(context.getId()+1,NULL);
-
-        // Allocate stream array for context
-        if( NULL == _streams[context.getId()] )
-        {
-            _streams[context.getId()] = newStream( context );
-
-            if( NULL == _streams[context.getId()] )
-            {
-                osg::notify( osg::FATAL )  
-                    << "Buffer::init( \"CONTEXT\" ) for Buffer \"" << asObject()->getName()
-                    << "\": DataArray could be allocated for context \"" 
-                    << context.getId() << "\"."
-                    << std::endl;
-
-                return false;
-            }
-
-            _streams[context.getId()]->_context = const_cast<osgCompute::Context*>( &context );
-            _streams[context.getId()]->_allocHint = getAllocHint();
-        }
-
-        // Register param if valid stream-array 
-        // is allocated
-        return Resource::init( context );
-    }
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    void Buffer<DATATYPE>::clear( const Context& context ) const
-    {
-        if( _streams.size() > context.getId() &&
-            NULL != _streams[context.getId()] )
-        {
-            // delete stream
-            delete _streams[context.getId()];
-            _streams[context.getId()] = NULL;
-        }
-
-        // Unregister context
-        return Resource::clear( context );
-    }
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    inline BufferStream<DATATYPE>* Buffer<DATATYPE>::lookupStream( const Context& context ) const
+    inline BufferStream* Buffer::lookupStream( const Context& context ) const
     {
         OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 
@@ -419,15 +241,6 @@ namespace osgCompute
             init( context );
 
         return _streams[context.getId()];
-    }
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    void Buffer<DATATYPE>::setNeedsSetup( bool needsSetup ) const
-    {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-        for( unsigned int c=0; c<_streams.size(); ++c )
-            _streams[c]->_needsSetup = needsSetup;
     }
 }
 

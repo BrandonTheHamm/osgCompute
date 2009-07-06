@@ -17,24 +17,21 @@
 #define TEXSTREAMER_H 1
 
 #include <osg/ref_ptr>
-#include <osgCuda/Export>
-#include <osgCuda/Module>
-#include <osgCuda/Buffer>
-#include <osgCuda/Array>
-#include <osgCuda/Texture2D>
+#include <osgCompute/Module>
+#include <osgCompute/Buffer>
 
 namespace TexDemo
 {
-    class TexStreamer : public osgCuda::Module 
+    class TexStreamer : public osgCompute::Module 
     {
     public:
-        TexStreamer() : osgCuda::Module() {clearLocal();}
+        TexStreamer() : osgCompute::Module() {clearLocal();}
         
         META_Module( TexDemo, TexStreamer )
 
         virtual bool init();
 
-        virtual void clear() { clearLocal(); osgCuda::Module::clear(); }
+        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
 
         virtual void launch( const osgCompute::Context& context ) const;
 
@@ -48,14 +45,11 @@ namespace TexDemo
         virtual ~TexStreamer() { clearLocal(); }
         void clearLocal();
 
-        virtual bool init( const osgCompute::Context& context ) const;
-        virtual void clear( const osgCompute::Context& context ) const;
-
         mutable osg::Vec2s                                _numBlocks;
         mutable osg::Vec2s                                _numThreads;
-        osg::ref_ptr<osgCuda::Vec4ubArray>                _srcArray;
-        osg::ref_ptr<osgCuda::Vec4ubBuffer>               _trgTmpBuffer;
-        osg::ref_ptr<osgCuda::Vec4ubTexture2D>            _trgBuffer;
+        osgCompute::Buffer*                               _srcArray;
+        osgCompute::Buffer*                               _trgTmpBuffer;
+        osgCompute::Buffer*                               _trgBuffer;
 
     private:
         TexStreamer(const TexStreamer&, const osg::CopyOp& ) {} 

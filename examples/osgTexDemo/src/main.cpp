@@ -28,6 +28,8 @@
 #include <osgViewer/ViewerEventHandlers>
 
 #include <osgCuda/Computation>
+#include <osgCuda/Array>
+#include <osgCuda/Buffer>
 #include <osgCuda/Texture2D>
 
 #include "TexStreamer"

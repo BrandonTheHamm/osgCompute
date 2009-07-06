@@ -17,21 +17,20 @@
 #define PTCLDEMO_PTCL_EMITTER 1
 
 #include <osg/ref_ptr>
-#include <osgCuda/Module>
-#include <osgCuda/Export>
-#include <osgCuda/Buffer>
+#include <osgCompute/Module>
+#include <osgCompute/Buffer>
 
 namespace PtclDemo
 {
-    class PtclEmitter : public osgCuda::Module 
+    class PtclEmitter : public osgCompute::Module 
     {
     public:
-        PtclEmitter() : osgCuda::Module(), _context(NULL) {clearLocal();}
+        PtclEmitter() : osgCompute::Module() {clearLocal();}
 
         META_Module( PtclDemo, PtclEmitter )
 
         virtual bool init();
-        virtual void clear() { clearLocal(); osgCuda::Module::clear(); }
+        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
 
         inline void setSeedBox( osg::Vec3f& seedMin, osg::Vec3f& seedMax ) { _seedBoxMin = seedMin; _seedBoxMax = seedMax; }
         virtual void launch( const osgCompute::Context& context ) const;
@@ -42,19 +41,13 @@ namespace PtclDemo
         virtual ~PtclEmitter();
         void clearLocal();
 
-        virtual bool init( const osgCompute::Context& context ) const;
-        virtual void clear( const osgCompute::Context& context ) const;
-
-        mutable const osgCuda::Context*                   _context;
-        mutable float*                                    _seeds;
-        unsigned int                                      _seedCount;
-
         unsigned int                                      _numBlocks;
         unsigned int                                      _numThreads;
 
         osg::Vec3f                                        _seedBoxMin;
         osg::Vec3f                                        _seedBoxMax;
-        osg::ref_ptr<osgCuda::Vec4fBuffer>                _particles;
+        osgCompute::Buffer*                               _ptcls;
+        osgCompute::Buffer*                               _seeds;
 
     private:
         PtclEmitter(const PtclEmitter&, const osg::CopyOp& ) {} 

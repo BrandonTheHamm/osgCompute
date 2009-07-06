@@ -39,7 +39,7 @@
 
 #include "PtclMover"
 #include "PtclEmitter"
-#include "PtclMapper"
+
 
 osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
@@ -115,17 +115,21 @@ osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     return bbox;
 }
 
-osgCuda::Computation* getComputation( unsigned int numParticles, osg::Vec3& bbmin, osg::Vec3& bbmax )
+osgCuda::Computation* getComputation( osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
-    ////////////
-    // BUFFER //
-    ////////////
-    // particle buffer
-    osgCuda::Vec4fBuffer* ptclBuffer = new osgCuda::Vec4fBuffer;
-    ptclBuffer->setName( "ptclCUDABuffer" );
-    ptclBuffer->setDimension(0,numParticles);
-    ptclBuffer->addHandle( "PTCL_BUFFER" );
-    ptclBuffer->addHandle( "PTCL_CUDA_BUFFER" );
+    ///////////
+    // SEEDS //
+    ///////////
+    unsigned int seedCount = 64000;
+    std::vector<float> seedValues(seedCount);
+    for( unsigned int s=0; s<seedCount; ++s )
+        seedValues[s] = float(rand()) / RAND_MAX;
+
+    osgCuda::FloatBuffer* seedBuffer = new osgCuda::FloatBuffer;
+    seedBuffer->setName( "ptclSeedBuffer" );
+    seedBuffer->setDimension(0,seedCount);
+    seedBuffer->setVector( &seedValues );
+    seedBuffer->addHandle( "PTCL_SEEDS" );
 
     /////////////
     // MODULES //
@@ -138,10 +142,6 @@ osgCuda::Computation* getComputation( unsigned int numParticles, osg::Vec3& bbmi
     ptclEmitter->setName( "ptclEmitter" );
     ptclEmitter->setSeedBox( bbmin, bbmax );
 
-    PtclDemo::PtclMapper* ptclMapper = new PtclDemo::PtclMapper;
-    ptclMapper->setSyncType( PtclDemo::PtclMapper::SYNC_GL_WITH_CUDA_DEVICE );
-    ptclMapper->setName( "ptclMapper" );
-
     /////////////////
     // COMPUTATION //
     /////////////////
@@ -149,8 +149,7 @@ osgCuda::Computation* getComputation( unsigned int numParticles, osg::Vec3& bbmi
     computation->setName("computation");
     computation->addModule( *ptclEmitter );    
     computation->addModule( *ptclMover );
-    computation->addModule( *ptclMapper );
-    computation->addResource( *ptclBuffer );
+    computation->addResource( *seedBuffer );
 
     return computation;
 }
@@ -166,11 +165,11 @@ osg::Geode* getGeode( unsigned int numParticles )
     osg::Vec4Array* coords = new osg::Vec4Array(numParticles);
     coords->setName("particles");
     for( unsigned int v=0; v<coords->size(); ++v )
-        (*coords)[v].set(0,0,0,1);
+        (*coords)[v].set(-1,-1,-1,0);
 
     ptclGeom->setVertexArray(coords);
     ptclGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
-    ptclGeom->addHandle( "PTCL_GL_BUFFER" );
+    ptclGeom->addHandle( "PTCL_BUFFER" );
 
     //////////
     // GEOM //
@@ -223,7 +222,7 @@ int main(int argc, char *argv[])
     /////////////////
     osg::Group* scene = new osg::Group;
 
-    osgCompute::Computation* computation = getComputation( numParticles, bbmin, bbmax );
+    osgCompute::Computation* computation = getComputation( bbmin, bbmax );
     computation->addChild( getGeode( numParticles ) );
     scene->addChild( computation );
     scene->addChild( getBBox( bbmin, bbmax ) );
@@ -240,8 +239,8 @@ int main(int argc, char *argv[])
     // if you have OSG Version 2.8.1 or the current OSG SVN Version (2.9.1 or later)
     // then try multithreaded
     // otherwise the application will finish with segmentation fault
-    viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
-    //viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    //viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
+    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);

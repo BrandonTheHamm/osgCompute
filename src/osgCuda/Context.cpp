@@ -145,51 +145,54 @@ namespace osgCuda
         if( !isDirty() )
             return false;
 
-        if( _device == -1 )
+        //////////////////
+        // PROOF DEVICE //
+        //////////////////
+        // enumerate devices
+        int deviceCount = 0;
+        cudaError res = cudaGetDeviceCount( &deviceCount );
+        if( cudaSuccess != res )
         {
-            ////////////////
-            // GET DEVICE //
-            ////////////////
-            // enumerate devices
-            int deviceCount = 0;
-            cudaError res = cudaGetDeviceCount( &deviceCount );
-            if( cudaSuccess != res )
-            {
-                osg::notify(osg::FATAL)  << "CUDA::Context::init(): something goes wrong on cudaGetDeviceCount(). Returned code is "<<res<<"."
-                    << std::endl;
-                clear();
-                return false;
-            }
-
-            // always use device 0
-            _device = 0;
-            if( _device > deviceCount - 1 )
-                _device = deviceCount - 1;
-
-            cudaDeviceProp deviceProp;
-            res = cudaGetDeviceProperties( &deviceProp, _device );
-            if( cudaSuccess != res )
-            {
-                osg::notify(osg::FATAL)  << "CUDA::Context::init(): no device found which supports CUDA."
-                    << std::endl;
-
-                clear();
-                return false;
-            }
-
-            if( deviceProp.major < 1 )
-            {
-                osg::notify(osg::FATAL)  << "CUDA::Context::init(): device does not support CUDA.\n"
-                    << std::endl;
-
-                clear();
-                return false;
-            }
-
-            _deviceProperties = deviceProp;
+            osg::notify(osg::FATAL)  << "CUDA::Context::init(): something goes wrong on cudaGetDeviceCount(). Returned code is "<<res<<"."
+                << std::endl;
+            clear();
+            return false;
         }
 
+        if( _device > deviceCount - 1 )
+        {
+            osg::notify(osg::FATAL)  << "CUDA::Context::init(): device \""<<_device<<"\" does not exist."
+                << std::endl;
 
+            clear();
+            return false;
+        }
+
+        cudaDeviceProp deviceProp;
+        res = cudaGetDeviceProperties( &deviceProp, _device );
+        if( cudaSuccess != res )
+        {
+            osg::notify(osg::FATAL)  << "CUDA::Context::init(): no device found which supports CUDA."
+                << std::endl;
+
+            clear();
+            return false;
+        }
+
+        if( deviceProp.major < 1 )
+        {
+            osg::notify(osg::FATAL)  << "CUDA::Context::init(): device does not support CUDA.\n"
+                << std::endl;
+
+            clear();
+            return false;
+        }
+
+        _deviceProperties = deviceProp;
+
+        ////////////////
+        // CTX MEMORY //
+        ////////////////
         _ctxmem = new ContextMemory;
         if( !_ctxmem )
         {
@@ -202,6 +205,23 @@ namespace osgCuda
         // the current graphics thread.
         if( getState() != NULL )
         {
+            ///////////////////
+            // SETUP WITH GL //
+            ///////////////////
+            res = cudaGLSetGLDevice( _device );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::FATAL)  
+                    << "CUDA::Context::init(): cannot share device with render context."
+                    << std::endl;
+
+                clear();
+                return false;
+            }
+
+            ///////////////////
+            // ADD OPERATION //
+            ///////////////////
             osg::GraphicsThread* gct = NULL;
 
             osg::GraphicsContext* gc = getState()->getGraphicsContext();
@@ -1006,7 +1026,6 @@ namespace osgCuda
             _ctxmem = NULL;
         }
 
-        _device = -1;
         memset( &_deviceProperties, 0x0, sizeof(cudaDeviceProp) );
         _asgThread = NULL;
         _releaseOp = NULL;

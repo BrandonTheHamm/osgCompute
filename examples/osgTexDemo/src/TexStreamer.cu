@@ -85,7 +85,7 @@ void k_filter( uchar4* trg )
 #include <osg/Vec2s>
 
 extern "C"
-void swap( osg::Vec2s& numBlocks, osg::Vec2s& numThreads, osg::Vec4ub* trg, osg::Vec4ub* src )
+void swap( osg::Vec2s& numBlocks, osg::Vec2s& numThreads, void* trg, void* src )
 {
     dim3 blocks( numBlocks[0], numBlocks[1], 1 );
     dim3 threads( numThreads[0], numThreads[1], 1 );
@@ -96,7 +96,7 @@ void swap( osg::Vec2s& numBlocks, osg::Vec2s& numThreads, osg::Vec4ub* trg, osg:
 }
 
 extern "C"
-void filter( osg::Vec2s& numBlocks, osg::Vec2s& numThreads, osg::Vec4ub* trgBuffer, cudaArray* srcArray, cudaChannelFormatDesc& srcDesc )
+void filter( osg::Vec2s& numBlocks, osg::Vec2s& numThreads, void* trgBuffer, void* srcArray )
 {
     dim3 blocks( numBlocks[0], numBlocks[1], 1 );
     dim3 threads( numThreads[0], numThreads[1], 1 );
@@ -108,7 +108,7 @@ void filter( osg::Vec2s& numBlocks, osg::Vec2s& numThreads, osg::Vec4ub* trgBuff
     srcTex.addressMode[1] = cudaAddressModeClamp;
 
     // bind texture
-    cudaError res = cudaBindTextureToArray( srcTex, srcArray, srcDesc );
+    cudaError res = cudaBindTextureToArray( srcTex, reinterpret_cast<cudaArray*>(srcArray) );
 
     // call kernel
     k_filter<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trgBuffer) );

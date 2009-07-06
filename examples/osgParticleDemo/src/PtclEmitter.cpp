@@ -13,17 +13,17 @@
  * The full license is in LICENSE file included with this distribution.
 */
 
-#include <builtin_types.h>
+//#include <builtin_types.h>
 #include <math.h>
-#include <cstdlib>
-#include <cuda_runtime.h>
+//#include <cstdlib>
+//#include <cuda_runtime.h>
 #include "PtclEmitter"
 
 extern "C"
 void reseed( unsigned int numBlocks,
              unsigned int numThreads,
-             osg::Vec4f* ptcls,
-             float* seeds,
+             void* ptcls,
+             void* seeds,
              unsigned int seedCount,
              unsigned int seedIdx,
              osg::Vec3f bbmin,
@@ -32,13 +32,6 @@ void reseed( unsigned int numBlocks,
 
 namespace PtclDemo
 {
-    float frand( float minf, float maxf )
-    {
-        float unit = float(rand()) / RAND_MAX;
-        float diff = maxf - minf;
-        return minf + unit * diff;
-    }
-
     //------------------------------------------------------------------------------
     PtclEmitter::~PtclEmitter()
     {
@@ -48,7 +41,7 @@ namespace PtclDemo
     //------------------------------------------------------------------------------
     bool PtclEmitter::init()
     {
-        if( !_particles.valid() )
+        if( !_ptcls || !_seeds )
         {
             osg::notify( osg::WARN )
                 << "ParticleDemo::ParticleMover::init(): params are missing."
@@ -57,17 +50,15 @@ namespace PtclDemo
             return false;
         }
 
-        _seedCount = 128000;
-
         /////////////////////////
         // COMPUTE KERNEL SIZE //
         /////////////////////////
         // One Thread handles a single particle
         // buffer size must be a multiple of 128 x sizeof(float4)
-        _numBlocks = _particles->getDimension(0) / 128;
+        _numBlocks = _ptcls->getDimension(0) / 128;
         _numThreads = 128;
 
-        return osgCuda::Module::init();
+        return osgCompute::Module::init();
     }
 
     //------------------------------------------------------------------------------
@@ -76,18 +67,12 @@ namespace PtclDemo
         if( isDirty() )
             return;
 
-        if( _context == NULL )
-            init( context );
-
-        //////////
-        // SEED //
-        //////////
+        ////////////
+        // PARAMS //
+        ////////////
         unsigned int seedIdx = static_cast<unsigned int>(rand());
-
-        /////////////
-        // MAPPING //
-        /////////////
-        osg::Vec4f* ptcls = (osg::Vec4f*)_particles->map( context, osgCompute::MAP_DEVICE );
+        void* ptcls = _ptcls->map( context, osgCompute::MAP_DEVICE );
+        void* seeds = _seeds->map( context, osgCompute::MAP_DEVICE_SOURCE );
 
         ///////////////
         // RESEEDING //
@@ -96,20 +81,20 @@ namespace PtclDemo
             _numBlocks,
             _numThreads,
             ptcls,
-            _seeds,
-            _seedCount,
+            seeds,
+            _seeds->getDimension(0),
             seedIdx,
             _seedBoxMin,
             _seedBoxMax );
-
-        //_particles->unmap( context );
     }
 
     //------------------------------------------------------------------------------
     void PtclEmitter::acceptResource( osgCompute::Resource& resource )
     {
         if( resource.isAddressedByHandle("PTCL_BUFFER") )
-            _particles = dynamic_cast<osgCuda::Vec4fBuffer*>( &resource );
+            _ptcls = dynamic_cast<osgCompute::Buffer*>( &resource );
+        if( resource.isAddressedByHandle("PTCL_SEEDS") )
+            _seeds = dynamic_cast<osgCompute::Buffer*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -121,95 +106,89 @@ namespace PtclDemo
         _numBlocks = 1;
         _numThreads = 1;
 
-        _particles = NULL;
+        _ptcls = NULL;
+        _seeds = NULL;
         _seedBoxMin = osg::Vec3f(0,0,0);
         _seedBoxMax = osg::Vec3f(0,0,0);
-
-        // clear seeds
-        if( _context != NULL && _seeds != NULL )
-            _context->freeMemory( _seeds );
-
-        _seeds = NULL;
-        _context = NULL;
     }
 
-    //------------------------------------------------------------------------------
-    bool PtclEmitter::init( const osgCompute::Context& context ) const
-    {
-        if( context.getState() == NULL )
-            return false;
+    ////------------------------------------------------------------------------------
+    //bool PtclEmitter::init( const osgCompute::Context& context ) const
+    //{
+    //    if( context.getState() == NULL )
+    //        return false;
 
-        ////////////////////
-        // GENERATE SEEDS //
-        ////////////////////
-        //float maxf = 1.0f;
-        //float minf = 0.0f;
-        float* tmpPtr = new float[_seedCount];
-        for( unsigned int s=0; s<_seedCount; ++s )
-        {
-            //float unit = float(rand()) / RAND_MAX;
-            //float diff = maxf - minf;
-            tmpPtr[s] = frand(0.0f,1.0f);//minf + unit * diff;
-        }
+    //    ////////////////////
+    //    // GENERATE SEEDS //
+    //    ////////////////////
+    //    //float maxf = 1.0f;
+    //    //float minf = 0.0f;
+    //    float* tmpPtr = new float[_seedCount];
+    //    for( unsigned int s=0; s<_seedCount; ++s )
+    //    {
+    //        //float unit = float(rand()) / RAND_MAX;
+    //        //float diff = maxf - minf;
+    //        tmpPtr[s] = frand(0.0f,1.0f);//minf + unit * diff;
+    //    }
 
-        ///////////////////
-        // DEVICE BUFFER //
-        ///////////////////
-        unsigned int bufferSize = _seedCount * sizeof(float);
-        // allocate buffer on the device to store the seeds
-        _context = dynamic_cast<const osgCuda::Context*>( &context );
-        if( _context == NULL )
-            return false;
+    //    ///////////////////
+    //    // DEVICE BUFFER //
+    //    ///////////////////
+    //    unsigned int bufferSize = _seedCount * sizeof(float);
+    //    // allocate buffer on the device to store the seeds
+    //    _context = dynamic_cast<const osgCompute::Context*>( &context );
+    //    if( _context == NULL )
+    //        return false;
 
-        _seeds = static_cast<float*>( _context->mallocDeviceMemory( bufferSize ) );
-        if( _seeds == NULL )
-        {
-            _context = NULL;
-            delete [] tmpPtr;
-            return false;
-        }
+    //    _seeds = static_cast<float*>( _context->mallocDeviceMemory( bufferSize ) );
+    //    if( _seeds == NULL )
+    //    {
+    //        _context = NULL;
+    //        delete [] tmpPtr;
+    //        return false;
+    //    }
 
-        cudaError res = cudaMemcpy( _seeds, tmpPtr, bufferSize, cudaMemcpyHostToDevice );
-        if( res != cudaSuccess )
-        {
-            _context->freeMemory( _seeds );
-            _context = NULL;
-            delete [] tmpPtr;
-            return false;
-        }
+    //    cudaError res = cudaMemcpy( _seeds, tmpPtr, bufferSize, cudaMemcpyHostToDevice );
+    //    if( res != cudaSuccess )
+    //    {
+    //        _context->freeMemory( _seeds );
+    //        _context = NULL;
+    //        delete [] tmpPtr;
+    //        return false;
+    //    }
 
-        // delete tmpPtr
-        delete [] tmpPtr;
+    //    // delete tmpPtr
+    //    delete [] tmpPtr;
 
-        if( !osgCuda::Module::init( context ) )
-        {
-            _context->freeMemory( _seeds );
-            _context = NULL;
-            return false;
-        }
+    //    if( !osgCompute::Module::init( context ) )
+    //    {
+    //        _context->freeMemory( _seeds );
+    //        _context = NULL;
+    //        return false;
+    //    }
 
-        ////////////////
-        // INIT PTCLS //
-        ////////////////
-        osg::Vec4f* ptcls = (osg::Vec4f*)_particles->map( context, osgCompute::MAP_HOST_TARGET );
+    //    ////////////////
+    //    // INIT PTCLS //
+    //    ////////////////
+    //    osg::Vec4f* ptcls = (osg::Vec4f*)_particles->map( context, osgCompute::MAP_HOST_TARGET );
 
-        for( unsigned int v=0; v<_particles->getDimension(0); ++v )
-            ptcls[v].set(-1,-1,-1,1);
+    //    for( unsigned int v=0; v<_particles->getDimension(0); ++v )
+    //        ptcls[v].set(-1,-1,-1,1);
 
-        _particles->unmap( context );
+    //    _particles->unmap( context );
 
-        return true;
-    }
+    //    return true;
+    //}
 
-    //------------------------------------------------------------------------------
-    void PtclEmitter::clear( const osgCompute::Context& context ) const
-    {
-        if( _context != NULL && _seeds != NULL )
-        {
-            _context->freeMemory( _seeds );
-            _seeds = NULL;
-        }
+    ////------------------------------------------------------------------------------
+    //void PtclEmitter::clear( const osgCompute::Context& context ) const
+    //{
+    //    if( _context != NULL && _seeds != NULL )
+    //    {
+    //        dynamic_cast<osgCompute::Context>_context->freeMemory( _seeds );
+    //        _seeds = NULL;
+    //    }
 
-        osgCuda::Module::clear( context );
-    }
+    //    osgCompute::Module::clear( context );
+    //}
 }

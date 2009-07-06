@@ -104,6 +104,9 @@ namespace osgCompute
         // do not clear the id!!!
         _state = NULL;
         _dirty = true;
+        _embedded = false;
+        // default use device 0
+        _device = 0;
     }
 
     //------------------------------------------------------------------------------

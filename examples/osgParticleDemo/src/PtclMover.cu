@@ -55,7 +55,7 @@ void k_move( float4* ptcls, float etime )
 
 //------------------------------------------------------------------------------
 extern "C" __host__
-void move( unsigned int numBlocks, unsigned int numThreads, osg::Vec4f* ptcls, float etime )
+void move( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime )
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );

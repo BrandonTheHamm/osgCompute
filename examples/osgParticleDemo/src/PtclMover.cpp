@@ -13,13 +13,11 @@
  * The full license is in LICENSE file included with this distribution.
 */
 
-#include <builtin_types.h>
 #include <math.h>
-#include <cuda_runtime.h>
 #include "PtclMover"
 
 extern "C"
-void move( unsigned int numBlocks, unsigned int numThreads, osg::Vec4f* ptcls, float etime );
+void move( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime );
 
 namespace PtclDemo
 {
@@ -32,7 +30,7 @@ namespace PtclDemo
     //------------------------------------------------------------------------------  
     bool PtclMover::init() 
     { 
-        if( !_particles.valid() )
+        if( !_ptcls )
         {
             osg::notify( osg::WARN ) 
                 << "ParticleDemo::ParticleMover::init(): particle buffer is missing."
@@ -46,10 +44,10 @@ namespace PtclDemo
         /////////////////////////
         // One Thread handles a single particle
         // buffer size must be a multiple of 128 x sizeof(float4)
-        _numBlocks = _particles->getDimension(0) / 128;
+        _numBlocks = _ptcls->getDimension(0) / 128;
         _numThreads = 128;
 
-        return osgCuda::Module::init();
+        return osgCompute::Module::init();
     }
 
     //------------------------------------------------------------------------------  
@@ -76,25 +74,22 @@ namespace PtclDemo
         /////////////
         // MAPPING //
         /////////////
-        osg::Vec4f* ptcls = (osg::Vec4f*)_particles->map( context, osgCompute::MAP_DEVICE );
+        void* ptcls = _ptcls->map( context, osgCompute::MAP_DEVICE );
 
         ///////////////
         // ADVECTION //
         ///////////////
-
         move( _numBlocks, 
               _numThreads, 
               ptcls, 
               etime );
-
-        //_particles->unmap( context );
     }
 
     //------------------------------------------------------------------------------
     void PtclMover::acceptResource( osgCompute::Resource& resource )
     {
         if( resource.isAddressedByHandle("PTCL_BUFFER") )
-            _particles = dynamic_cast<osgCuda::Vec4fBuffer*>( &resource );
+            _ptcls = dynamic_cast<osgCompute::Buffer*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -106,7 +101,7 @@ namespace PtclDemo
         _numBlocks = 1;
         _numThreads = 1;
 
-        _particles = NULL;
+        _ptcls = NULL;
 
         _lastTime = 0.0;
         _frameStamp = NULL;

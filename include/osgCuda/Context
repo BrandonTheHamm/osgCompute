@@ -40,7 +40,6 @@ namespace osgCuda
         virtual void apply();
 
         inline const cudaDeviceProp* getDeviceProperties() const;
-        inline int getDevice() const;
 
         void* mallocHostMemory( unsigned int byteSize ) const;
         void* mallocDeviceMemory( unsigned int byteSize ) const;
@@ -72,7 +71,6 @@ namespace osgCuda
         ReleaseOperation*            _releaseOp;
         mutable ContextMemory*       _ctxmem;
         cudaDeviceProp               _deviceProperties;
-        int                          _device;
         OpenThreads::Thread*         _asgThread;
 
     private:
@@ -85,12 +83,6 @@ namespace osgCuda
     inline const cudaDeviceProp* Context::getDeviceProperties() const 
     { 
         return &_deviceProperties; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline int Context::getDevice() const 
-    { 
-        return _device; 
     }
 
     //------------------------------------------------------------------------------

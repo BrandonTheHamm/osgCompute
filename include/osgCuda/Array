@@ -84,7 +84,7 @@ namespace osgCuda
     /**
     */
     template< class DATATYPE >
-    class ArrayStream : public osgCompute::BufferStream<DATATYPE>
+    class ArrayStream : public osgCompute::BufferStream
     {
     public:
         cudaArray*                      _devArray;
@@ -110,7 +110,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     template< class DATATYPE >
     ArrayStream<DATATYPE>::ArrayStream()
-        :   osgCompute::BufferStream<DATATYPE>(),
+        :   osgCompute::BufferStream(),
         _devArray(NULL),
         _hostPtr(NULL),
         _syncDevice(false),
@@ -126,16 +126,16 @@ namespace osgCuda
     ArrayStream<DATATYPE>::~ArrayStream()
     {
         if( _devArrayAllocated && NULL != _devArray )
-            static_cast<Context*>(osgCompute::BufferStream<DATATYPE>::_context.get())->freeMemory( _devArray );
+            static_cast<Context*>(osgCompute::BufferStream::_context.get())->freeMemory( _devArray );
 
         if( _hostPtrAllocated && NULL != _hostPtr)
-            static_cast<Context*>(osgCompute::BufferStream<DATATYPE>::_context.get())->freeMemory( _hostPtr );
+            static_cast<Context*>(osgCompute::BufferStream::_context.get())->freeMemory( _hostPtr );
     }
 
     /**
     */
     template< class DATATYPE >
-    class Array : public osgCompute::Buffer<DATATYPE>, public osg::Object
+    class Array : public osgCompute::Buffer, public osg::Object
     {
 
     public:
@@ -150,6 +150,7 @@ namespace osgCuda
         virtual cudaArray* mapArray( const osgCompute::Context& context, unsigned int mapping ) const;
         virtual void* map( const osgCompute::Context& context, unsigned int mapping ) const;
         virtual void unmap( const osgCompute::Context& context ) const;
+        virtual unsigned int getElementSize() const { return sizeof(DATATYPE); }
 
         virtual void setImage( osg::Image* image );
         virtual osg::Image* getImage();
@@ -175,7 +176,7 @@ namespace osgCuda
         bool allocStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const;
         bool syncStream( unsigned int mapping, ArrayStream<DATATYPE>& stream ) const;
 
-        virtual osgCompute::BufferStream<DATATYPE>* newStream( const osgCompute::Context& context ) const;
+        virtual osgCompute::BufferStream* newStream( const osgCompute::Context& context ) const;
 
         mutable std::vector<DATATYPE>        _vector;
         mutable osg::ref_ptr<osg::Image>     _image;
@@ -194,7 +195,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     template< class DATATYPE >
     Array<DATATYPE>::Array()
-        : osgCompute::Buffer<DATATYPE>(),
+        : osgCompute::Buffer(),
           osg::Object()
     {
         clearLocal();
@@ -205,7 +206,7 @@ namespace osgCuda
     void Array<DATATYPE>::clear()
     {
         clearLocal();
-        osgCompute::Buffer<DATATYPE>::clear();
+        osgCompute::Buffer::clear();
     }
 
     //------------------------------------------------------------------------------
@@ -213,7 +214,7 @@ namespace osgCuda
     bool Array<DATATYPE>::init()
     {
 
-        if( osgCompute::Buffer<DATATYPE>::getNumDimensions() > 3 )
+        if( osgCompute::Buffer::getNumDimensions() > 3 )
         {
             osg::notify(osg::FATAL)
                 << "CUDA::Array::init() for array \""
@@ -225,8 +226,8 @@ namespace osgCuda
         }
 
         unsigned int numElements = 1;
-        for( unsigned int d=0; d<osgCompute::Buffer<DATATYPE>::getNumDimensions(); ++d )
-            numElements *= osgCompute::Buffer<DATATYPE>::getDimension( d );
+        for( unsigned int d=0; d<osgCompute::Buffer::getNumDimensions(); ++d )
+            numElements *= osgCompute::Buffer::getDimension( d );
 
         unsigned int byteSize = numElements * sizeof( DATATYPE );
 
@@ -264,7 +265,7 @@ namespace osgCuda
                 _vector.resize( numElements );
         }
 
-        return osgCompute::Buffer<DATATYPE>::init();
+        return osgCompute::Buffer::init();
     }
 
     //------------------------------------------------------------------------------
@@ -301,7 +302,7 @@ namespace osgCuda
             return NULL;
         }
 
-        ArrayStream<DATATYPE>* stream = static_cast<ArrayStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context) );
+        ArrayStream<DATATYPE>* stream = static_cast<ArrayStream<DATATYPE>*>( osgCompute::Buffer::lookupStream(context) );
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)
@@ -345,17 +346,7 @@ namespace osgCuda
             return NULL;
         }
 
-        if( mapping & osgCompute::MAP_DEVICE )
-        {
-            osg::notify(osg::FATAL)
-                << "CUDA::Array::mapArray() for array \""
-                << osg::Object::getName() <<"\": cannot map buffer to device. Call mapArray() instead."
-                << std::endl;
-
-            return NULL;
-        }
-
-        ArrayStream<DATATYPE>* stream = static_cast<ArrayStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context) );
+        ArrayStream<DATATYPE>* stream = static_cast<ArrayStream<DATATYPE>*>( osgCompute::Buffer::lookupStream(context) );
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)
@@ -400,7 +391,7 @@ namespace osgCuda
             return;
         }
 
-        ArrayStream<DATATYPE>* stream = static_cast<ArrayStream<DATATYPE>*>( osgCompute::Buffer<DATATYPE>::lookupStream(context) );
+        ArrayStream<DATATYPE>* stream = static_cast<ArrayStream<DATATYPE>*>( osgCompute::Buffer::lookupStream(context) );
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)
@@ -471,10 +462,10 @@ namespace osgCuda
         ///////////////////
         if( stream._mapping == mapping && !stream._needsSetup )
         {
-            if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != stream._devArray )
+            if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != stream._devArray )
             {
                 const osgCompute::BufferSubloadCallback* callback = 
-                    dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback());
+                    dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer::getSubloadResourceCallback());
                 if( callback )
                 {
                     // load or subload data before returning the host pointer
@@ -540,10 +531,10 @@ namespace osgCuda
         //////////////////
         // LOAD/SUBLOAD //
         //////////////////
-        if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != ptr )
+        if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
         {
             const osgCompute::BufferSubloadCallback* callback = 
-                dynamic_cast<const osgCompute::BufferSubloadCallback*>( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() );
+                dynamic_cast<const osgCompute::BufferSubloadCallback*>( osgCompute::Buffer::getSubloadResourceCallback() );
             if( callback )
             {
                 // load or subload data before returning the host pointer
@@ -568,10 +559,10 @@ namespace osgCuda
         ///////////////////
         if( stream._mapping == mapping && !stream._needsSetup )
         {
-            if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != stream._hostPtr )
+            if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != stream._hostPtr )
             {
                 const osgCompute::BufferSubloadCallback* callback = 
-                    dynamic_cast<const osgCompute::BufferSubloadCallback*>( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() );
+                    dynamic_cast<const osgCompute::BufferSubloadCallback*>( osgCompute::Buffer::getSubloadResourceCallback() );
                 if( callback )
                 {
                     // subload data before returning the pointer
@@ -636,10 +627,10 @@ namespace osgCuda
         //////////////////
         // LOAD/SUBLOAD //
         //////////////////
-        if( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() && NULL != ptr )
+        if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
         {
             const osgCompute::BufferSubloadCallback* callback = 
-                dynamic_cast<const osgCompute::BufferSubloadCallback*>( osgCompute::Buffer<DATATYPE>::getSubloadResourceCallback() );
+                dynamic_cast<const osgCompute::BufferSubloadCallback*>( osgCompute::Buffer::getSubloadResourceCallback() );
             if( callback )
             {
                 // load or subload data before returning the host pointer
@@ -683,7 +674,7 @@ namespace osgCuda
 
             if( getNumDimensions() < 3 )
             {
-                res = cudaMemcpyToArray(stream._devArray,0,0,data, osgCompute::Buffer<DATATYPE>::getByteSize(), cudaMemcpyHostToDevice);
+                res = cudaMemcpyToArray(stream._devArray,0,0,data, osgCompute::Buffer::getByteSize(), cudaMemcpyHostToDevice);
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
@@ -750,7 +741,7 @@ namespace osgCuda
                 return false;
             }
 
-            res = cudaMemcpy( stream._hostPtr, data, osgCompute::Buffer<DATATYPE>::getByteSize(), cudaMemcpyHostToHost );
+            res = cudaMemcpy( stream._hostPtr, data, osgCompute::Buffer::getByteSize(), cudaMemcpyHostToHost );
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
@@ -783,7 +774,7 @@ namespace osgCuda
             if( (stream._allocHint & ALLOC_DYNAMIC) == ALLOC_DYNAMIC )
             {
                 stream._hostPtr = reinterpret_cast<DATATYPE*>(
-                    static_cast<Context*>(stream._context.get())->mallocDeviceHostMemory( osgCompute::Buffer<DATATYPE>::getByteSize() ) );
+                    static_cast<Context*>(stream._context.get())->mallocDeviceHostMemory( osgCompute::Buffer::getByteSize() ) );
                 if( NULL == stream._hostPtr )
                 {
                     osg::notify(osg::FATAL)
@@ -798,7 +789,7 @@ namespace osgCuda
             else
             {
                 stream._hostPtr = reinterpret_cast<DATATYPE*>(
-                    static_cast<Context*>(stream._context.get())->mallocHostMemory( osgCompute::Buffer<DATATYPE>::getByteSize() ) );
+                    static_cast<Context*>(stream._context.get())->mallocHostMemory( osgCompute::Buffer::getByteSize() ) );
                 if( NULL == stream._hostPtr )
                 {
                     osg::notify(osg::FATAL)
@@ -831,12 +822,12 @@ namespace osgCuda
                 return false;
             }
 
-            if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 3 )
+            if( osgCompute::Buffer::getNumDimensions() == 3 )
             {
                 stream._devArray = static_cast<Context*>(stream._context.get())->mallocDevice3DArray(
-                                        osgCompute::Buffer<DATATYPE>::getDimension(0),
-                                        (osgCompute::Buffer<DATATYPE>::getDimension(1) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(1),
-                                        (osgCompute::Buffer<DATATYPE>::getDimension(2) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(2),
+                                        osgCompute::Buffer::getDimension(0),
+                                        (osgCompute::Buffer::getDimension(1) <= 1)? 0 : osgCompute::Buffer::getDimension(1),
+                                        (osgCompute::Buffer::getDimension(2) <= 1)? 0 : osgCompute::Buffer::getDimension(2),
                                         desc );
                 if( NULL == stream._devArray )
                 {
@@ -848,11 +839,11 @@ namespace osgCuda
                     return false;
                 }
             }
-            else if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 2 )
+            else if( osgCompute::Buffer::getNumDimensions() == 2 )
             {
                 stream._devArray = static_cast<Context*>(stream._context.get())->mallocDevice2DArray(
-                                        osgCompute::Buffer<DATATYPE>::getDimension(0),
-                                        (osgCompute::Buffer<DATATYPE>::getDimension(1) <= 1)? 0 : osgCompute::Buffer<DATATYPE>::getDimension(1),
+                                        osgCompute::Buffer::getDimension(0),
+                                        (osgCompute::Buffer::getDimension(1) <= 1)? 0 : osgCompute::Buffer::getDimension(1),
                                         desc );
                 if( NULL == stream._devArray )
                 {
@@ -867,7 +858,7 @@ namespace osgCuda
             else 
             {
                 stream._devArray = static_cast<Context*>(stream._context.get())->mallocDeviceArray(
-                                        osgCompute::Buffer<DATATYPE>::getDimension(0),
+                                        osgCompute::Buffer::getDimension(0),
                                         desc );
                 if( NULL == stream._devArray )
                 {
@@ -896,9 +887,9 @@ namespace osgCuda
         cudaError res;
         if( mapping & osgCompute::MAP_DEVICE )
         {
-            if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 1 )
+            if( osgCompute::Buffer::getNumDimensions() == 1 )
             {
-                res = cudaMemcpyToArray( stream._devArray, 0, 0, stream._hostPtr, osgCompute::Buffer<DATATYPE>::getByteSize(), cudaMemcpyHostToDevice );
+                res = cudaMemcpyToArray( stream._devArray, 0, 0, stream._hostPtr, osgCompute::Buffer::getByteSize(), cudaMemcpyHostToDevice );
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
@@ -910,14 +901,14 @@ namespace osgCuda
                     return false;
                 }
             }
-            else if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 2 )
+            else if( osgCompute::Buffer::getNumDimensions() == 2 )
             {
                 res = cudaMemcpy2DToArray( stream._devArray,
                     0, 0,
                     stream._hostPtr,
-                    osgCompute::Buffer<DATATYPE>::getDimension(0) * sizeof(DATATYPE),
-                    osgCompute::Buffer<DATATYPE>::getDimension(0),
-                    osgCompute::Buffer<DATATYPE>::getDimension(1),
+                    osgCompute::Buffer::getDimension(0) * sizeof(DATATYPE),
+                    osgCompute::Buffer::getDimension(0),
+                    osgCompute::Buffer::getDimension(1),
                     cudaMemcpyHostToDevice );
                 if( cudaSuccess != res )
                 {
@@ -934,15 +925,15 @@ namespace osgCuda
             else
             {
                 cudaPitchedPtr pitchPtr = {0};
-                pitchPtr.pitch = osgCompute::Buffer<DATATYPE>::getDimension(0)*sizeof(DATATYPE);
+                pitchPtr.pitch = osgCompute::Buffer::getDimension(0)*sizeof(DATATYPE);
                 pitchPtr.ptr = (void*)stream._hostPtr;
-                pitchPtr.xsize = osgCompute::Buffer<DATATYPE>::getDimension(0);
-                pitchPtr.ysize = osgCompute::Buffer<DATATYPE>::getDimension(1);
+                pitchPtr.xsize = osgCompute::Buffer::getDimension(0);
+                pitchPtr.ysize = osgCompute::Buffer::getDimension(1);
 
                 cudaExtent extent = {0};
-                extent.width = osgCompute::Buffer<DATATYPE>::getDimension(0);
-                extent.height = osgCompute::Buffer<DATATYPE>::getDimension(1);
-                extent.depth = osgCompute::Buffer<DATATYPE>::getDimension(2);
+                extent.width = osgCompute::Buffer::getDimension(0);
+                extent.height = osgCompute::Buffer::getDimension(1);
+                extent.depth = osgCompute::Buffer::getDimension(2);
 
                 cudaMemcpy3DParms copyParams = {0};
                 copyParams.srcPtr = pitchPtr;
@@ -969,9 +960,9 @@ namespace osgCuda
         }
         else if( mapping & osgCompute::MAP_HOST )
         {
-            if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 1 )
+            if( osgCompute::Buffer::getNumDimensions() == 1 )
             {
-                res = cudaMemcpyFromArray( stream._hostPtr, stream._devArray, 0, 0, osgCompute::Buffer<DATATYPE>::getByteSize(), cudaMemcpyDeviceToHost );
+                res = cudaMemcpyFromArray( stream._hostPtr, stream._devArray, 0, 0, osgCompute::Buffer::getByteSize(), cudaMemcpyDeviceToHost );
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
@@ -984,15 +975,15 @@ namespace osgCuda
                     return false;
                 }
             }
-            else if( osgCompute::Buffer<DATATYPE>::getNumDimensions() == 2 )
+            else if( osgCompute::Buffer::getNumDimensions() == 2 )
             {
                 res = cudaMemcpy2DFromArray(
                     stream._hostPtr,
-                    osgCompute::Buffer<DATATYPE>::getDimension(0) * sizeof(DATATYPE),
+                    osgCompute::Buffer::getDimension(0) * sizeof(DATATYPE),
                     stream._devArray,
                     0, 0,
-                    osgCompute::Buffer<DATATYPE>::getDimension(0),
-                    osgCompute::Buffer<DATATYPE>::getDimension(1),
+                    osgCompute::Buffer::getDimension(0),
+                    osgCompute::Buffer::getDimension(1),
                     cudaMemcpyDeviceToHost );
                 if( cudaSuccess != res )
                 {
@@ -1009,15 +1000,15 @@ namespace osgCuda
             else
             {
                 cudaPitchedPtr pitchPtr = {0};
-                pitchPtr.pitch = osgCompute::Buffer<DATATYPE>::getDimension(0)*sizeof(DATATYPE);
+                pitchPtr.pitch = osgCompute::Buffer::getDimension(0)*sizeof(DATATYPE);
                 pitchPtr.ptr = (void*)stream._hostPtr;
-                pitchPtr.xsize = osgCompute::Buffer<DATATYPE>::getDimension(0);
-                pitchPtr.ysize = osgCompute::Buffer<DATATYPE>::getDimension(1);
+                pitchPtr.xsize = osgCompute::Buffer::getDimension(0);
+                pitchPtr.ysize = osgCompute::Buffer::getDimension(1);
 
                 cudaExtent extent = {0};
-                extent.width = osgCompute::Buffer<DATATYPE>::getDimension(0);
-                extent.height = osgCompute::Buffer<DATATYPE>::getDimension(1);
-                extent.depth = osgCompute::Buffer<DATATYPE>::getDimension(2);
+                extent.width = osgCompute::Buffer::getDimension(0);
+                extent.height = osgCompute::Buffer::getDimension(1);
+                extent.depth = osgCompute::Buffer::getDimension(2);
 
                 cudaMemcpy3DParms copyParams = {0};
                 copyParams.srcArray = stream._devArray;
@@ -1081,7 +1072,7 @@ namespace osgCuda
                 return;
             }
 
-            if( image->getTotalSizeInBytes() != osgCompute::Buffer<DATATYPE>::getByteSize() )
+            if( image->getTotalSizeInBytes() != osgCompute::Buffer::getByteSize() )
             {
                 osg::notify(osg::FATAL)
                     << "CUDA::Array::setupStream() for array \""
@@ -1096,7 +1087,7 @@ namespace osgCuda
         _image = image;
         _vector.clear();
 
-        osgCompute::Buffer<DATATYPE>::setNeedsSetup( (image != NULL) );
+        osgCompute::Buffer::setNeedsSetup( (image != NULL) );
     }
 
     //------------------------------------------------------------------------------
@@ -1125,12 +1116,12 @@ namespace osgCuda
 
             if( !osgCompute::Resource::isDirty() )
             {
-                if( _vector.size() < osgCompute::Buffer<DATATYPE>::getNumElements() )
-                    _vector.resize( osgCompute::Buffer<DATATYPE>::getNumElements() );
+                if( _vector.size() < osgCompute::Buffer::getNumElements() )
+                    _vector.resize( osgCompute::Buffer::getNumElements() );
 
                 // if streamsize is known then check for overwrites
-                if( (offset + numElementsToCopy) > osgCompute::Buffer<DATATYPE>::getNumElements() )
-                    numElementsToCopy = (osgCompute::Buffer<DATATYPE>::getNumElements() - offset);
+                if( (offset + numElementsToCopy) > osgCompute::Buffer::getNumElements() )
+                    numElementsToCopy = (osgCompute::Buffer::getNumElements() - offset);
             }
             else
             {
@@ -1147,7 +1138,7 @@ namespace osgCuda
         }
 
         _image = NULL;
-        osgCompute::Buffer<DATATYPE>::setNeedsSetup( (data != NULL) );
+        osgCompute::Buffer::setNeedsSetup( (data != NULL) );
     }
 
     //------------------------------------------------------------------------------
@@ -1202,7 +1193,7 @@ namespace osgCuda
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    osgCompute::BufferStream<DATATYPE>* Array<DATATYPE>::newStream( const osgCompute::Context& context ) const
+    osgCompute::BufferStream* Array<DATATYPE>::newStream( const osgCompute::Context& context ) const
     {
         return new ArrayStream<DATATYPE>;
     }

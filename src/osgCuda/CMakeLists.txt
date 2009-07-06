@@ -49,7 +49,6 @@ SET(TARGET_H
 	${HEADER_PATH}/Context
 	${HEADER_PATH}/Export
 	${HEADER_PATH}/Geometry
-	${HEADER_PATH}/Module
 	${HEADER_PATH}/Computation
     ${HEADER_PATH}/Texture1D
     ${HEADER_PATH}/Texture2D
@@ -61,7 +60,6 @@ SET(TARGET_H
 # collect the sources
 SET(TARGET_SRC
 	Context.cpp
-	Module.cpp
 	Texture.cpp
 	Computation.cpp
 )
