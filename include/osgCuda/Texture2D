@@ -1,12 +1,12 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
-*                                                                     
+*
 * This library is free software; you can redistribute it and/or modify
 * it under the terms of the GNU Lesser General Public License as
 * published by the Free Software Foundation; either version 3 of
 * the License, or (at your option) any later version.
-*                                                                     
+*
 * This library is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesse General Public License for more details.
 *
@@ -86,7 +86,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     template< class DATATYPE >
     Texture2D<DATATYPE>::Texture2D()
-        : Texture<DATATYPE>(),
+        : osgCuda::Texture<DATATYPE>(),
           osg::Texture2D()
     {
         clearLocal();
@@ -103,7 +103,7 @@ namespace osgCuda
     template< class DATATYPE >
     void Texture2D<DATATYPE>::clear()
     {
-        Texture<DATATYPE>::clear();
+        osgCuda::Texture<DATATYPE>::clear();
         clearLocal();
     }
 
@@ -111,7 +111,7 @@ namespace osgCuda
     template< class DATATYPE >
     bool Texture2D<DATATYPE>::init()
     {
-        return Texture<DATATYPE>::init();
+        return osgCuda::Texture<DATATYPE>::init();
     }
 
     //------------------------------------------------------------------------------
@@ -120,26 +120,26 @@ namespace osgCuda
     {
         if( state != NULL )
         {
-            const osgCompute::Context* curCtx = getContext( state->getContextID() );
+            const osgCompute::Context* curCtx = this->getContext( state->getContextID() );
             if( curCtx )
             {
                 if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
-                    unmap( *curCtx );
+                    this->unmap( *curCtx );
             }
         }
 
-        osg::Texture2D::releaseGLObjects( state ); 
+        osg::Texture2D::releaseGLObjects( state );
     }
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
     void Texture2D<DATATYPE>::apply( osg::State& state ) const
     {
-        const osgCompute::Context* curCtx = getContext( state.getContextID() );
+        const osgCompute::Context* curCtx = this->getContext( state.getContextID() );
         if( curCtx )
         {
             if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
-                unmap( *curCtx );
+                this->unmap( *curCtx );
         }
 
         osg::Texture2D::apply( state );
@@ -154,7 +154,7 @@ namespace osgCuda
             setTextureWidth( osgCompute::Buffer::getDimension(0) );
             setTextureHeight( osgCompute::Buffer::getDimension(1) );
         }
-        else 
+        else
         {
             if( getImage(0) && getTextureWidth() == 0)
                 setTextureWidth( getImage(0)->s() );
@@ -166,7 +166,7 @@ namespace osgCuda
             osgCompute::Buffer::setDimension(1, getTextureHeight() );
         }
 
-        return Texture<DATATYPE>::initDimension();
+        return osgCuda::Texture<DATATYPE>::initDimension();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -225,11 +225,11 @@ namespace osgCuda
 
         // UNPACK the PBO data
         glTexSubImage2D(
-                    GL_TEXTURE_2D, 0, 0, 0, 
-                    osgCompute::Buffer::getDimension(0), 
-                    osgCompute::Buffer::getDimension(1), 
-                    tex->_internalFormat, 
-                    texType, 
+                    GL_TEXTURE_2D, 0, 0, 0,
+                    osgCompute::Buffer::getDimension(0),
+                    osgCompute::Buffer::getDimension(1),
+                    tex->_internalFormat,
+                    texType,
                     NULL );
 
         GLenum errorStatus = glGetError();
@@ -380,7 +380,7 @@ namespace osgCuda
         }
 
         // second chance
-        tex = osg::Texture::getTextureObject( stream._context->getId() ); 
+        tex = osg::Texture::getTextureObject( stream._context->getId() );
         if( !tex )
         {
 
@@ -440,7 +440,7 @@ namespace osgCuda
             // Sync PBO with Texture-Data if Texture is allocated
             syncPBO( stream );
         }
-        else if( !getIsRenderTarget() )
+        else if( !this->getIsRenderTarget() )
         {
             /////////////////////////////
             // ALLOCATE TEXTURE MEMORY //
@@ -456,7 +456,7 @@ namespace osgCuda
                 tex->_width, tex->_height,
                 tex->_border,
                 tex->_internalFormat, texType, NULL );
-                
+
             GLenum errorNo = glGetError();
             if( errorNo != GL_NO_ERROR )
             {

@@ -1,11 +1,12 @@
 #include "osgCuda/Texture"
 
 namespace osgCuda
-{   
+{
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
+    template<>
     bool Texture<unsigned char>::initFormatAndType()
     {
         asTexture()->setInternalFormat( GL_LUMINANCE );
@@ -16,6 +17,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
+    template<>
     bool Texture<osg::Vec4ub>::initFormatAndType()
     {
         asTexture()->setInternalFormat( GL_RGBA );
