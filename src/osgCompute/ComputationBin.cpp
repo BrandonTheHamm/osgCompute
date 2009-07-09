@@ -133,7 +133,7 @@ namespace osgCompute
         // CALLBACK 
         _launchCallback = _computation->getLaunchCallback();
 
-        _dirty = false;
+        _clear = false;
         return true;
     }
 
@@ -216,7 +216,7 @@ namespace osgCompute
         _computation = NULL;
         _computeOrder = osgCompute::Computation::PRE_COMPUTE_POST_TRAVERSAL;
         _context = NULL;
-        _dirty = true;
+        _clear = true;
         _launchCallback = NULL;
         _modules.clear();
 
@@ -226,7 +226,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ComputationBin::launch() const
     {
-        if( _dirty || !_computation || !_context.valid() )
+        if( _clear || !_computation || !_context.valid() )
             return;
 
         // Apply context 

@@ -72,6 +72,7 @@ namespace osgCuda
         bool                     _syncDevice;
         GLuint                   _bo;
         bool                     _boRegistered;
+        unsigned int             _modifyCount;
 
         TextureStream();
         virtual ~TextureStream();
@@ -95,7 +96,8 @@ namespace osgCuda
         _syncHost(false),
         _hostPtrAllocated(false),
         _bo( UINT_MAX ),
-        _boRegistered(false)
+        _boRegistered(false),
+        _modifyCount(UINT_MAX)
     {
     }
 
@@ -127,11 +129,13 @@ namespace osgCuda
         virtual void unmap( const osgCompute::Context& context ) const;
         virtual unsigned int getElementSize() const { return sizeof(DATATYPE); }
 
+        virtual osg::Image* getImagePtr();
+        virtual const osg::Image* getImagePtr() const;
+
         inline void setIsRenderTarget( bool isRenderTarget );
         inline bool getIsRenderTarget() const;
 
         virtual void clear();
-
     protected:
         virtual ~Texture();
         void clearLocal();
@@ -142,9 +146,11 @@ namespace osgCuda
         virtual DATATYPE* mapStream( TextureStream<DATATYPE>& stream, unsigned int mapping ) const;
         virtual void unmapStream( TextureStream<DATATYPE>& stream ) const;
 
+        bool setupStream( unsigned int mapping, TextureStream<DATATYPE>& stream ) const;
         bool allocStream( unsigned int mapping, TextureStream<DATATYPE>& stream ) const;
         bool syncStream( unsigned int mapping, TextureStream<DATATYPE>& stream ) const;
 
+        virtual void syncModifiedCounter( const osgCompute::Context& context ) const = 0;
         virtual bool allocPBO( TextureStream<DATATYPE>& stream ) const = 0;
         virtual void syncPBO( TextureStream<DATATYPE>& stream ) const = 0;
         virtual void syncTexture( TextureStream<DATATYPE>& stream ) const = 0;
@@ -189,7 +195,7 @@ namespace osgCuda
     template< class DATATYPE >
     bool Texture<DATATYPE>::init()
     {
-        if( !osgCompute::Resource::isDirty() )
+        if( !osgCompute::Resource::isClear() )
             return true;
 
         if( !asTexture() )
@@ -432,7 +438,7 @@ namespace osgCuda
     template< class DATATYPE >
     void* Texture<DATATYPE>::map( const osgCompute::Context& context, unsigned int mapping ) const
     {
-        if( osgCompute::Resource::isDirty() )
+        if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::FATAL)
                 << "Texture::map() for texture \""
@@ -490,7 +496,7 @@ namespace osgCuda
     template< class DATATYPE >
     void Texture<DATATYPE>::unmap( const osgCompute::Context& context ) const
     {
-        if( osgCompute::Resource::isDirty() )
+        if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::FATAL)
                 << "CUDA::Texture::map() for texture \""
@@ -569,6 +575,21 @@ namespace osgCuda
 
         unmap( context );
         return false;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    osg::Image* Texture<DATATYPE>::getImagePtr()
+    {
+        return NULL;
+    }
+
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    const osg::Image* Texture<DATATYPE>::getImagePtr() const
+    {
+        return NULL;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -688,6 +709,13 @@ namespace osgCuda
                     return NULL;
             }
 
+            //////////////////
+            // SETUP STREAM //
+            //////////////////
+            if( getImagePtr() && getImagePtr()->getModifiedCount() != stream._modifyCount ) 
+                if( !setupStream( mapping, stream ) )
+                    return NULL;
+
             /////////////////
             // SYNC STREAM //
             /////////////////
@@ -699,6 +727,13 @@ namespace osgCuda
         }
         else if( (stream._mapping & osgCompute::MAP_DEVICE) )
         {
+            //////////////////
+            // SETUP STREAM //
+            //////////////////
+            if( getImagePtr() && getImagePtr()->getModifiedCount() != stream._modifyCount ) 
+                if( !setupStream( mapping, stream ) )
+                    return NULL;
+
             /////////////////
             // SYNC STREAM //
             /////////////////
@@ -775,6 +810,82 @@ namespace osgCuda
         }
 
         stream._mapping = osgCompute::UNMAPPED;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Texture<DATATYPE>::setupStream( unsigned int mapping, TextureStream<DATATYPE>& stream ) const
+    {
+        if( !getImagePtr() )
+            return true;
+
+        cudaError res;
+        if( mapping & osgCompute::MAP_DEVICE )
+        {
+            const void* data = getImagePtr()->data();
+
+            if( data == NULL )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Buffer::setupStream() for buffer \""<< asObject()->getName()
+                    << "\": Cannot receive valid data pointer."
+                    << std::endl;
+
+                return false;
+            }
+
+            res = cudaMemcpy( stream._devPtr,  data, osgCompute::Buffer::getByteSize(), cudaMemcpyHostToDevice );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Buffer::setupStream() for buffer \""<< asObject()->getName()
+                    << "\": cudaMemcpy() failed for data within context \""
+                    << stream._context->getId() << "\". Returned code is " << std::hex<<res<<"."
+                    << std::endl;
+
+                return false;
+            }
+
+            // host must be synchronized
+            stream._syncHost = true;
+            stream._modifyCount = getImagePtr()->getModifiedCount();
+
+            return true;
+        }
+        else if( mapping & osgCompute::MAP_HOST )
+        {
+            const void* data = getImagePtr()->data();
+
+            if( data == NULL )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Buffer::setupStream() for buffer \""<< asObject()->getName()
+                    << "\": Cannot receive valid data pointer."
+                    << std::endl;
+
+                return false;
+            }
+
+            res = cudaMemcpy( stream._hostPtr,  data, osgCompute::Buffer::getByteSize(), cudaMemcpyHostToHost );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Buffer::setupStream() for buffer \""<< asObject()->getName()
+                    << "\": cudaMemcpy() failed for data within context \""
+                    << stream._context->getId() << "\". Returned code is " << std::hex<<res<<"."
+                    << std::endl;
+
+                return false;
+            }
+
+            // device must be synchronized
+            stream._syncDevice = true;
+            stream._modifyCount = getImagePtr()->getModifiedCount();
+
+            return true;
+        }
+
+        return false;
     }
 
     //------------------------------------------------------------------------------

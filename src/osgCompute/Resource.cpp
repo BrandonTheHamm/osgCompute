@@ -30,7 +30,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     bool Resource::init()
     {
-        if( !isDirty() )
+        if( !isClear() )
             return true;
 
         if( _handles.empty() )
@@ -38,14 +38,8 @@ namespace osgCompute
             addHandle( "notaddressed" );
         }
 
-        _dirty = false;
+        _clear = false;
         return true;
-    }
-
-    //------------------------------------------------------------------------------
-    unsigned int osgCompute::Resource::getByteSize() const
-    {
-        return 0;
     }
 
     //------------------------------------------------------------------------------
@@ -76,7 +70,7 @@ namespace osgCompute
         _contexts.clear();
         _updateCallback = NULL;
         _eventCallback = NULL;
-        _dirty = true;
+        _clear = true;
     } 
 
     //------------------------------------------------------------------------------

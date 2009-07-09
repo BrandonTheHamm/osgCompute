@@ -7,3 +7,4 @@ Contributors:
 --------------
 
 Team of SVT Group
+Mourad Boufarguine (TextureRectangle class)

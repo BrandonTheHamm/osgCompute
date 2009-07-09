@@ -13,10 +13,8 @@
  * The full license is in LICENSE file included with this distribution.
 */
 
-//#include <builtin_types.h>
 #include <math.h>
 #include <cstdlib>
-//#include <cuda_runtime.h>
 #include "PtclEmitter"
 
 extern "C"
@@ -64,7 +62,7 @@ namespace PtclDemo
     //------------------------------------------------------------------------------
     void PtclEmitter::launch( const osgCompute::Context& context ) const
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         ////////////
@@ -111,84 +109,4 @@ namespace PtclDemo
         _seedBoxMin = osg::Vec3f(0,0,0);
         _seedBoxMax = osg::Vec3f(0,0,0);
     }
-
-    ////------------------------------------------------------------------------------
-    //bool PtclEmitter::init( const osgCompute::Context& context ) const
-    //{
-    //    if( context.getState() == NULL )
-    //        return false;
-
-    //    ////////////////////
-    //    // GENERATE SEEDS //
-    //    ////////////////////
-    //    //float maxf = 1.0f;
-    //    //float minf = 0.0f;
-    //    float* tmpPtr = new float[_seedCount];
-    //    for( unsigned int s=0; s<_seedCount; ++s )
-    //    {
-    //        //float unit = float(rand()) / RAND_MAX;
-    //        //float diff = maxf - minf;
-    //        tmpPtr[s] = frand(0.0f,1.0f);//minf + unit * diff;
-    //    }
-
-    //    ///////////////////
-    //    // DEVICE BUFFER //
-    //    ///////////////////
-    //    unsigned int bufferSize = _seedCount * sizeof(float);
-    //    // allocate buffer on the device to store the seeds
-    //    _context = dynamic_cast<const osgCompute::Context*>( &context );
-    //    if( _context == NULL )
-    //        return false;
-
-    //    _seeds = static_cast<float*>( _context->mallocDeviceMemory( bufferSize ) );
-    //    if( _seeds == NULL )
-    //    {
-    //        _context = NULL;
-    //        delete [] tmpPtr;
-    //        return false;
-    //    }
-
-    //    cudaError res = cudaMemcpy( _seeds, tmpPtr, bufferSize, cudaMemcpyHostToDevice );
-    //    if( res != cudaSuccess )
-    //    {
-    //        _context->freeMemory( _seeds );
-    //        _context = NULL;
-    //        delete [] tmpPtr;
-    //        return false;
-    //    }
-
-    //    // delete tmpPtr
-    //    delete [] tmpPtr;
-
-    //    if( !osgCompute::Module::init( context ) )
-    //    {
-    //        _context->freeMemory( _seeds );
-    //        _context = NULL;
-    //        return false;
-    //    }
-
-    //    ////////////////
-    //    // INIT PTCLS //
-    //    ////////////////
-    //    osg::Vec4f* ptcls = (osg::Vec4f*)_particles->map( context, osgCompute::MAP_HOST_TARGET );
-
-    //    for( unsigned int v=0; v<_particles->getDimension(0); ++v )
-    //        ptcls[v].set(-1,-1,-1,1);
-
-    //    _particles->unmap( context );
-
-    //    return true;
-    //}
-
-    ////------------------------------------------------------------------------------
-    //void PtclEmitter::clear( const osgCompute::Context& context ) const
-    //{
-    //    if( _context != NULL && _seeds != NULL )
-    //    {
-    //        dynamic_cast<osgCompute::Context>_context->freeMemory( _seeds );
-    //        _seeds = NULL;
-    //    }
-
-    //    osgCompute::Module::clear( context );
-    //}
 }

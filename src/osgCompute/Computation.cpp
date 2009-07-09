@@ -606,13 +606,13 @@ namespace osgCompute
                 if( !curResource || curResource->asModule() != NULL )
                     continue;
 
-                if( curResource->isDirty() )
+                if( curResource->isClear() )
                     curResource->init();
             }
 
             for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             {
-                if( (*itr)->isDirty() )
+                if( (*itr)->isClear() )
                     (*itr)->init();
             }
 

@@ -123,6 +123,7 @@ namespace osgCuda
         virtual DATATYPE* mapStream( GeometryStream<DATATYPE>& stream, unsigned int mapping ) const;
         virtual void unmapStream( GeometryStream<DATATYPE>& stream ) const;
 
+        bool setupStream( unsigned int mapping, GeometryStream<DATATYPE>& stream ) const;
         bool allocStream( unsigned int mapping, GeometryStream<DATATYPE>& stream ) const;
         bool syncStream( unsigned int mapping, GeometryStream<DATATYPE>& stream ) const;
 
@@ -166,7 +167,7 @@ namespace osgCuda
     template< class DATATYPE >
     bool Geometry<DATATYPE>::init()
     {
-        if( !osgCompute::Resource::isDirty() )
+        if( !osgCompute::Resource::isClear() )
             return true;
 
         // geometry must use vertex buffer objects
@@ -246,7 +247,7 @@ namespace osgCuda
     template< class DATATYPE >
     void* Geometry<DATATYPE>::map( const osgCompute::Context& context, unsigned int mapping ) const
     {
-        if( osgCompute::Resource::isDirty() )
+        if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::FATAL)
                 << "Geometry::map() for geometry \""
@@ -292,7 +293,7 @@ namespace osgCuda
     template< class DATATYPE >
     void Geometry<DATATYPE>::unmap( const osgCompute::Context& context ) const
     {
-        if( osgCompute::Resource::isDirty() )
+        if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::FATAL)
                 << "CUDA::Geometry::map() for geometry \""
@@ -398,6 +399,11 @@ namespace osgCuda
     {
         DATATYPE* ptr = NULL;
 
+        osgCuda::Geometry<DATATYPE>* thisGeom = const_cast<osgCuda::Geometry<DATATYPE>*>(this);
+        osg::VertexBufferObject* vbo = thisGeom->getOrCreateVertexBufferObject();
+        if( !vbo )
+            return NULL;
+
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
@@ -492,6 +498,12 @@ namespace osgCuda
                     return NULL;
             }
 
+            //////////////////
+            // SETUP STREAM //
+            //////////////////
+            if( vbo->isDirty( stream._context->getState()->getContextID() ) )
+                setupStream( mapping, stream );
+
             /////////////////
             // SYNC STREAM //
             /////////////////
@@ -503,6 +515,12 @@ namespace osgCuda
         }
         else if( (stream._mapping & osgCompute::MAP_DEVICE) )
         {
+            //////////////////
+            // SETUP STREAM //
+            //////////////////
+            if( vbo->isDirty( stream._context->getState()->getContextID() ) )
+                setupStream( mapping, stream );
+
             /////////////////
             // SYNC STREAM //
             /////////////////
@@ -578,6 +596,46 @@ namespace osgCuda
         }
 
         stream._mapping = osgCompute::UNMAPPED;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    bool Geometry<DATATYPE>::setupStream( unsigned int mapping, GeometryStream<DATATYPE>& stream ) const
+    {
+
+        osgCuda::Geometry<DATATYPE>* thisGeom = const_cast<osgCuda::Geometry<DATATYPE>*>(this);
+        osg::VertexBufferObject* vbo = thisGeom->getOrCreateVertexBufferObject();
+        if( !vbo->isDirty( stream._context->getState()->getContextID() ) )
+            return true;
+
+        ////////////////////
+        // UNREGISTER PBO //
+        ////////////////////
+        if( !stream._boRegistered )
+            static_cast<const Context*>( stream._context.get() )->freeBufferObject( stream._bo );
+
+        ////////////////
+        // UPDATE PBO //
+        ////////////////
+        vbo->compileBuffer( const_cast<osg::State&>(*stream._context->getState()) );
+
+        //////////////////
+        // REGISTER PBO //
+        //////////////////
+        if( !static_cast<const Context*>( stream._context.get() )->registerBufferObject( stream._bo, osgCompute::Buffer::getByteSize() ) )
+        {
+            osg::notify(osg::FATAL)
+                << "CUDA::Geometry::setupStream() for geometry \""
+                << osg::Object::getName()<< "\": could not register buffer object for context \""
+                << stream._context->getId()<<"\"."
+                << std::endl;
+
+            return false;
+        }
+        stream._boRegistered = true;
+        stream._syncHost = true;
+
+        return true;
     }
 
     //------------------------------------------------------------------------------

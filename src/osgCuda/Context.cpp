@@ -163,7 +163,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     bool Context::init()
     {
-        if( !isDirty() )
+        if( !isClear() )
             return false;
 
         //////////////////
@@ -284,7 +284,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void* Context::mallocHostMemory( unsigned int byteSize ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::mallocHostMemory(): context is dirty."
@@ -330,7 +330,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void* Context::mallocDeviceMemory( unsigned int byteSize ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::mallocDeviceMemory(): context is dirty."
@@ -377,7 +377,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void* Context::mallocDeviceHostMemory( unsigned int byteSize ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::mallocDeviceHostMemory(): context is dirty."
@@ -424,7 +424,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void* Context::mallocDevice2DMemory( unsigned int widthPitch, unsigned int height ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::mallocDevice2DMemory(): context is dirty."
@@ -471,7 +471,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void* Context::mallocDevice3DMemory(  unsigned int widthPitch, unsigned int height, unsigned int depth ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::mallocDevice3DMemory(): context is dirty."
@@ -629,7 +629,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     GLuint Context::mallocBufferObject( unsigned int byteSize ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::registerBufferObject(): context is dirty."
@@ -743,7 +743,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     bool Context::registerBufferObject( GLuint bo, unsigned int byteSize ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::registerBufferObject(): context is dirty."
@@ -799,7 +799,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Context::freeMemory( void* buffer ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::freeMemory(\"BUFFER\"): context is dirty."
@@ -858,7 +858,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Context::freeMemory( cudaArray* array ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::freeMemory(\"ARRAY\"): context is dirty."
@@ -909,7 +909,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Context::freeBufferObject( GLuint bo ) const
     {
-        if( isDirty() )
+        if( isClear() )
         {
             osg::notify(osg::WARN)
                 << "CUDA::Context::unregisterBufferObject(): context is dirty."

@@ -53,7 +53,7 @@ namespace PtclDemo
     //------------------------------------------------------------------------------  
     void PtclMover::launch( const osgCompute::Context& context ) const
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         if( context.getState() == NULL || context.getState()->getFrameStamp() == NULL )

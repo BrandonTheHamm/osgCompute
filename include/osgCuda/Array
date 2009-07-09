@@ -20,6 +20,7 @@
 #include <cuda_runtime.h>
 #include <driver_types.h>
 #include <osg/Image>
+#include <osg/Array>
 #include <osgCompute/Buffer>
 #include "osgCuda/Context"
 #include "osgCuda/Export"
@@ -94,6 +95,7 @@ namespace osgCuda
         bool                            _hostPtrAllocated;
         bool                            _syncHost;
         unsigned int                    _allocHint;
+        unsigned int                    _modifyCount;
 
         ArrayStream();
         virtual ~ArrayStream();
@@ -117,7 +119,8 @@ namespace osgCuda
         _syncHost(false),
         _allocHint(0),
         _devArrayAllocated(false),
-        _hostPtrAllocated(false)
+        _hostPtrAllocated(false),
+        _modifyCount(UINT_MAX)
     {
     }
 
@@ -156,9 +159,9 @@ namespace osgCuda
         virtual osg::Image* getImage();
         virtual const osg::Image* getImage() const;
 
-        virtual void setVector( std::vector<DATATYPE>* streamVector, unsigned int numElements = UINT_MAX, unsigned int offset = 0 );
-        virtual std::vector<DATATYPE>* getVector();
-        virtual const std::vector<DATATYPE>* getVector() const;
+        virtual void setArray( osg::Array* array );
+        virtual osg::Array* getArray();
+        virtual const osg::Array* getArray() const;
 
         inline void setChannelFormatDesc(cudaChannelFormatDesc& channelFormatDesc);
         inline cudaChannelFormatDesc& getChannelFormatDesc();
@@ -178,10 +181,10 @@ namespace osgCuda
 
         virtual osgCompute::BufferStream* newStream( const osgCompute::Context& context ) const;
 
-        mutable std::vector<DATATYPE>        _vector;
+        mutable osg::ref_ptr<osg::Array>     _array;
         mutable osg::ref_ptr<osg::Image>     _image;
 
-        cudaChannelFormatDesc        _channelFormatDesc;
+        cudaChannelFormatDesc                _channelFormatDesc;
 
     private:
         // copy constructor and operator should not be called
@@ -259,10 +262,20 @@ namespace osgCuda
                 return false;
             }
         }
-        else if( !_vector.empty() )
+
+        if( _array.valid() )
         {
-            if( _vector.size() != numElements )
-                _vector.resize( numElements );
+            if( _array->getTotalDataSize() != byteSize )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::init() for array \""
+                    << osg::Object::getName() <<"\": size of array \""
+                    << _array->getName() << "\" does not match with the buffer size."
+                    << std::endl;
+
+                clear();
+                return false;
+            }
         }
 
         return osgCompute::Buffer::init();
@@ -272,7 +285,7 @@ namespace osgCuda
     template< class DATATYPE >
     cudaArray* osgCuda::Array<DATATYPE>::mapArray( const osgCompute::Context& context, unsigned int mapping ) const
     {
-        if( osgCompute::Resource::isDirty() )
+        if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::INFO)
                 << "CUDA::Array::map() for array \""
@@ -326,7 +339,7 @@ namespace osgCuda
     template< class DATATYPE >
     void* Array<DATATYPE>::map( const osgCompute::Context& context, unsigned int mapping ) const
     {
-        if( osgCompute::Resource::isDirty() )
+        if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::FATAL)
                 << "CUDA::Array::map() for array \""
@@ -371,7 +384,7 @@ namespace osgCuda
     template< class DATATYPE >
     void Array<DATATYPE>::unmap( const osgCompute::Context& context ) const
     {
-        if( osgCompute::Resource::isDirty() )
+        if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::FATAL)
                 << "CUDA::Array::map() for array \""
@@ -430,22 +443,15 @@ namespace osgCuda
 
             return true;
         }
-        //else if( mapping & osgCompute::MAP_DEVICE_TARGET )
-        //{
-        //    cudaError res = cudaMemset( data, value, getByteSize() );
-        //    if( res != cudaSuccess )
-        //    {
-        //        osg::notify(osg::FATAL)
-        //            << "CUDA::Array::setMemory() for array \""
-        //            << osg::Object::getName() <<"\": cudaMemset() failed for device data within context \""
-        //            << context.getId() << "\"."
-        //            << std::endl;
-        //
-        //          unmap( context );
-        //          return false;
-        //    }
-        //    return true;
-        //}
+        else if( mapping & osgCompute::MAP_DEVICE_TARGET )
+        {
+            osg::notify(osg::INFO)
+                << "CUDA::Array::setMemory() for array \""
+                << osg::Object::getName() <<"\": cudaMemset() for cuda arrays is not available yet."
+                << std::endl;
+
+            return true;
+        }
         
         unmap( context );
         return false;
@@ -457,10 +463,15 @@ namespace osgCuda
     {
         cudaArray* ptr = NULL;
 
+        bool needsSetup = false;
+        if( (_image.valid() && _image->getModifiedCount() != stream._modifyCount ) ||
+            (_array.valid() && _array->getModifiedCount() != stream._modifyCount ) )
+            needsSetup = true;
+
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
-        if( stream._mapping == mapping && !stream._needsSetup )
+        if( stream._mapping == mapping && !needsSetup )
         {
             if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != stream._devArray )
             {
@@ -503,9 +514,7 @@ namespace osgCuda
             //////////////////
             // SETUP STREAM //
             //////////////////
-            if( (!_vector.empty() ||
-                _image.valid()) &&
-                stream._needsSetup )
+            if( needsSetup )
                 if( !setupStream( mapping, stream ) )
                     return NULL;
 
@@ -554,10 +563,15 @@ namespace osgCuda
     {
         DATATYPE* ptr = NULL;
 
+        bool needsSetup = false;
+        if( (_image.valid() && _image->getModifiedCount() != stream._modifyCount ) ||
+            (_array.valid() && _array->getModifiedCount() != stream._modifyCount ) )
+            needsSetup = true;
+
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
-        if( stream._mapping == mapping && !stream._needsSetup )
+        if( stream._mapping == mapping && !needsSetup )
         {
             if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != stream._hostPtr )
             {
@@ -599,9 +613,7 @@ namespace osgCuda
             //////////////////
             // SETUP STREAM //
             //////////////////
-            if( (!_vector.empty() ||
-                _image.valid()) &&
-                stream._needsSetup )
+            if( needsSetup )
                 if( !setupStream( mapping, stream ) )
                     return NULL;
 
@@ -652,14 +664,15 @@ namespace osgCuda
 
         if( mapping & osgCompute::MAP_DEVICE )
         {
-            void* data = NULL;
+            const void* data = NULL;
             if( _image.valid() )
             {
                 data = _image->data();
             }
-            else if( !_vector.empty() )
+
+            if( _array.valid() )
             {
-                data = &_vector.front();
+                data = reinterpret_cast<const void*>(_array->getDataPointer());
             }
 
             if( data == NULL )
@@ -716,19 +729,20 @@ namespace osgCuda
 
             // host must be synchronized
             stream._syncHost = true;
-            stream._needsSetup = false;
+            stream._modifyCount = _image.valid()? _image->getModifiedCount() : _array->getModifiedCount();
             return true;
         }
         else if( mapping & osgCompute::MAP_HOST )
         {
-            void* data = NULL;
+            const void* data = NULL;
             if( _image.valid() )
             {
                 data = _image->data();
             }
-            else if( !_vector.empty() )
+
+            if( _array.valid() )
             {
-                data = &_vector.front();
+                data = reinterpret_cast<const void*>( _array->getDataPointer() );
             }
 
             if( data == NULL )
@@ -755,7 +769,7 @@ namespace osgCuda
 
             // device must be synchronized
             stream._syncDevice = true;
-            stream._needsSetup = false;
+            stream._modifyCount = _image.valid()? _image->getModifiedCount() : _array->getModifiedCount();
             return true;
         }
 
@@ -1058,7 +1072,7 @@ namespace osgCuda
     template< class DATATYPE >
     void Array<DATATYPE>::setImage( osg::Image* image )
     {
-        if( !osgCompute::Resource::isDirty() && NULL != image)
+        if( !osgCompute::Resource::isClear() && NULL != image)
         {
             if( image->getNumMipmapLevels() > 1 )
             {
@@ -1085,9 +1099,7 @@ namespace osgCuda
         }
 
         _image = image;
-        _vector.clear();
-
-        osgCompute::Buffer::setNeedsSetup( (image != NULL) );
+        _array = NULL;
     }
 
     //------------------------------------------------------------------------------
@@ -1106,74 +1118,59 @@ namespace osgCuda
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    void Array<DATATYPE>::setVector( std::vector<DATATYPE>* data, unsigned int numElements, unsigned int offset )
+    void Array<DATATYPE>::setArray( osg::Array* array )
     {
-        if( data != NULL )
+        if( !osgCompute::Resource::isClear() && array != NULL )
         {
-            unsigned int numElementsToCopy = (numElements == UINT_MAX)? data->size() : numElements;
-            if( numElementsToCopy == 0 )
+            if( array->getTotalDataSize() != osgCompute::Buffer::getByteSize() )
+            {
+                osg::notify(osg::FATAL)
+                    << "CUDA::Array::setArray() for buffer \""
+                    << osg::Object::getName() <<"\": size of array \""
+                    << array->getName() << "\" does not match with the array size."
+                    << std::endl;
+
                 return;
-
-            if( !osgCompute::Resource::isDirty() )
-            {
-                if( _vector.size() < osgCompute::Buffer::getNumElements() )
-                    _vector.resize( osgCompute::Buffer::getNumElements() );
-
-                // if streamsize is known then check for overwrites
-                if( (offset + numElementsToCopy) > osgCompute::Buffer::getNumElements() )
-                    numElementsToCopy = (osgCompute::Buffer::getNumElements() - offset);
             }
-            else
-            {
-                if( _vector.size() < (numElementsToCopy + offset) )
-                    _vector.resize( numElementsToCopy + offset );
-            }
-
-
-            memcpy( &_vector.at(offset), &data->front(), numElementsToCopy * sizeof(DATATYPE) );
-        }
-        else
-        {
-            _vector.clear();
         }
 
+        _array = array;
         _image = NULL;
-        osgCompute::Buffer::setNeedsSetup( (data != NULL) );
     }
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    std::vector<DATATYPE>* Array<DATATYPE>::getVector()
+    osg::Array* Array<DATATYPE>::getArray()
     {
-        return &_vector;
+        return _array.get();
     }
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    const std::vector<DATATYPE>* Array<DATATYPE>::getVector() const
+    const osg::Array* Array<DATATYPE>::getArray() const
     {
-        return &_vector;
+        return _array.get();
     }
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    cudaChannelFormatDesc& osgCuda::Array<DATATYPE>::getChannelFormatDesc()
-    {
-        return _channelFormatDesc;
-    }
-
-    //------------------------------------------------------------------------------
-    template< class DATATYPE >
-    const cudaChannelFormatDesc& osgCuda::Array<DATATYPE>::getChannelFormatDesc() const
+    cudaChannelFormatDesc& Array<DATATYPE>::getChannelFormatDesc()
     {
         return _channelFormatDesc;
     }
 
     //------------------------------------------------------------------------------
     template< class DATATYPE >
-    void osgCuda::Array<DATATYPE>::setChannelFormatDesc(cudaChannelFormatDesc& channelFormatDesc)
+    const cudaChannelFormatDesc& Array<DATATYPE>::getChannelFormatDesc() const
     {
-        if( !osgCompute::Resource::isDirty() )
+        return _channelFormatDesc;
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Array<DATATYPE>::setChannelFormatDesc(cudaChannelFormatDesc& channelFormatDesc)
+    {
+        if( !osgCompute::Resource::isClear() )
             return;
 
         _channelFormatDesc = channelFormatDesc;
@@ -1187,7 +1184,7 @@ namespace osgCuda
     void Array<DATATYPE>::clearLocal()
     {
         _image = NULL;
-        _vector.clear();
+        _array = NULL;
         memset( &_channelFormatDesc, INT_MAX, sizeof(cudaChannelFormatDesc) );
     }
 

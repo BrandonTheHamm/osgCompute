@@ -40,14 +40,14 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     bool Context::init()
     {
-        _dirty = false;
+        _clear = false;
         return true;
     }
 
     //------------------------------------------------------------------------------
     void Context::apply()
     {
-        if(isDirty())
+        if(isClear())
             init();
     }
 
@@ -103,7 +103,7 @@ namespace osgCompute
 
         // do not clear the id!!!
         _state = NULL;
-        _dirty = true;
+        _clear = true;
         _embedded = false;
         // default use device 0
         _device = 0;

@@ -50,7 +50,7 @@ namespace osgCompute
         inline ResourceSet& getResources();
         inline const ResourceSet& getResources() const;
 
-        inline bool isDirty() const;
+        inline bool isClear() const;
 
         virtual void reset();
         virtual void clear();
@@ -68,7 +68,7 @@ namespace osgCompute
         ResourceSet                        _resourcesA;
         ResourceSet                        _resourcesB;
 
-        bool                               _dirty;
+        bool                               _clear;
 
     private:
         // copy constructor and operator should not be called
@@ -77,9 +77,9 @@ namespace osgCompute
     };
 
     //------------------------------------------------------------------------------
-    inline bool ResourceVisitor::isDirty() const
+    inline bool ResourceVisitor::isClear() const
     {
-        return _dirty;
+        return _clear;
     }
 
     //------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ namespace osgCompute
 
         inline Context* getContext();
         inline const Context* getContext() const;
-        inline bool isDirty() const;
+        inline bool isClear() const;
 
         virtual void clear();
     protected:
@@ -164,7 +164,7 @@ namespace osgCompute
         inline void setContext( Context* context );
 
         osg::ref_ptr<osgCompute::Context>   _context;
-        bool                                _dirty;
+        bool                                _clear;
 
     private:
         // copy constructor and operator should not be called
@@ -191,9 +191,9 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    inline bool ContextVisitor::isDirty() const
+    inline bool ContextVisitor::isClear() const
     {
-        return _dirty;
+        return _clear;
     }
 }
 

@@ -67,7 +67,7 @@ namespace osgCompute
         inline void setContext( Context& context );
         inline Context* getContext();
         inline const Context* getContext() const;
-        inline bool isDirty() const;
+        inline bool isClear() const;
         inline Computation* getComputation();
         inline const Computation* getComputation() const;
         inline LaunchCallback* getLaunchCallback();
@@ -87,7 +87,7 @@ namespace osgCompute
         // members
         Computation*                         _computation; 
         unsigned int                         _computeOrder; 
-        bool                                 _dirty;
+        bool                                 _clear;
         LaunchCallback*                      _launchCallback;
         ModuleList                           _modules;
         mutable osg::ref_ptr<Context>        _context;               
@@ -102,9 +102,9 @@ namespace osgCompute
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    inline bool ComputationBin::isDirty() const
+    inline bool ComputationBin::isClear() const
     { 
-        return _dirty; 
+        return _clear; 
     }
 
     //------------------------------------------------------------------------------

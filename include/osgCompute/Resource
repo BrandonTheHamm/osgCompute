@@ -49,8 +49,6 @@ namespace osgCompute
 
         virtual bool init();
 
-        virtual unsigned int getByteSize() const;
-
         inline void setUpdateResourceCallback( ResourceCallback* uc );
         inline ResourceCallback* getUpdateResourceCallback();
         inline const ResourceCallback* getUpdateResourceCallback() const;
@@ -62,8 +60,7 @@ namespace osgCompute
         inline void removeHandle( const std::string& handle );
         inline bool isAddressedByHandle( const std::string& handle );
 
-        inline bool isDirty() const;
-
+        inline bool isClear() const;
         virtual void clear();
 
     protected:
@@ -81,7 +78,7 @@ namespace osgCompute
         osg::ref_ptr<ResourceCallback>      _updateCallback;
         osg::ref_ptr<ResourceCallback>      _eventCallback;
         HandleSet                           _handles;
-        bool                                _dirty;
+        bool                                _clear;
 
     private:
         // copy constructor and operator should not be called
@@ -89,6 +86,9 @@ namespace osgCompute
         Resource &operator=(const Resource&) { return *this; }
     };
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
     inline void Resource::setUpdateResourceCallback( ResourceCallback* uc ) 
     { 
@@ -151,11 +151,10 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    inline bool Resource::isDirty() const 
+    inline bool Resource::isClear() const 
     { 
-        return _dirty; 
+        return _clear; 
     }
-
 }
 
 #endif //OSGCOMPUTE_PARAM

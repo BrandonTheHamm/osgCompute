@@ -24,8 +24,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     BufferStream::BufferStream() 
         :   _mapping( UNMAPPED ),
-        _allocHint(0),
-        _needsSetup(true)
+            _allocHint(0)
     {
     }
 
@@ -54,7 +53,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     bool Buffer::init()
     {
-        if( !isDirty() )
+        if( !isClear() )
             return true;
 
         if( _dimensions.empty() )
@@ -79,7 +78,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     unsigned int Buffer::getMapping( const osgCompute::Context& context ) const
     {
-        if( isDirty() )
+        if( isClear() )
             return osgCompute::UNMAPPED;
 
         BufferStream* stream = lookupStream( context );
@@ -96,12 +95,6 @@ namespace osgCompute
 
         return stream->_mapping;
     }
-
-    ////------------------------------------------------------------------------------
-    //void* Buffer::getDesc() const
-    //{
-    //    return NULL;
-    //}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
@@ -150,13 +143,5 @@ namespace osgCompute
 
         // Unregister context
         return Resource::clear( context );
-    }
-
-    //------------------------------------------------------------------------------
-    void Buffer::setNeedsSetup( bool needsSetup ) const
-    {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-        for( unsigned int c=0; c<_streams.size(); ++c )
-            _streams[c]->_needsSetup = needsSetup;
     }
 }

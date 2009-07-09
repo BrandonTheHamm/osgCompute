@@ -20,6 +20,7 @@
 #include <osg/PolygonMode>
 #include <osg/Geometry>
 #include <osg/Point>
+#include <osg/Array>
 #include <osg/PointSprite>
 #include <osgViewer/Viewer>
 #include <osgGA/TrackballManipulator>
@@ -121,14 +122,14 @@ osgCuda::Computation* getComputation( osg::Vec3& bbmin, osg::Vec3& bbmax )
     // SEEDS //
     ///////////
     unsigned int seedCount = 64000;
-    std::vector<float> seedValues(seedCount);
+    osg::FloatArray* seedValues = new osg::FloatArray();
     for( unsigned int s=0; s<seedCount; ++s )
-        seedValues[s] = float(rand()) / RAND_MAX;
+        seedValues->push_back( float(rand()) / RAND_MAX );
 
     osgCuda::FloatBuffer* seedBuffer = new osgCuda::FloatBuffer;
     seedBuffer->setName( "ptclSeedBuffer" );
     seedBuffer->setDimension(0,seedCount);
-    seedBuffer->setVector( &seedValues );
+    seedBuffer->setArray( seedValues );
     seedBuffer->addHandle( "PTCL_SEEDS" );
 
     /////////////
@@ -239,8 +240,8 @@ int main(int argc, char *argv[])
     // if you have OSG Version 2.8.1 or the current OSG SVN Version (2.9.1 or later)
     // then try multithreaded
     // otherwise the application will finish with segmentation fault
-    viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
-    //viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    //viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
+    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);

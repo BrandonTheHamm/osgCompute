@@ -57,6 +57,7 @@ SET(TARGET_H
     ${HEADER_PATH}/Texture1D
     ${HEADER_PATH}/Texture2D
     ${HEADER_PATH}/Texture3D
+    ${HEADER_PATH}/TextureRectangle
     ${HEADER_PATH}/Texture
 )
 

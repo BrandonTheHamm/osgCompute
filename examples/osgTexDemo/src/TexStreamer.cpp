@@ -50,7 +50,7 @@ namespace TexDemo
     //------------------------------------------------------------------------------  
     void TexStreamer::launch( const osgCompute::Context& context ) const
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         // map params

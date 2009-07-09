@@ -63,7 +63,7 @@ namespace osgCompute
         virtual void clear();
         virtual void apply();
 
-        inline bool isDirty() const;
+        inline bool isClear() const;
         inline void setId( unsigned int id );
         inline unsigned int getId() const;
         inline void setState( osg::State& state );
@@ -87,7 +87,7 @@ namespace osgCompute
 
         unsigned int                        _id;
         osg::ref_ptr<osg::State>            _state;
-        bool                                _dirty;
+        bool                                _clear;
         mutable OpenThreads::Mutex          _mutex;
         mutable ResourceList                _resources;
         int                                 _device;
@@ -105,7 +105,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     inline void Context::setId( unsigned int id )
     {
-        if( !isDirty() )
+        if( !isClear() )
             return;
 
         _id = id;
@@ -120,7 +120,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     inline void Context::setState( osg::State& state )
     {
-        if( !isDirty() )
+        if( !isClear() )
             return;
 
         _state = &state;
@@ -163,9 +163,9 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    inline bool Context::isDirty() const
+    inline bool Context::isClear() const
     {
-        return _dirty;
+        return _clear;
     }
 }
 

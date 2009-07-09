@@ -30,14 +30,14 @@ namespace osgCompute
             return false;
         }
 
-        _dirty = false;
+        _clear = false;
         return true;
     }
 
     //------------------------------------------------------------------------------
     void ResourceVisitor::setupForTraversal()
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         // swap stacks for new traversal
@@ -50,7 +50,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ResourceVisitor::updateComputation()
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         // check for removed resources
@@ -80,7 +80,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ResourceVisitor::apply( osg::Node& node )
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         // collect state attributes
@@ -108,7 +108,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ResourceVisitor::apply( osg::Geode& geode )
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         // collect drawables
@@ -124,7 +124,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ResourceVisitor::apply( osg::Group& group )
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         Computation* computation = dynamic_cast<Computation*>( &group );
@@ -137,7 +137,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ResourceVisitor::apply( Computation& computation )
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         // computation has started its own traversal 
@@ -178,7 +178,7 @@ namespace osgCompute
 
         _ptrResources = &_resourcesA;
         _ptrOldResources = &_resourcesB;
-        _dirty = true;
+        _clear = true;
     }
 
 
@@ -204,7 +204,7 @@ namespace osgCompute
             return false;
         }
 
-        _dirty = false;
+        _clear = false;
         return true;
     }
 
@@ -217,7 +217,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ContextVisitor::apply( Computation& computation )
     {
-        if( isDirty() )
+        if( isClear() )
             return;
 
         // setup shared context
@@ -240,6 +240,6 @@ namespace osgCompute
     void ContextVisitor::clearLocal()
     {
         _context = NULL;
-        _dirty = true;
+        _clear = true;
     }
 }

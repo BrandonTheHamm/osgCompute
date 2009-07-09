@@ -75,7 +75,7 @@ namespace osgCompute
     {
         _launchCallback = NULL;
         _enabled = true;
-        _dirty = true;
+        _clear = true;
     }
 
     //------------------------------------------------------------------------------

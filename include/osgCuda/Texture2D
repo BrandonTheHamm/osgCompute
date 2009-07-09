@@ -61,14 +61,17 @@ namespace osgCuda
         virtual void apply(osg::State& state) const;
         virtual void releaseGLObjects(osg::State* state=0) const;
 
-        virtual void clear();
+        virtual osg::Image* getImagePtr();
+        virtual const osg::Image* getImagePtr() const;
 
+        virtual void clear();
     protected:
         virtual ~Texture2D();
         void clearLocal();
 
         virtual bool initDimension();
 
+        virtual void syncModifiedCounter( const osgCompute::Context& context ) const;
         virtual bool allocPBO( TextureStream<DATATYPE>& stream ) const;
         virtual void syncPBO( TextureStream<DATATYPE>& stream ) const;
         virtual void syncTexture( TextureStream<DATATYPE>& stream ) const;
@@ -169,6 +172,20 @@ namespace osgCuda
         return osgCuda::Texture<DATATYPE>::initDimension();
     }
 
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    osg::Image* Texture2D<DATATYPE>::getImagePtr()
+    {
+        return this->getImage();
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    const osg::Image* Texture2D<DATATYPE>::getImagePtr() const
+    {
+        return this->getImage();
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -176,6 +193,16 @@ namespace osgCuda
     template< class DATATYPE >
     void Texture2D<DATATYPE>::clearLocal()
     {
+    }
+
+    //------------------------------------------------------------------------------
+    template< class DATATYPE >
+    void Texture2D<DATATYPE>::syncModifiedCounter( const osgCompute::Context& context ) const
+    {
+        if( !getImagePtr() )
+            return; 
+
+        osg::Texture2D::getModifiedCount(context.getState()->getContextID()) = getImagePtr()->getModifiedCount();
     }
 
     //------------------------------------------------------------------------------

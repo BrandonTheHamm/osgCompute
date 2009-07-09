@@ -69,7 +69,6 @@ namespace osgCompute
         unsigned int                    _mapping;
         osg::ref_ptr<Context>           _context;
         unsigned int                    _allocHint;
-        bool                            _needsSetup;
 
         BufferStream();
         virtual ~BufferStream();
@@ -88,12 +87,10 @@ namespace osgCompute
         Buffer();
 
         virtual bool init();
-        virtual void clear();
 
         virtual bool setMemory( const Context& context, int value, unsigned int mapping ) const = 0;
         virtual void* map( const Context& context, unsigned int mapping ) const = 0;
         virtual void unmap( const Context& context ) const = 0;
-        //virtual void* getDesc() const;
 
         virtual unsigned int getElementSize() const = 0;
         inline unsigned int getByteSize() const;
@@ -113,6 +110,7 @@ namespace osgCompute
         inline SubloadCallback* getSubloadResourceCallback();
         inline const SubloadCallback* getSubloadResourceCallback() const;
 
+        virtual void clear();
     protected:
         virtual ~Buffer() { clearLocal(); }
         inline void clearLocal();
@@ -122,8 +120,6 @@ namespace osgCompute
 
         virtual BufferStream* newStream( const Context& context ) const = 0;
         inline BufferStream* lookupStream( const Context& context ) const;
-
-        virtual void setNeedsSetup( bool needsSetup ) const;
 
         unsigned int                                    _allocHint;
         std::vector<unsigned int>                       _dimensions;
@@ -151,7 +147,7 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	inline void Buffer::setDimension( unsigned int dimIdx, unsigned int dimSize )
     {
-        if( !isDirty() )
+        if( !isClear() )
             return;
 
         if (_dimensions.size()<=dimIdx)
@@ -184,7 +180,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     inline void osgCompute::Buffer::setAllocHint( unsigned int allocHint )
     {
-        if( !isDirty() )
+        if( !isClear() )
             return;
 
         _allocHint = (_allocHint | allocHint);
@@ -213,6 +209,7 @@ namespace osgCompute
     { 
         return _subloadCallback.get(); 
     }
+
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
