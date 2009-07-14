@@ -59,7 +59,7 @@ namespace osgCompute
         if( _dimensions.empty() )
         {
             osg::notify(osg::FATAL)  
-                << "Buffer::init() for Buffer \""<<asObject()->getName()<<"\": No Dimensions specified."                  
+                << "Buffer::init() for buffer \""<<asObject()->getName()<<"\": no dimensions specified."                  
                 << std::endl;
 
             return false;
@@ -85,8 +85,8 @@ namespace osgCompute
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)  
-                << "Buffer::getMapping() for Buffer \""
-                << asObject()->getName() <<"\": Could not receive BufferStream for Context \""
+                << "Buffer::getMapping() for buffer \""
+                << asObject()->getName() <<"\": could not receive stream for context \""
                 << context.getId() << "\"."
                 << std::endl;
 
@@ -113,8 +113,8 @@ namespace osgCompute
             if( NULL == _streams[context.getId()] )
             {
                 osg::notify( osg::FATAL )  
-                    << "Buffer::init( \"CONTEXT\" ) for Buffer \"" << asObject()->getName()
-                    << "\": DataArray could be allocated for context \"" 
+                    << "Buffer::init( \"CONTEXT\" ) for buffer \"" << asObject()->getName()
+                    << "\": data stream is not available for context \"" 
                     << context.getId() << "\"."
                     << std::endl;
 
@@ -129,6 +129,12 @@ namespace osgCompute
         // is allocated
         return Resource::init( context );
     }
+
+	//------------------------------------------------------------------------------
+	BufferStream* Buffer::newStream( const Context& context ) const
+	{
+		return NULL;
+	}
 
     //------------------------------------------------------------------------------
     void Buffer::clear( const Context& context ) const

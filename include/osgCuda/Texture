@@ -201,7 +201,7 @@ namespace osgCuda
         if( !asTexture() )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture::init() for buffer \""
+                << "osgCuda::Texture::init() for buffer \""
                 << asObject()->getName() <<"\": object must be of type osg::Texture."
                 << std::endl;
 
@@ -252,7 +252,7 @@ namespace osgCuda
             if( dim[0] == 0 )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Texture::initDimension() for texture \""
+                    << "osgCuda::Texture::initDimension() for texture \""
                     << asObject()->getName()<< "\": no dimensions defined for texture! Call setDimension() first."
                     << std::endl;
 
@@ -273,7 +273,7 @@ namespace osgCuda
                 if( dim[d] > 0 && dim[d] != osgCompute::Buffer::getDimension(d) )
                 {
                     osg::notify(osg::FATAL)
-                        << "CUDA::Texture::initDimension() for texture \""
+                        << "osgCuda::Texture::initDimension() for texture \""
                         << asObject()->getName()<< "\": different dimensions for cuda context and rendering context specified!"
                         << std::endl;
 
@@ -309,7 +309,7 @@ namespace osgCuda
             if(!image)
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Texture::initFormatAndType() for texture \""
+                    << "osgCuda::Texture::initFormatAndType() for texture \""
                     << asObject()->getName()<< "\": could not find promised image data."
                     << std::endl;
 
@@ -332,7 +332,7 @@ namespace osgCuda
         if( renderByteSize != compByteSize )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture::initFormatAndType() for texture \""
+                << "osgCuda::Texture::initFormatAndType() for texture \""
                 << asObject()->getName()<< "\": Different byte size specified for compute context and rendering context."
                 << std::endl;
 
@@ -419,22 +419,6 @@ namespace osgCuda
     bool LIBRARY_EXPORT Texture<osg::Vec4f>::initFormatAndType();
 
     //------------------------------------------------------------------------------
-    template<>
-    bool LIBRARY_EXPORT Texture<double>::initFormatAndType();
-
-    //------------------------------------------------------------------------------
-    template<>
-    bool LIBRARY_EXPORT Texture<osg::Vec2d>::initFormatAndType();
-
-    //------------------------------------------------------------------------------
-    template<>
-    bool LIBRARY_EXPORT Texture<osg::Vec3d>::initFormatAndType();
-
-    //------------------------------------------------------------------------------
-    template<>
-    bool LIBRARY_EXPORT Texture<osg::Vec4d>::initFormatAndType();
-
-    //------------------------------------------------------------------------------
     template< class DATATYPE >
     void* Texture<DATATYPE>::map( const osgCompute::Context& context, unsigned int mapping ) const
     {
@@ -499,7 +483,7 @@ namespace osgCuda
         if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture::map() for texture \""
+                << "osgCuda::Texture::map() for texture \""
                 << asObject()->getName() <<"\": buffer is dirty."
                 << std::endl;
 
@@ -509,7 +493,7 @@ namespace osgCuda
         if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture::map() for texture \""
+                << "osgCuda::Texture::map() for texture \""
                 << asObject()->getName() <<"\": calling thread differs from the context's thread."
                 << std::endl;
 
@@ -520,7 +504,7 @@ namespace osgCuda
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture::map() for texture \""
+                << "osgCuda::Texture::map() for texture \""
                 << asObject()->getName() <<"\": could not receive TextureStream for context \""
                 << context.getId() << "\"."
                 << std::endl;
@@ -544,7 +528,7 @@ namespace osgCuda
             if( NULL == memset( data, value, getByteSize() ) )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Texture::setMemory() for texture \""
+                    << "osgCuda::Texture::setMemory() for texture \""
                     << asObject()->getName() <<"\": memset() failed for host data within context \""
                     << context.getId() << "\"."
                     << std::endl;
@@ -561,7 +545,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Texture::setMemory() for texture \""
+                    << "osgCuda::Texture::setMemory() for texture \""
                     << asObject()->getName() <<"\": cudaMemset() failed for device data within context \""
                     << context.getId() << "\"."
                     << std::endl;
@@ -647,7 +631,6 @@ namespace osgCuda
             unmapStream( stream );
         }
 
-        stream._mapping = mapping;
 
 
         bool firstLoad = false;
@@ -685,9 +668,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
-                    << "CUDA::Texture::mapStream() for texture \""<< asObject()->getName()
+                    << "osgCuda::Texture::mapStream() for texture \""<< asObject()->getName()
                     << "\": something goes wrong on cudaGLMapBufferObject() for context \""
-                    << stream._context->getId()<<"\". Returned code is "<<std::hex<<res<<"."
+                    << stream._context->getId()<<"\"." 
+					<< cudaGetErrorString( res ) << "."
                     << std::endl;
 
                 return NULL;
@@ -725,7 +709,7 @@ namespace osgCuda
 
             ptr = stream._hostPtr;
         }
-        else if( (stream._mapping & osgCompute::MAP_DEVICE) )
+        else if( (mapping & osgCompute::MAP_DEVICE) )
         {
             //////////////////
             // SETUP STREAM //
@@ -746,7 +730,7 @@ namespace osgCuda
         else
         {
             osg::notify(osg::WARN)
-                << "CUDA::Texture::mapStream() for texture \""<< asObject()->getName()<<"\": wrong mapping type. Use one of the following types: "
+                << "osgCuda::Texture::mapStream() for texture \""<< asObject()->getName()<<"\": wrong mapping type. Use one of the following types: "
                 << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
                 << std::endl;
 
@@ -770,6 +754,7 @@ namespace osgCuda
             }
         }
 
+		stream._mapping = mapping;
         return ptr;
     }
 
@@ -786,9 +771,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
-                    << "CUDA::Texture::unmapStream() for texture \""<< asObject()->getName()
+                    << "osgCuda::Texture::unmapStream() for texture \""<< asObject()->getName()
                     <<"\": something goes wrong on cudaGLUnmapBufferObject() for context \""
-                    << stream._context->getId()<<"\". Returned code is "<<std::hex<<res<<"."
+                    << stream._context->getId()<<"\"."
+					<< cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
             }
@@ -827,7 +813,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""<< asObject()->getName()
+                    << "osgCuda::Buffer::setupStream() for buffer \""<< asObject()->getName()
                     << "\": Cannot receive valid data pointer."
                     << std::endl;
 
@@ -838,9 +824,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""<< asObject()->getName()
+                    << "osgCuda::Buffer::setupStream() for buffer \""<< asObject()->getName()
                     << "\": cudaMemcpy() failed for data within context \""
-                    << stream._context->getId() << "\". Returned code is " << std::hex<<res<<"."
+                    << stream._context->getId() << "\"." 
+					<< cudaGetErrorString( res ) << "."
                     << std::endl;
 
                 return false;
@@ -859,7 +846,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""<< asObject()->getName()
+                    << "osgCuda::Buffer::setupStream() for buffer \""<< asObject()->getName()
                     << "\": Cannot receive valid data pointer."
                     << std::endl;
 
@@ -870,9 +857,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""<< asObject()->getName()
+                    << "osgCuda::Buffer::setupStream() for buffer \""<< asObject()->getName()
                     << "\": cudaMemcpy() failed for data within context \""
-                    << stream._context->getId() << "\". Returned code is " << std::hex<<res<<"."
+                    << stream._context->getId() << "\"." 
+					<< cudaGetErrorString( res ) <<"."
                     << std::endl;
 
                 return false;
@@ -904,7 +892,7 @@ namespace osgCuda
                 if( NULL == stream._hostPtr )
                 {
                     osg::notify(osg::FATAL)
-                        << "CUDA::Texture::allocStream() for texture \""
+                        << "osgCuda::Texture::allocStream() for texture \""
                         << asObject()->getName()<<"\": something goes wrong within mallocDeviceHost() within context \""<<stream._context->getId()
                         << "\"."
                         << std::endl;
@@ -919,7 +907,7 @@ namespace osgCuda
                 if( NULL == stream._hostPtr )
                 {
                     osg::notify(osg::FATAL)
-                        << "CUDA::Texture::allocStream() for texture \""
+                        << "osgCuda::Texture::allocStream() for texture \""
                         << asObject()->getName()<<"\": something goes wrong within mallocHost() within context \""<<stream._context->getId()
                         << "\"."
                         << std::endl;
@@ -964,10 +952,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Texture::syncStream() for texture \""<< asObject()->getName()
+                    << "osgCuda::Texture::syncStream() for texture \""<< asObject()->getName()
                     << "\": something goes wrong on cudaMemcpy() to device within context \""
-                    << stream._context->getId() << "\". Returned code is "
-                    << std::hex<<res<<"."
+                    << stream._context->getId() << "\"."
+                    << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return false;
             }
@@ -981,10 +969,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Texture::syncStream() for texture \""
+                    << "osgCuda::Texture::syncStream() for texture \""
                     << asObject()->getName()<<"\": something goes wrong within cudaMemcpy() to host within context \""
-                    << stream._context->getId() << "\". Returned code is "
-                    << std::hex<<res<<"."
+                    << stream._context->getId() << "\"."
+                    << cudaGetErrorString( res ) << "."
                     << std::endl;
 
                 return false;

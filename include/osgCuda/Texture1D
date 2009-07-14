@@ -202,7 +202,7 @@ namespace osgCuda
         if( !bufferExt )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::syncTexture() for texture \""
+                << "osgCuda::Texture1D::syncTexture() for texture \""
                 << osg::Object::getName()<< "\": cannot find required extensions for context \""<<stream._context->getId()<<"\"."
                 << std::endl;
 
@@ -213,7 +213,7 @@ namespace osgCuda
         if( !tex )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::syncTexture() for texture \""
+                << "osgCuda::Texture1D::syncTexture() for texture \""
                 << osg::Object::getName()<< "\": texture object not allocated for context \""<<stream._context->getId()<<"\"."
                 << std::endl;
 
@@ -248,7 +248,7 @@ namespace osgCuda
         if( errorStatus != GL_NO_ERROR )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::syncTexture() for buffer \""
+                << "osgCuda::Texture1D::syncTexture() for buffer \""
                 << osg::Object::getName()<< "\": something goes wrong on glTex(Sub)ImageXD() for context \""
                 << stream._context->getId()<<"\". Returned code is "
                 << std::hex<<errorStatus<<"."
@@ -281,7 +281,7 @@ namespace osgCuda
         if( !bufferExt )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::syncPBO() for texture \""
+                << "osgCuda::Texture1D::syncPBO() for texture \""
                 << osg::Object::getName()<< "\": cannot find required extension for context \""<<stream._context->getId()<<"\"."
                 << std::endl;
 
@@ -292,7 +292,7 @@ namespace osgCuda
         if( !tex )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::syncPBO() for texture \""
+                << "osgCuda::Texture1D::syncPBO() for texture \""
                 << osg::Object::getName()<< "\": texture object not allocated for context \""<<stream._context->getId()<<"\"."
                 << std::endl;
 
@@ -313,7 +313,7 @@ namespace osgCuda
         if( texType == GL_NONE )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::syncPBO() for texture \""
+                << "osgCuda::Texture1D::syncPBO() for texture \""
                 << osg::Object::getName()<< "\": texture type unknown."
                 << std::endl;
 
@@ -327,10 +327,10 @@ namespace osgCuda
         if( cudaSuccess != res )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::syncPBO() for texture \""
+                << "osgCuda::Texture1D::syncPBO() for texture \""
                 << osg::Object::getName()<< "\": something goes wrong on cudaGLUnregisterBufferObject() for context \""
-                << stream._context->getId()<<"\". Returned code is "
-                << std::hex<<res<<"."
+                << stream._context->getId()<<"\"."
+                << cudaGetErrorString( res ) <<"."
                 << std::endl;
 
             return;
@@ -349,7 +349,7 @@ namespace osgCuda
         if( errorStatus != GL_NO_ERROR )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::syncPBO() for texture \""
+                << "osgCuda::Texture1D::syncPBO() for texture \""
                 << osg::Object::getName()<< "\": something goes wrong on glGetTexImage() for context \""
                 << stream._context->getId()<<"\". Returned code is "
                 << std::hex<<errorStatus<<"."
@@ -366,10 +366,10 @@ namespace osgCuda
         if( cudaSuccess != res )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::syncPBO() for texture \""
+                << "osgCuda::Texture1D::syncPBO() for texture \""
                 << osg::Object::getName()<< "\": something goes wrong on cudaGLRegisterBufferObject() for context \""
-                << stream._context->getId()<<"\". Returned code is "
-                << std::hex<<res<<"."
+                << stream._context->getId()<<"\"."
+                << cudaGetErrorString( res ) <<"."
                 << std::endl;
         }
 
@@ -387,7 +387,7 @@ namespace osgCuda
         if( !bufferExt  )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::allocPBO() for texture \""
+                << "osgCuda::Texture1D::allocPBO() for texture \""
                 << osg::Object::getName()<< "\": cannot find required extensions for context \""<<stream._context->getId()<<"\"."
                 << std::endl;
 
@@ -399,6 +399,16 @@ namespace osgCuda
         {
             apply( *stream._context->getState() );
             glBindTexture( GL_TEXTURE_1D, 0 );
+			GLenum errorStatus = glGetError();
+			if( errorStatus != GL_NO_ERROR )
+			{
+				osg::notify(osg::FATAL)
+					<< "osgCuda::Texture1D::allocPBO() for buffer \""
+					<< osg::Object::getName()<<"\": apply() failed on texture resource."
+					<< std::endl;
+
+				return false;
+			}
         }
 
         // second chance
@@ -407,8 +417,8 @@ namespace osgCuda
         {
 
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::allocPBO() for texture \""
-                << osg::Object::getName()<< "\": texture object not allocated for context \""<<stream._context->getId()<<"\"."
+                << "osgCuda::Texture1D::allocPBO() for texture \""
+                << osg::Object::getName()<< "\": cannot allocate texture object for context \""<<stream._context->getId()<<"\"."
                 << std::endl;
 
             return false;
@@ -428,7 +438,7 @@ namespace osgCuda
         if( texType == GL_NONE )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::allocPBO() for texture \""
+                << "osgCuda::Texture1D::allocPBO() for texture \""
                 << osg::Object::getName()<< "\": texture type unknown."
                 << std::endl;
 
@@ -442,7 +452,7 @@ namespace osgCuda
         if( UINT_MAX == stream._bo )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Texture1D::allocPBO() for Buffer \""
+                << "osgCuda::Texture1D::allocPBO() for Buffer \""
                 << osg::Object::getName()<< "\": Could not generate buffer object (glGenBuffers()) for context \""
                 << stream._context->getId()<<"\"."
                 << std::endl;
@@ -483,7 +493,7 @@ namespace osgCuda
             if( errorNo != GL_NO_ERROR )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Texture1D::allocPBO() for buffer \""
+                    << "osgCuda::Texture1D::allocPBO() for buffer \""
                     << osg::Object::getName()<< "\": something goes wrong on glTexImageXD() for context \""
                     << stream._context->getId()<<"\". Returned code is "
                     << std::hex<<errorNo<<"."

@@ -206,7 +206,7 @@ namespace osgCuda
             if( _image->getNumMipmapLevels() > 1 )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::init() for Buffer \""
+                    << "osgCuda::Buffer::init() for Buffer \""
                     << osg::Object::getName() <<"\": Image \""
                     << _image->getName() << "\" uses MipMaps which are currently"
                     << "not supported."
@@ -219,7 +219,7 @@ namespace osgCuda
             if( _image->getTotalSizeInBytes() != byteSize )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::init() for buffer \""
+                    << "osgCuda::Buffer::init() for buffer \""
                     << osg::Object::getName() <<"\": size of image \""
                     << _image->getName() << "\" does not match the buffer size."
                     << std::endl;
@@ -234,7 +234,7 @@ namespace osgCuda
             if( _array->getTotalDataSize() != byteSize )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::init() for buffer \""
+                    << "osgCuda::Buffer::init() for buffer \""
                     << osg::Object::getName() <<"\": size of array \""
                     << _array->getName() << "\" does not match with the buffer size."
                     << std::endl;
@@ -254,7 +254,7 @@ namespace osgCuda
         if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Buffer::map() for buffer \""
+                << "osgCuda::Buffer::map() for buffer \""
                 << osg::Object::getName() <<"\": buffer is dirty."
                 << std::endl;
 
@@ -264,7 +264,7 @@ namespace osgCuda
         if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Buffer::map() for Buffer \""
+                << "osgCuda::Buffer::map() for Buffer \""
                 << osg::Object::getName() <<"\": calling thread differs from the context's thread."
                 << std::endl;
 
@@ -275,7 +275,7 @@ namespace osgCuda
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
-				<< "CUDA::Buffer::map() for buffer \""
+				<< "osgCuda::Buffer::map() for buffer \""
 				<< osg::Object::getName() <<"\": could not receive BufferStream for context \""
 				<< context.getId() << "\"."
 				<< std::endl;
@@ -299,7 +299,7 @@ namespace osgCuda
         if( osgCompute::Resource::isClear() )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Buffer::map() for buffer \""
+                << "osgCuda::Buffer::map() for buffer \""
                 << osg::Object::getName() <<"\": buffer is dirty."
                 << std::endl;
 
@@ -309,7 +309,7 @@ namespace osgCuda
         if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Buffer::map() for Buffer \""
+                << "osgCuda::Buffer::map() for Buffer \""
                 << osg::Object::getName() <<"\": calling thread differs from the context's thread."
                 << std::endl;
 
@@ -320,7 +320,7 @@ namespace osgCuda
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Buffer::map() for buffer \""
+                << "osgCuda::Buffer::map() for buffer \""
                 << osg::Object::getName() <<"\": could not receive BufferStream for context \""
                 << context.getId() << "\"."
                 << std::endl;
@@ -344,7 +344,7 @@ namespace osgCuda
             if( NULL == memset( data, value, getByteSize() ) )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setMemory() for buffer \""
+                    << "osgCuda::Buffer::setMemory() for buffer \""
                     << osg::Object::getName() <<"\": memset() failed for host data within context \""
                     << context.getId() << "\"."
                     << std::endl;
@@ -359,7 +359,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setMemory() for buffer \""
+                    << "osgCuda::Buffer::setMemory() for buffer \""
                     << osg::Object::getName() <<"\": cudaMemset() failed for device data within context \""
                     << context.getId() << "\"."
                     << std::endl;
@@ -480,7 +480,7 @@ namespace osgCuda
         else
         {
             osg::notify(osg::WARN)
-                << "CUDA::Buffer::mapStream() for Buffer \""<< osg::Object::getName()<<"\": Wrong mapping. Use one of the following: "
+                << "osgCuda::Buffer::mapStream() for Buffer \""<< osg::Object::getName()<<"\": Wrong mapping. Use one of the following: "
                 << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
                 << std::endl;
 
@@ -529,7 +529,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""<< osg::Object::getName()
+                    << "osgCuda::Buffer::setupStream() for buffer \""<< osg::Object::getName()
                     << "\": Cannot receive valid data pointer."
                     << std::endl;
 
@@ -540,9 +540,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""<< osg::Object::getName()
+                    << "osgCuda::Buffer::setupStream() for buffer \""<< osg::Object::getName()
                     << "\": cudaMemcpy() failed for data within context \""
-                    << stream._context->getId() << "\". Returned code is " << std::hex<<res<<"."
+                    << stream._context->getId() << "\"." 
+					<< cudaGetErrorString( res ) <<"."
                     << std::endl;
 
                 return false;
@@ -570,7 +571,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""<< osg::Object::getName()
+                    << "osgCuda::Buffer::setupStream() for buffer \""<< osg::Object::getName()
                     << "\": Cannot receive valid data pointer."
                     << std::endl;
 
@@ -581,9 +582,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""<< osg::Object::getName()
+                    << "osgCuda::Buffer::setupStream() for buffer \""<< osg::Object::getName()
                     << "\": cudaMemcpy() failed for data within context \""
-                    << stream._context->getId() << "\". Returned code is " << std::hex<<res<<"."
+                    << stream._context->getId() << "\"." 
+					<< cudaGetErrorString( res ) <<"."
                     << std::endl;
 
                 return false;
@@ -615,7 +617,7 @@ namespace osgCuda
                 if( NULL == stream._hostPtr )
                 {
                     osg::notify(osg::FATAL)
-                        << "CUDA::Buffer::allocStream() for Buffer \""
+                        << "osgCuda::Buffer::allocStream() for Buffer \""
                         << osg::Object::getName()<<"\": Something goes wrong within mallocDeviceHost() within Context \""<<stream._context->getId()
                         << "\"."
                         << std::endl;
@@ -630,7 +632,7 @@ namespace osgCuda
                 if( NULL == stream._hostPtr )
                 {
                     osg::notify(osg::FATAL)
-                        << "CUDA::Buffer::allocStream() for Buffer \""
+                        << "osgCuda::Buffer::allocStream() for Buffer \""
                         << osg::Object::getName()<<"\": Something goes wrong within mallocHost() within Context \""<<stream._context->getId()
                         << "\"."
                         << std::endl;
@@ -660,7 +662,7 @@ namespace osgCuda
                 if( NULL == stream._devPtr )
                 {
                     osg::notify(osg::FATAL)
-                        << "CUDA::Buffer::allocStream() for Buffer \""<< osg::Object::getName()<<"\": Something goes wrong within mallocDevice3D() within Context \""
+                        << "osgCuda::Buffer::allocStream() for Buffer \""<< osg::Object::getName()<<"\": Something goes wrong within mallocDevice3D() within Context \""
                         << stream._context->getId() << "\"."
                         << std::endl;
 
@@ -677,7 +679,7 @@ namespace osgCuda
                 if( NULL == stream._devPtr )
                 {
                     osg::notify(osg::FATAL)
-                        << "CUDA::Buffer::allocStream() for Buffer \""<< osg::Object::getName()<<"\": Something goes wrong within mallocDevice2D() within Context \""
+                        << "osgCuda::Buffer::allocStream() for Buffer \""<< osg::Object::getName()<<"\": Something goes wrong within mallocDevice2D() within Context \""
                         << stream._context->getId() << "\"."
                         << std::endl;
 
@@ -692,7 +694,7 @@ namespace osgCuda
                  if( NULL == stream._devPtr )
                  {
                      osg::notify(osg::FATAL)
-                         << "CUDA::Buffer::allocStream() for Buffer \""<< osg::Object::getName()<<"\": Something goes wrong within mallocDevice() within Context \""
+                         << "osgCuda::Buffer::allocStream() for Buffer \""<< osg::Object::getName()<<"\": Something goes wrong within mallocDevice() within Context \""
                          << stream._context->getId() << "\"."
                          << std::endl;
 
@@ -721,10 +723,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::syncStream() for Buffer \""<< osg::Object::getName()
+                    << "osgCuda::Buffer::syncStream() for Buffer \""<< osg::Object::getName()
                     << "\": Something goes wrong on cudaMemcpy() to device within Context \""
-                    << stream._context->getId() << "\". Returned code is "
-                    << std::hex<<res<<"."
+                    << stream._context->getId() << "\"."
+                    << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return false;
             }
@@ -738,10 +740,10 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::syncStream() for Buffer \""
+                    << "osgCuda::Buffer::syncStream() for Buffer \""
                     << osg::Object::getName()<<"\": Something goes wrong within cudaMemcpy() to host within Context \""
-                    << stream._context->getId() << "\". Returned code is "
-                    << std::hex<<res<<"."
+                    << stream._context->getId() << "\"."
+                    << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
                 return false;
@@ -779,7 +781,7 @@ namespace osgCuda
             if( image->getNumMipmapLevels() > 1 )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""
+                    << "osgCuda::Buffer::setupStream() for buffer \""
                     << osg::Object::getName() <<"\": image \""
                     << image->getName() << "\" uses MipMaps which are currently"
                     << "not supported."
@@ -791,7 +793,7 @@ namespace osgCuda
             if( image->getTotalSizeInBytes() != osgCompute::Buffer::getByteSize() )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setupStream() for buffer \""
+                    << "osgCuda::Buffer::setupStream() for buffer \""
                     << osg::Object::getName() <<"\": size of image \""
                     << image->getName() << "\" does not match the buffer size."
                     << std::endl;
@@ -827,7 +829,7 @@ namespace osgCuda
             if( array->getTotalDataSize() != osgCompute::Buffer::getByteSize() )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Buffer::setArray() for buffer \""
+                    << "osgCuda::Buffer::setArray() for buffer \""
                     << osg::Object::getName() <<"\": size of array \""
                     << array->getName() << "\" does not match with the buffer size."
                     << std::endl;

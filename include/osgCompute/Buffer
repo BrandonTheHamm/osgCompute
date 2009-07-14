@@ -118,7 +118,7 @@ namespace osgCompute
         virtual bool init( const Context& context ) const;
         virtual void clear( const Context& context ) const;
 
-        virtual BufferStream* newStream( const Context& context ) const = 0;
+        virtual BufferStream* newStream( const Context& context ) const;
         inline BufferStream* lookupStream( const Context& context ) const;
 
         unsigned int                                    _allocHint;

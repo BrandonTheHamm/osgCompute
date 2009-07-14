@@ -191,50 +191,5 @@ namespace osgCuda
 
         return true;
     }
-
-    //------------------------------------------------------------------------------
-    template<>
-    bool Texture<double>::initFormatAndType()
-    {
-        asTexture()->setInternalFormat( GL_LUMINANCE );
-        asTexture()->setSourceFormat( GL_LUMINANCE );
-        asTexture()->setSourceType( GL_DOUBLE );
-
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
-    template<>
-    bool Texture<osg::Vec2d>::initFormatAndType()
-    {
-        asTexture()->setInternalFormat( GL_LUMINANCE_ALPHA );
-        asTexture()->setSourceFormat( GL_LUMINANCE_ALPHA );
-        asTexture()->setSourceType( GL_DOUBLE );
-
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
-    template<>
-    bool Texture<osg::Vec3d>::initFormatAndType()
-    {
-        asTexture()->setInternalFormat( GL_RGB );
-        asTexture()->setSourceFormat( GL_RGB );
-        asTexture()->setSourceType( GL_DOUBLE );
-
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
-    template<>
-    bool Texture<osg::Vec4d>::initFormatAndType()
-    {
-        asTexture()->setInternalFormat( GL_RGBA );
-        asTexture()->setSourceFormat( GL_RGBA );
-        asTexture()->setSourceType( GL_DOUBLE );
-
-        return true;
-    }
-
 }
 

@@ -31,7 +31,7 @@ namespace osgCuda
         if( cudaSuccess != res )
         {
             osg::notify(osg::FATAL)  
-                << "CUDA::Context::init(): cannot share device with render context."
+                << "osgCuda::Context::init(): cannot share device with render context."
                 << std::endl;
 
             return false;
@@ -126,7 +126,7 @@ namespace osgCuda
         }
 
         //------------------------------------------------------------------------------
-        // any CUDA resources created through the runtime in one host thread cannot be
+        // any osgCuda resources created through the runtime in one host thread cannot be
         // used by the runtime from another host thread.
         virtual void release()
         {
@@ -174,7 +174,7 @@ namespace osgCuda
         cudaError res = cudaGetDeviceCount( &deviceCount );
         if( cudaSuccess != res )
         {
-            osg::notify(osg::FATAL)  << "CUDA::Context::init(): something goes wrong on cudaGetDeviceCount(). Returned code is "<<res<<"."
+            osg::notify(osg::FATAL)  << "osgCuda::Context::init(): something goes wrong on cudaGetDeviceCount(). Returned code is "<<res<<"."
                 << std::endl;
             clear();
             return false;
@@ -182,7 +182,7 @@ namespace osgCuda
 
         if( _device > deviceCount - 1 )
         {
-            osg::notify(osg::FATAL)  << "CUDA::Context::init(): device \""<<_device<<"\" does not exist."
+            osg::notify(osg::FATAL)  << "osgCuda::Context::init(): device \""<<_device<<"\" does not exist."
                 << std::endl;
 
             clear();
@@ -193,7 +193,7 @@ namespace osgCuda
         res = cudaGetDeviceProperties( &deviceProp, _device );
         if( cudaSuccess != res )
         {
-            osg::notify(osg::FATAL)  << "CUDA::Context::init(): no device found which supports CUDA."
+            osg::notify(osg::FATAL)  << "osgCuda::Context::init(): no device found which supports CUDA."
                 << std::endl;
 
             clear();
@@ -202,7 +202,7 @@ namespace osgCuda
 
         if( deviceProp.major < 1 )
         {
-            osg::notify(osg::FATAL)  << "CUDA::Context::init(): device does not support CUDA.\n"
+            osg::notify(osg::FATAL)  << "osgCuda::Context::init(): device does not support CUDA.\n"
                 << std::endl;
 
             clear();
@@ -232,7 +232,7 @@ namespace osgCuda
             if( !setupSharedDevice(_device) )
             {
                 osg::notify(osg::FATAL)  
-                    << "CUDA::Context::init(): cannot share device with render context."
+                    << "osgCuda::Context::init(): cannot share device with render context."
                     << std::endl;
 
                 clear();
@@ -272,7 +272,7 @@ namespace osgCuda
         if( _asgThread != OpenThreads::Thread::CurrentThread() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::apply(): context cannot applied to different threads."
+                << "osgCuda::Context::apply(): context cannot applied to different threads."
                 << std::endl;
 
             return;
@@ -287,7 +287,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocHostMemory(): context is dirty."
+                << "osgCuda::Context::mallocHostMemory(): context is dirty."
                 << std::endl;
 
             return NULL;
@@ -297,7 +297,7 @@ namespace osgCuda
         if( curThread != _asgThread )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocHostMemory(): cannot allocate resources from different threads.\n"
+                << "osgCuda::Context::mallocHostMemory(): cannot allocate resources from different threads.\n"
                 << std::endl;
 
             return NULL;
@@ -309,7 +309,7 @@ namespace osgCuda
         if( allocMem._buffer == NULL )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocHostMemory() for Context \""<< getId()<<"\": something goes wrong within malloc()."
+                << "osgCuda::Context::mallocHostMemory() for Context \""<< getId()<<"\": something goes wrong within malloc()."
                 << std::endl;
 
             return NULL;
@@ -333,7 +333,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocDeviceMemory(): context is dirty."
+                << "osgCuda::Context::mallocDeviceMemory(): context is dirty."
                 << std::endl;
 
             return NULL;
@@ -343,7 +343,7 @@ namespace osgCuda
         if( curThread != _asgThread )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocDeviceMemory(): cannot allocate resources from different threads.\n"
+                << "osgCuda::Context::mallocDeviceMemory(): cannot allocate resources from different threads.\n"
                 << std::endl;
 
             return NULL;
@@ -355,8 +355,8 @@ namespace osgCuda
         if( res != cudaSuccess )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocDeviceMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMalloc()."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::mallocDeviceMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMalloc()."
+                << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -380,7 +380,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocDeviceHostMemory(): context is dirty."
+                << "osgCuda::Context::mallocDeviceHostMemory(): context is dirty."
                 << std::endl;
 
             return NULL;
@@ -390,7 +390,7 @@ namespace osgCuda
         if( curThread != _asgThread )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocDeviceHostMemory(): cannot allocate resources from different threads.\n"
+                << "osgCuda::Context::mallocDeviceHostMemory(): cannot allocate resources from different threads.\n"
                 << std::endl;
 
             return NULL;
@@ -402,8 +402,8 @@ namespace osgCuda
         if( res != cudaSuccess )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocDeviceHostMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMallocHost()."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::mallocDeviceHostMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMallocHost()."
+                << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -427,7 +427,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocDevice2DMemory(): context is dirty."
+                << "osgCuda::Context::mallocDevice2DMemory(): context is dirty."
                 << std::endl;
 
             return NULL;
@@ -437,7 +437,7 @@ namespace osgCuda
         if( curThread != _asgThread )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocDevice2DMemory(): cannot allocate resources from different threads.\n"
+                << "osgCuda::Context::mallocDevice2DMemory(): cannot allocate resources from different threads.\n"
                 << std::endl;
 
             return NULL;
@@ -449,8 +449,8 @@ namespace osgCuda
         if( cudaSuccess != res )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocDevice2DMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMallocPitch()."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::mallocDevice2DMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMallocPitch()."
+                << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -474,7 +474,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocDevice3DMemory(): context is dirty."
+                << "osgCuda::Context::mallocDevice3DMemory(): context is dirty."
                 << std::endl;
 
             return NULL;
@@ -484,7 +484,7 @@ namespace osgCuda
         if( curThread != _asgThread )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::mallocDevice3DMemory(): cannot allocate resources for different threads.\n"
+                << "osgCuda::Context::mallocDevice3DMemory(): cannot allocate resources for different threads.\n"
                 << std::endl;
 
             return NULL;
@@ -502,8 +502,8 @@ namespace osgCuda
         if( cudaSuccess != res || NULL == pitchPtr.ptr )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocDevice3DMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMalloc3D()."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::mallocDevice3DMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMalloc3D()."
+                << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -531,8 +531,8 @@ namespace osgCuda
         if( cudaSuccess != res || NULL ==  allocMem._array )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocDeviceArray() for Context \""<< getId()<<"\": Something goes wrong within cudaMallocArray()."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::mallocDeviceArray() for Context \""<< getId()<<"\": Something goes wrong within cudaMallocArray()."
+                << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -563,8 +563,8 @@ namespace osgCuda
         if( cudaSuccess != res || NULL ==  allocMem._array )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocDevice2DArray() for Context \""<< getId()<<"\": Something goes wrong within cudaMallocArray()."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::mallocDevice2DArray() for Context \""<< getId()<<"\": Something goes wrong within cudaMallocArray()."
+                << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -601,8 +601,8 @@ namespace osgCuda
         if( cudaSuccess != res || NULL ==  allocMem._array )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocDevice3DArray() for Context \""<< getId()<<"\": Something goes wrong within cudaMalloc3DArray()."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::mallocDevice3DArray() for Context \""<< getId()<<"\": Something goes wrong within cudaMalloc3DArray()."
+                << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -632,7 +632,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::registerBufferObject(): context is dirty."
+                << "osgCuda::Context::registerBufferObject(): context is dirty."
                 << std::endl;
 
             return UINT_MAX;
@@ -641,7 +641,7 @@ namespace osgCuda
         if( !getState() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::registerBufferObject(): No valid osg::State found."
+                << "osgCuda::Context::registerBufferObject(): No valid osg::State found."
                 << std::endl;
 
             return UINT_MAX;
@@ -651,7 +651,7 @@ namespace osgCuda
         if( curThread != _asgThread )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::registerBufferObject(): cannot register resources for different threads.\n"
+                << "osgCuda::Context::registerBufferObject(): cannot register resources for different threads.\n"
                 << std::endl;
 
             return UINT_MAX;
@@ -672,7 +672,7 @@ namespace osgCuda
         if( 0 == regMem._bo  || errorNo )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocBufferObject() for Context \""
+                << "osgCuda::Context::mallocBufferObject() for Context \""
                 << getId()<<"\": cannot generate BufferObject (glGenBuffers())."
                 << std::endl;
 
@@ -692,7 +692,7 @@ namespace osgCuda
         if (errorNo != GL_NO_ERROR)
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocBufferObject() for Context \""
+                << "osgCuda::Context::mallocBufferObject() for Context \""
                 << getId()<<"\": cannot bind BufferObject (glBindBuffer())."
                 << std::endl;
 
@@ -704,7 +704,7 @@ namespace osgCuda
         if (errorNo != GL_NO_ERROR)
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::mallocBufferObject() for Context \""
+                << "osgCuda::Context::mallocBufferObject() for Context \""
                 << getId()<<"\": cannot initialize BufferObject (glBufferData())."
                 << std::endl;
 
@@ -724,8 +724,8 @@ namespace osgCuda
         if( cudaSuccess != res )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::registerBufferObject() for Context \""<< getId()<<"\": something goes wrong within cudaGLRegisterBufferObject()."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::registerBufferObject() for Context \""<< getId()<<"\": something goes wrong within cudaGLRegisterBufferObject()."
+                << cudaGetErrorString(res) << "."
                 << std::endl;
 
             return UINT_MAX;
@@ -746,7 +746,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::registerBufferObject(): context is dirty."
+                << "osgCuda::Context::registerBufferObject(): context is dirty."
                 << std::endl;
 
             return false;
@@ -755,7 +755,7 @@ namespace osgCuda
         if( !getState() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::registerBufferObject(): no valid osg::State found."
+                << "osgCuda::Context::registerBufferObject(): no valid osg::State found."
                 << std::endl;
 
             return false;
@@ -765,7 +765,7 @@ namespace osgCuda
         if( curThread != _asgThread )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::registerBufferObject(): cannot register resources for different threads.\n"
+                << "osgCuda::Context::registerBufferObject(): cannot register resources for different threads.\n"
                 << std::endl;
 
             return false;
@@ -780,8 +780,8 @@ namespace osgCuda
         if( cudaSuccess != res )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::registerBufferObject() for Context \""<< getId()<<"\": something goes wrong within cudaGLRegisterBufferObject()."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::registerBufferObject() for Context \""<< getId()<<"\": something goes wrong within cudaGLRegisterBufferObject()."
+                << cudaGetErrorString(res) << "."
                 << std::endl;
 
             return false;
@@ -802,7 +802,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::freeMemory(\"BUFFER\"): context is dirty."
+                << "osgCuda::Context::freeMemory(\"BUFFER\"): context is dirty."
                 << std::endl;
 
             return;
@@ -847,8 +847,8 @@ namespace osgCuda
         if( res != cudaSuccess )
         {
              osg::notify(osg::FATAL)
-                << "CUDA::Context::freeMemory(\"BUFFER\") for Context \""<< getId()<<"\": something goes wrong during deallocation."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::freeMemory(\"BUFFER\") for Context \""<< getId()<<"\": something goes wrong during deallocation."
+                << cudaGetErrorString(res) << "."
                 << std::endl;
         }
 
@@ -861,7 +861,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::freeMemory(\"ARRAY\"): context is dirty."
+                << "osgCuda::Context::freeMemory(\"ARRAY\"): context is dirty."
                 << std::endl;
 
             return;
@@ -898,8 +898,8 @@ namespace osgCuda
         if( res != cudaSuccess )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::freeMemory(\"ARRAY\") for Context \""<< getId()<<"\": something goes wrong during deallocation."
-                << "Returned code is " << std::hex << res << "."
+                << "osgCuda::Context::freeMemory(\"ARRAY\") for Context \""<< getId()<<"\": something goes wrong during deallocation."
+                << cudaGetErrorString(res) << "."
                 << std::endl;
         }
 
@@ -912,7 +912,7 @@ namespace osgCuda
         if( isClear() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::unregisterBufferObject(): context is dirty."
+                << "osgCuda::Context::unregisterBufferObject(): context is dirty."
                 << std::endl;
 
             return;
@@ -921,7 +921,7 @@ namespace osgCuda
         if( !getState() )
         {
             osg::notify(osg::WARN)
-                << "CUDA::Context::unregisterBufferObject(): no valid osg::State found."
+                << "osgCuda::Context::unregisterBufferObject(): no valid osg::State found."
                 << std::endl;
 
             return;
@@ -947,9 +947,9 @@ namespace osgCuda
         if( cudaSuccess != res )
         {
             osg::notify(osg::FATAL)
-                << "CUDA::Context::unregisterBufferObject for Context \""
+                << "osgCuda::Context::unregisterBufferObject for Context \""
                 << getId()<<"\": something goes wrong within cudaGLUnregisterBufferObject()."
-                << "Returned code is " << std::hex << res << "."
+                << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return;
@@ -988,7 +988,7 @@ namespace osgCuda
             if( !_ctxmem->_allocMem.empty() )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Context::clearLocal(): resources of size \"";
+                    << "osgCuda::Context::clearLocal(): resources of size \"";
 
                 unsigned int byteSize = 0;
                 for( AllocMapCnstItr itr = _ctxmem->_allocMem.begin();
@@ -1006,7 +1006,7 @@ namespace osgCuda
             if( !_ctxmem->_lazyFreeMem.empty() )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Context::clearLocal(): resources of size \"";
+                    << "osgCuda::Context::clearLocal(): resources of size \"";
 
                 unsigned int byteSize = 0;
                 for( AllocMapCnstItr itr = _ctxmem->_allocMem.begin();
@@ -1024,7 +1024,7 @@ namespace osgCuda
             if( !_ctxmem->_lazyUnregMem.empty() )
             {
                 osg::notify(osg::FATAL)
-                    << "CUDA::Context::clearLocal(): resources of size \"";
+                    << "osgCuda::Context::clearLocal(): resources of size \"";
 
                 unsigned int byteSize = 0;
                 for( RegistrationMapCnstItr itr = _ctxmem->_regMem.begin();
@@ -1108,8 +1108,8 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::WARN)
-                    << "CUDA::Context::clearMemory(): freeing \""<<allocMem._bytes<<"\" bytes of memory failed."
-                    << " Returned code is \""<<std::hex << res << "\"."
+                    << "osgCuda::Context::clearMemory(): freeing \""<<allocMem._bytes<<"\" bytes of memory failed."
+                    << cudaGetErrorString( res ) << "\"."
                     << std::endl;
             }
 
@@ -1128,8 +1128,8 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::WARN)
-                        << "CUDA::Context::clearMemory(): unregistering \""<<regMem._bytes<<"\" bytes of memory failed."
-                        << " Returned code is \""<<std::hex << res << "\"."
+                        << "osgCuda::Context::clearMemory(): unregistering \""<<regMem._bytes<<"\" bytes of memory failed."
+                        << cudaGetErrorString( res ) << "\"."
                         << std::endl;
                 }
 
