@@ -17,6 +17,7 @@
 #define OSGCOMPUTE_CALLBACK 1
 
 #include <osg/Object>
+#include <osgCompute/Export>
 
 namespace osg
 {

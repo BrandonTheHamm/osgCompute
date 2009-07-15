@@ -46,7 +46,7 @@ namespace TexDemo
 
         return osgCompute::Module::init();
     }
-
+  
     //------------------------------------------------------------------------------  
     void TexStreamer::launch( const osgCompute::Context& context ) const
     {

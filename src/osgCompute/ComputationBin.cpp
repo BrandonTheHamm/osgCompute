@@ -14,9 +14,9 @@
 */
 
 #include <osg/Notify>
-#include "osgCompute/ComputationBin"
-#include "osgCompute/Computation"
-#include "osgCompute/Context"
+#include <osgCompute/ComputationBin>
+#include <osgCompute/Computation>
+#include <osgCompute/Context>
 
 namespace osgCompute
 {   

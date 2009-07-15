@@ -10,7 +10,7 @@
 #include <cuda_runtime.h>
 #include <builtin_types.h>
 #include <cuda_gl_interop.h>
-#include "osgCuda/Context"
+#include <osgCuda/Context>
 
 namespace osgCuda
 {

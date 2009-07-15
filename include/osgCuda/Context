@@ -20,7 +20,7 @@
 #include <driver_types.h>
 #include <OpenThreads/Thread>
 #include <osgCompute/Context>
-#include "osgCuda/Export"
+#include <osgCuda/Export>
 
 namespace osgCuda
 {

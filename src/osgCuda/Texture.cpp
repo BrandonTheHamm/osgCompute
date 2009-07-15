@@ -1,4 +1,4 @@
-#include "osgCuda/Texture"
+#include <osgCuda/Texture>
 
 namespace osgCuda
 {

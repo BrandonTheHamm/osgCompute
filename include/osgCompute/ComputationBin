@@ -20,9 +20,9 @@
 #include <osg/Object>
 #include <osg/NodeVisitor>
 #include <osgUtil/RenderBin>
-#include "osgCompute/Export"
-#include "osgCompute/Callback"
-#include "osgCompute/Module"
+#include <osgCompute/Export>
+#include <osgCompute/Callback>
+#include <osgCompute/Module>
 
 namespace osg
 {

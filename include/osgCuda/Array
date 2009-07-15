@@ -22,8 +22,8 @@
 #include <osg/Image>
 #include <osg/Array>
 #include <osgCompute/Buffer>
-#include "osgCuda/Context"
-#include "osgCuda/Export"
+#include <osgCuda/Context>
+#include <osgCuda/Export>
 
 namespace osg
 {
@@ -471,7 +471,8 @@ namespace osgCuda
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
-        if( stream._mapping == mapping && !needsSetup )
+		if( (stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE) &&
+			!needsSetup )
         {
             if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != stream._devArray )
             {
@@ -484,6 +485,7 @@ namespace osgCuda
                 }
             }
 
+			stream._mapping = mapping;
             return stream._devArray;
         }
         else if( stream._mapping != osgCompute::UNMAPPED )
@@ -571,7 +573,8 @@ namespace osgCuda
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
-        if( stream._mapping == mapping && !needsSetup )
+		if( (stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST) &&
+			!needsSetup )
         {
             if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != stream._hostPtr )
             {
@@ -584,6 +587,7 @@ namespace osgCuda
                 }
             }
 
+			stream._mapping = mapping;
             return stream._hostPtr;
         }
         else if( stream._mapping != osgCompute::UNMAPPED )

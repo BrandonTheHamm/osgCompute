@@ -605,7 +605,8 @@ namespace osgCuda
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
-        if( stream._mapping == mapping )
+        if( (stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE ) ||
+			(stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST ) ) 
         {
             if( (stream._mapping & osgCompute::MAP_DEVICE) )
                 ptr = stream._devPtr;
@@ -624,6 +625,7 @@ namespace osgCuda
                 }
             }
 
+			stream._mapping = mapping;
             return ptr;
         }
         else if( stream._mapping != osgCompute::UNMAPPED )

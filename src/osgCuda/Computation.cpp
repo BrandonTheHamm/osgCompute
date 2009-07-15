@@ -1,7 +1,7 @@
 #include <osg/NodeVisitor>
 #include <osg/OperationThread>
 #include <osgUtil/CullVisitor>
-#include "osgCuda/Computation"
+#include <osgCuda/Computation>
 
 namespace osgCuda
 { 

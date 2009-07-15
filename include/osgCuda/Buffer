@@ -16,13 +16,13 @@
 #ifndef OSGCUDA_BUFFER
 #define OSGCUDA_BUFFER 1
 
-#include "osgCuda/Context"
+#include <osgCuda/Context>
 #include <cuda_runtime.h>
 #include <driver_types.h>
 #include <osg/Image>
 #include <osg/Array>
 #include <osgCompute/Buffer>
-#include "osgCuda/Export"
+#include <osgCuda/Export>
 
 namespace osg
 {
@@ -387,8 +387,9 @@ namespace osgCuda
         ///////////////////
         // PROOF MAPPING //
         ///////////////////
-        if( stream._mapping == mapping && 
-            !needsSetup )
+		if( ((stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE) ||
+			 (stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST))  &&
+			!needsSetup )
         {
             if( (stream._mapping & osgCompute::MAP_DEVICE) )
                 ptr = stream._devPtr;
@@ -406,6 +407,7 @@ namespace osgCuda
                 }
             }
 
+			stream._mapping = mapping;
             return ptr;
         }
         else if( stream._mapping != osgCompute::UNMAPPED )
