@@ -15,6 +15,17 @@
 # Works now also with emulation mode. Added --device-emulation to CUDA_OPTIONS. (SVT Group)
 
 
+# Allow the user to specify if the device code is supposed to be 32 or 64 bit.
+# copied from current nvidia texture-tools (FindCUDA.cmake)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(CUDA_64_BIT_DEVICE_CODE_DEFAULT ON)
+else()
+  set(CUDA_64_BIT_DEVICE_CODE_DEFAULT OFF)
+endif()
+option(CUDA_64_BIT_DEVICE_CODE "Compile device code in 64 bit mode" ${CUDA_64_BIT_DEVICE_CODE_DEFAULT})
+
+
+# Find cuda compiler
 IF (WIN32)
 	FIND_PROGRAM (CUDA_COMPILER nvcc.exe
 		$ENV{CUDA_BIN_PATH}
@@ -52,8 +63,20 @@ FIND_LIBRARY (CUDA_RUNTIME_LIBRARY
 	${CUDA_COMPILER_DIR}
 	DOC "The CUDA runtime library")
 
+    
+# CUDA_CUT_LIBRARIES
+
+# cutil library is called cutil64 for 64 bit builds on windows.  We don't want
+# to get these confused, so we are setting the name based on the word size of
+# the build.
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(cuda_cutil_name cutil64)
+else(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(cuda_cutil_name cutil32)
+endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+
 FIND_LIBRARY (CUTIL_LIBRARY
-	NAMES cutil32 cutil64
+	NAMES ${cuda_cutil_name}
 	PATHS
 	"$ENV{NVSDKCUDA_ROOT}/common/lib"
 	"$ENV{PROGRAMFILES}/NVIDIA Corporation/NVIDIA CUDA SDK/common/lib"
@@ -88,6 +111,14 @@ OPTION(CUDA_EMULATION "Use CUDA emulation mode. Attention: this enables debuggin
 IF (CUDA_EMULATION)
 	SET (CUDA_OPTIONS ${CUDA_OPTIONS} --device-emulation --define-macro=_DEVICEEMU --debug)
 ENDIF (CUDA_EMULATION)
+
+# copied from current nvidia texture-tools (FindCUDA.cmake)
+if(CUDA_64_BIT_DEVICE_CODE)
+    set(CUDA_OPTIONS ${CUDA_OPTIONS} -m64)
+else()
+    set(CUDA_OPTIONS ${CUDA_OPTIONS} -m32)
+endif()
+  
 
 IF(WIN32)
     SET (CUDA_OPTIONS ${CUDA_OPTIONS} --define-macro=WIN32)
