@@ -104,8 +104,16 @@ SET (CUTIL_LIBRARIES ${CUTIL_LIBRARY})
 MARK_AS_ADVANCED (CUTIL_FOUND)
 
 
-#SET(CUDA_OPTIONS "-ncfe")
-SET(CUDA_OPTIONS --host-compilation=C++)
+# copied from current nvidia texture-tools (FindCUDA.cmake)
+if(CUDA_64_BIT_DEVICE_CODE)
+    set(CUDA_OPTIONS -m64)
+else()
+    set(CUDA_OPTIONS -m32)
+endif()
+
+# You may use this option for proper debugging in emulation mode.
+option(CUDA_HOST_COMPILATION_C "Generated file extension. You may use this option for proper debugging in emulation mode." OFF)
+SET(CUDA_OPTIONS ${CUDA_OPTIONS} --host-compilation=C)
 
 OPTION(CUDA_EMULATION "Use CUDA emulation mode. Attention: this enables debugging of CUDA kernels on the CPU." OFF)
 IF (CUDA_EMULATION)
