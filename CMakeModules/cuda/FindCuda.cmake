@@ -123,13 +123,7 @@ IF (CUDA_EMULATION)
 	SET (CUDA_OPTIONS ${CUDA_OPTIONS} --device-emulation --define-macro=_DEVICEEMU --debug)
 ENDIF (CUDA_EMULATION)
 
-# copied from current nvidia texture-tools (FindCUDA.cmake)
-if(CUDA_64_BIT_DEVICE_CODE)
-    set(CUDA_OPTIONS ${CUDA_OPTIONS} -m64)
-else()
-    set(CUDA_OPTIONS ${CUDA_OPTIONS} -m32)
-endif()
-  
+
 
 IF(WIN32)
     SET (CUDA_OPTIONS ${CUDA_OPTIONS} --define-macro=WIN32)
