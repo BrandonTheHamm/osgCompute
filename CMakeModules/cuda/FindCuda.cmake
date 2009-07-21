@@ -124,7 +124,7 @@ IF (CUDA_EMULATION)
 ENDIF (CUDA_EMULATION)
 
 
-OPTION(USE_CUDA_GEN_C_FILE_EXTENSION "Generated files will have the extension .gen.c instead of .gen.cpp" OFF)
+OPTION(CUDA_USE_GEN_C_FILE_EXTENSION "Generated files will have the extension .gen.c instead of .gen.cpp" OFF)
 
 
 
@@ -188,7 +188,7 @@ MACRO (WRAP_CUDA outfiles)
 
     #check for c-file extension
     # this may be important when using emulation mode with CUDA_HOST_COMPILATION_C
-    if(USE_CUDA_GEN_C_FILE_EXTENSION)
+    if(CUDA_USE_GEN_C_FILE_EXTENSION)
         set(CUDA_GEN_FILE_EXTENSION c)
     else()
         set(CUDA_GEN_FILE_EXTENSION cpp)
