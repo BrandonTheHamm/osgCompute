@@ -113,7 +113,10 @@ endif()
 
 # You may use this option for proper debugging in emulation mode.
 option(CUDA_HOST_COMPILATION_C "Generated file extension. You may use this option for proper debugging in emulation mode." OFF)
-SET(CUDA_OPTIONS ${CUDA_OPTIONS} --host-compilation=C)
+IF (CUDA_EMULATION)
+	SET(CUDA_OPTIONS ${CUDA_OPTIONS} --host-compilation=C)
+ENDIF (CUDA_EMULATION)
+
 
 OPTION(CUDA_EMULATION "Use CUDA emulation mode. Attention: this enables debugging of CUDA kernels on the CPU." OFF)
 IF (CUDA_EMULATION)
