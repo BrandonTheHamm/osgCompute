@@ -113,15 +113,18 @@ endif()
 
 # You may use this option for proper debugging in emulation mode.
 option(CUDA_HOST_COMPILATION_C "Generated file extension. You may use this option for proper debugging in emulation mode." OFF)
-IF (CUDA_EMULATION)
+IF (CUDA_HOST_COMPILATION_C)
 	SET(CUDA_OPTIONS ${CUDA_OPTIONS} --host-compilation=C)
-ENDIF (CUDA_EMULATION)
+ENDIF (CUDA_HOST_COMPILATION_C)
 
 
 OPTION(CUDA_EMULATION "Use CUDA emulation mode. Attention: this enables debugging of CUDA kernels on the CPU." OFF)
 IF (CUDA_EMULATION)
 	SET (CUDA_OPTIONS ${CUDA_OPTIONS} --device-emulation --define-macro=_DEVICEEMU --debug)
 ENDIF (CUDA_EMULATION)
+
+
+OPTION(USE_CUDA_GEN_C_FILE_EXTENSION "Generated files will have the extension .gen.c instead of .gen.cpp" OFF)
 
 
 
@@ -183,10 +186,19 @@ MACRO (WRAP_CUDA outfiles)
 	GET_CUDA_INC_DIRS(cuda_includes)
 	#MESSAGE(${cuda_includes})
 
+    #check for c-file extension
+    # this may be important when using emulation mode with CUDA_HOST_COMPILATION_C
+    if(USE_CUDA_GEN_C_FILE_EXTENSION)
+        set(CUDA_GEN_FILE_EXTENSION c)
+    else()
+        set(CUDA_GEN_FILE_EXTENSION cpp)
+    endif()
+    
 	FOREACH (CUFILE ${ARGN})
 		GET_FILENAME_COMPONENT (CUFILE ${CUFILE} ABSOLUTE)
 		GET_FILENAME_COMPONENT (CPPFILE ${CUFILE} NAME_WE)
-		SET (CPPFILE ${CMAKE_CURRENT_BINARY_DIR}/${CPPFILE}.gen.cpp)
+		#SET (CPPFILE ${CMAKE_CURRENT_BINARY_DIR}/${CPPFILE}.gen.cpp)
+        SET (CPPFILE ${CMAKE_CURRENT_BINARY_DIR}/${CPPFILE}.gen.${CUDA_GEN_FILE_EXTENSION})
 
 		GET_CUFILE_DEPENDENCIES(CUDEPS ${CUFILE})
 		#MESSAGE("${CUDEPS}")
