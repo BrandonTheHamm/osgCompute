@@ -65,6 +65,15 @@ namespace osgCompute
             return false;
         }
 
+		if( _elementSize == 0 )
+		{
+			osg::notify(osg::FATAL)  
+				<< "Buffer::init() for buffer \""<<asObject()->getName()<<"\": no element size specified."                  
+				<< std::endl;
+
+			return false;
+		}
+
         ///////////////////////
         // COMPUTE BYTE SIZE //
         ///////////////////////

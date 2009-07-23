@@ -65,6 +65,13 @@ SET(TARGET_H
 # collect the sources
 SET(TARGET_SRC
 	Context.cpp
+	Array.cpp
+	Buffer.cpp
+	Geometry.cpp
+	Texture1D.cpp
+	Texture2D.cpp
+	Texture3D.cpp
+	TextureRectangle.cpp
 	Texture.cpp
 	Computation.cpp
 )

@@ -174,7 +174,7 @@ namespace osgCuda
         cudaError res = cudaGetDeviceCount( &deviceCount );
         if( cudaSuccess != res )
         {
-            osg::notify(osg::FATAL)  << "osgCuda::Context::init(): something goes wrong on cudaGetDeviceCount(). Returned code is "<<res<<"."
+            osg::notify(osg::FATAL)  << "osgCuda::Context::init(): error during cudaGetDeviceCount(). Returned code is "<<res<<"."
                 << std::endl;
             clear();
             return false;
@@ -356,7 +356,7 @@ namespace osgCuda
         {
             osg::notify(osg::FATAL)
                 << "osgCuda::Context::mallocDeviceMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMalloc()."
-                << cudaGetErrorString( res ) << "."
+                << " " << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -403,7 +403,7 @@ namespace osgCuda
         {
             osg::notify(osg::FATAL)
                 << "osgCuda::Context::mallocDeviceHostMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMallocHost()."
-                << cudaGetErrorString( res ) << "."
+                << " " << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -450,7 +450,7 @@ namespace osgCuda
         {
             osg::notify(osg::FATAL)
                 << "osgCuda::Context::mallocDevice2DMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMallocPitch()."
-                << cudaGetErrorString( res ) << "."
+                << " " << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -503,7 +503,7 @@ namespace osgCuda
         {
             osg::notify(osg::FATAL)
                 << "osgCuda::Context::mallocDevice3DMemory() for Context \""<< getId()<<"\": something goes wrong within cudaMalloc3D()."
-                << cudaGetErrorString( res ) << "."
+                << " " << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -531,8 +531,8 @@ namespace osgCuda
         if( cudaSuccess != res || NULL ==  allocMem._array )
         {
             osg::notify(osg::FATAL)
-                << "osgCuda::Context::mallocDeviceArray() for Context \""<< getId()<<"\": Something goes wrong within cudaMallocArray()."
-                << cudaGetErrorString( res ) << "."
+                << "osgCuda::Context::mallocDeviceArray() for Context \""<< getId()<<"\": error during cudaMallocArray()."
+                << " " << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -563,8 +563,8 @@ namespace osgCuda
         if( cudaSuccess != res || NULL ==  allocMem._array )
         {
             osg::notify(osg::FATAL)
-                << "osgCuda::Context::mallocDevice2DArray() for Context \""<< getId()<<"\": Something goes wrong within cudaMallocArray()."
-                << cudaGetErrorString( res ) << "."
+                << "osgCuda::Context::mallocDevice2DArray() for Context \""<< getId()<<"\": error during cudaMallocArray()."
+                << " " << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -601,8 +601,8 @@ namespace osgCuda
         if( cudaSuccess != res || NULL ==  allocMem._array )
         {
             osg::notify(osg::FATAL)
-                << "osgCuda::Context::mallocDevice3DArray() for Context \""<< getId()<<"\": Something goes wrong within cudaMalloc3DArray()."
-                << cudaGetErrorString( res ) << "."
+                << "osgCuda::Context::mallocDevice3DArray() for Context \""<< getId()<<"\": error during cudaMalloc3DArray()."
+                << " " << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return NULL;
@@ -949,7 +949,7 @@ namespace osgCuda
             osg::notify(osg::FATAL)
                 << "osgCuda::Context::unregisterBufferObject for Context \""
                 << getId()<<"\": something goes wrong within cudaGLUnregisterBufferObject()."
-                << cudaGetErrorString( res ) << "."
+                << " " << cudaGetErrorString( res ) << "."
                 << std::endl;
 
             return;
@@ -1109,7 +1109,7 @@ namespace osgCuda
             {
                 osg::notify(osg::WARN)
                     << "osgCuda::Context::clearMemory(): freeing \""<<allocMem._bytes<<"\" bytes of memory failed."
-                    << cudaGetErrorString( res ) << "\"."
+                    << " " << cudaGetErrorString( res ) << "\"."
                     << std::endl;
             }
 
@@ -1129,7 +1129,7 @@ namespace osgCuda
                 {
                     osg::notify(osg::WARN)
                         << "osgCuda::Context::clearMemory(): unregistering \""<<regMem._bytes<<"\" bytes of memory failed."
-                        << cudaGetErrorString( res ) << "\"."
+                        << " " << cudaGetErrorString( res ) << "\"."
                         << std::endl;
                 }
 

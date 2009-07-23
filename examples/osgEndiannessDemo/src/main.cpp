@@ -83,7 +83,8 @@ int main(int argc, char *argv[])
     context->apply();
 
     // create buffer
-    osg::ref_ptr<osgCuda::UIntBuffer> buffer = new osgCuda::UIntBuffer;
+    osg::ref_ptr<osgCuda::Buffer> buffer = new osgCuda::Buffer;
+	buffer->setElementSize( sizeof(unsigned int) );
     buffer->setDimension(0, numEndians);
     buffer->init();
 

@@ -88,11 +88,12 @@ namespace osgCompute
 
         virtual bool init();
 
-        virtual bool setMemory( const Context& context, int value, unsigned int mapping ) const = 0;
+        virtual bool setMemory( const Context& context, int value, unsigned int mapping, unsigned int offset, unsigned int count ) const = 0;
         virtual void* map( const Context& context, unsigned int mapping ) const = 0;
         virtual void unmap( const Context& context ) const = 0;
 
-        virtual unsigned int getElementSize() const = 0;
+		inline void setElementSize( unsigned int elementSize );
+		inline unsigned int getElementSize() const;
         inline unsigned int getByteSize() const;
 
         inline void setDimension( unsigned int dimIdx, unsigned int dimSize );
@@ -124,6 +125,7 @@ namespace osgCompute
         unsigned int                                    _allocHint;
         std::vector<unsigned int>                       _dimensions;
         unsigned int                                    _numElements;
+		unsigned int									_elementSize;
         osg::ref_ptr<SubloadCallback>                   _subloadCallback;
 
         mutable OpenThreads::Mutex                      _mutex;
@@ -139,9 +141,24 @@ namespace osgCompute
 	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//------------------------------------------------------------------------------
+	inline void Buffer::setElementSize( unsigned int elementSize ) 
+	{ 
+		if( !isClear() )
+			return;
+
+		_elementSize = elementSize; 
+	}
+
+	//------------------------------------------------------------------------------
+	inline unsigned int Buffer::getElementSize() const 
+	{ 
+		return _elementSize; 
+	}
+
+	//------------------------------------------------------------------------------
 	inline unsigned int Buffer::getByteSize() const 
 	{ 
-		return getElementSize() * _numElements; 
+		return getElementSize() * getNumElements(); 
 	}
 
 	//------------------------------------------------------------------------------
@@ -220,6 +237,7 @@ namespace osgCompute
         _streams.clear();
         _dimensions.clear();
         _numElements = 0;
+		_elementSize = 0;
         _allocHint = NO_ALLOC_HINT;
         _subloadCallback = NULL;
     }

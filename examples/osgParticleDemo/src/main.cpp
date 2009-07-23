@@ -126,7 +126,8 @@ osgCuda::Computation* getComputation( osg::Vec3& bbmin, osg::Vec3& bbmax )
     for( unsigned int s=0; s<seedCount; ++s )
         seedValues->push_back( float(rand()) / RAND_MAX );
 
-    osgCuda::FloatBuffer* seedBuffer = new osgCuda::FloatBuffer;
+    osgCuda::Buffer* seedBuffer = new osgCuda::Buffer;
+	seedBuffer->setElementSize( sizeof(float) );
     seedBuffer->setName( "ptclSeedBuffer" );
     seedBuffer->setDimension(0,seedCount);
     seedBuffer->setArray( seedValues );
@@ -160,7 +161,7 @@ osg::Geode* getGeode( unsigned int numParticles )
     osg::Geode* geode = new osg::Geode;
 
     // GEOMETRY
-    osg::ref_ptr<osgCuda::Vec4fGeometry> ptclGeom = new osgCuda::Vec4fGeometry;
+    osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
 
     // initialize the vertices
     osg::Vec4Array* coords = new osg::Vec4Array(numParticles);

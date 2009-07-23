@@ -18,7 +18,7 @@ INCLUDE(FindosgViewer)
 INCLUDE(FindosgGA)
 INCLUDE(FindosgDB)
 # check for cuda
-INCLUDE(FindCuda)
+INCLUDE(FindCuda) 
 
 
 

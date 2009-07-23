@@ -43,15 +43,17 @@ osgCuda::Computation* getComputation( osg::Image& srcImage )
     srcDesc.z = 8;
     srcDesc.w = 8;
 
-    osgCuda::Vec4ubArray* srcArray = new osgCuda::Vec4ubArray;
+    osgCuda::Array* srcArray = new osgCuda::Array;
     srcArray->setName("srcArray");
+	srcArray->setElementSize( sizeof(osg::Vec4ub) );
     srcArray->setChannelFormatDesc( srcDesc );
     srcArray->setDimension( 0, srcImage.s() );
     srcArray->setDimension( 1, srcImage.t() );
     srcArray->setImage( &srcImage );
     srcArray->addHandle( "SRC_ARRAY" );
 
-    osgCuda::Vec4ubBuffer* trgTmpBuffer = new osgCuda::Vec4ubBuffer;
+	osgCuda::Buffer* trgTmpBuffer = new osgCuda::Buffer;
+	trgTmpBuffer->setElementSize( sizeof(osg::Vec4ub) );
     trgTmpBuffer->setName( "trgTmpBuffer" );
     trgTmpBuffer->setDimension( 0, srcImage.s() );
     trgTmpBuffer->setDimension( 1, srcImage.t() );
@@ -127,7 +129,10 @@ int main(int argc, char *argv[])
         return NULL;
     }
 
-    osg::ref_ptr< osgCuda::Vec4ubTexture2D > trgTexture = new osgCuda::Vec4ubTexture2D;
+    osg::ref_ptr< osgCuda::Texture2D > trgTexture = new osgCuda::Texture2D;
+	trgTexture->setInternalFormat( GL_RGBA );
+	trgTexture->setSourceType( GL_UNSIGNED_BYTE );
+	trgTexture->setElementSize( sizeof(osg::Vec4ub) );
     trgTexture->setName( "trgBuffer" );
     trgTexture->setDimension(0,srcImage->s());
     trgTexture->setDimension(1,srcImage->t());
