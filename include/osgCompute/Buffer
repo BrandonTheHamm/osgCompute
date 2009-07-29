@@ -88,13 +88,13 @@ namespace osgCompute
 
         virtual bool init();
 
-        virtual bool setMemory( const Context& context, int value, unsigned int mapping, unsigned int offset, unsigned int count ) const = 0;
+        virtual bool setMemory( const Context& context, int value, unsigned int mapping, unsigned int offset = 0, unsigned int count = UINT_MAX ) const = 0;
         virtual void* map( const Context& context, unsigned int mapping ) const = 0;
         virtual void unmap( const Context& context ) const = 0;
 
 		inline void setElementSize( unsigned int elementSize );
 		inline unsigned int getElementSize() const;
-        inline unsigned int getByteSize() const;
+        virtual unsigned int getByteSize() const;
 
         inline void setDimension( unsigned int dimIdx, unsigned int dimSize );
         inline unsigned int getDimension( unsigned int dimIdx ) const;
@@ -153,12 +153,6 @@ namespace osgCompute
 	inline unsigned int Buffer::getElementSize() const 
 	{ 
 		return _elementSize; 
-	}
-
-	//------------------------------------------------------------------------------
-	inline unsigned int Buffer::getByteSize() const 
-	{ 
-		return getElementSize() * getNumElements(); 
 	}
 
 	//------------------------------------------------------------------------------
