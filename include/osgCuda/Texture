@@ -105,6 +105,18 @@ namespace osgCuda
         Texture( const Texture& , const osg::CopyOp& ) {}
         Texture& operator=(const Texture&) { return (*this); }
     };
+
+	//------------------------------------------------------------------------------
+	inline bool Texture::getIsRenderTarget() const
+	{
+		return _isRenderTarget;
+	}
+
+	//------------------------------------------------------------------------------
+	inline void Texture::setIsRenderTarget( bool isRenderTarget )
+	{
+		_isRenderTarget = isRenderTarget;
+	}
 }
 
 

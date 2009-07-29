@@ -14,8 +14,8 @@ namespace osgCuda
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//------------------------------------------------------------------------------
 	Texture3D::Texture3D()
-		: Texture(),
-		osg::Texture3D()
+		: osgCuda::Texture(),
+          osg::Texture3D()
 	{
 		clearLocal();
 	}
@@ -52,7 +52,7 @@ namespace osgCuda
 			}
 		}
 
-		osg::Texture3D::releaseGLObjects( state ); 
+		osg::Texture3D::releaseGLObjects( state );
 	}
 
 	//------------------------------------------------------------------------------
@@ -77,7 +77,7 @@ namespace osgCuda
 			setTextureHeight( osgCompute::Buffer::getDimension(1) );
 			setTextureDepth( osgCompute::Buffer::getDimension(2) );
 		}
-		else 
+		else
 		{
 			if( getImage(0) && getTextureWidth() == 0)
 				setTextureWidth( getImage(0)->s() );
@@ -120,7 +120,7 @@ namespace osgCuda
 	void Texture3D::syncModifiedCounter( const osgCompute::Context& context ) const
 	{
 		if( !getImagePtr() )
-			return; 
+			return;
 
 		osg::Texture3D::getModifiedCount(context.getState()->getContextID()) = getImagePtr()->getModifiedCount();
 	}
@@ -173,11 +173,11 @@ namespace osgCuda
 		// UNPACK the PBO data
 		tex3DExt->glTexSubImage3D(
 			GL_TEXTURE_3D, 0, 0, 0, 0,
-			osgCompute::Buffer::getDimension(0), 
-			osgCompute::Buffer::getDimension(1), 
-			osgCompute::Buffer::getDimension(2), 
-			tex->_internalFormat, 
-			texType, 
+			osgCompute::Buffer::getDimension(0),
+			osgCompute::Buffer::getDimension(1),
+			osgCompute::Buffer::getDimension(2),
+			tex->_internalFormat,
+			texType,
 			NULL );
 
 		GLenum errorStatus = glGetError();
@@ -337,7 +337,7 @@ namespace osgCuda
 		}
 
 		// second chance
-		tex = osg::Texture::getTextureObject( stream._context->getId() ); 
+		tex = osg::Texture::getTextureObject( stream._context->getId() );
 		if( !tex )
 		{
 

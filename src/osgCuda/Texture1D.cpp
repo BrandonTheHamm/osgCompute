@@ -13,8 +13,8 @@ namespace osgCuda
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//------------------------------------------------------------------------------
 	Texture1D::Texture1D()
-		: Texture(),
-		osg::Texture1D()
+		: osgCuda::Texture(),
+          osg::Texture1D()
 	{
 		clearLocal();
 	}
@@ -52,7 +52,7 @@ namespace osgCuda
 			}
 		}
 
-		osg::Texture1D::releaseGLObjects( state ); 
+		osg::Texture1D::releaseGLObjects( state );
 	}
 
 	//------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ namespace osgCuda
 		{
 			setTextureWidth( osgCompute::Buffer::getDimension(0) );
 		}
-		else 
+		else
 		{
 			if( getImage(0) && getTextureWidth() == 0)
 				setTextureWidth( getImage(0)->s() );
@@ -153,9 +153,9 @@ namespace osgCuda
 		// UNPACK the PBO data
 		glTexSubImage1D(
 			GL_TEXTURE_1D, 0, 0,
-			osgCompute::Buffer::getDimension(0), 
-			tex->_internalFormat, 
-			texType, 
+			osgCompute::Buffer::getDimension(0),
+			tex->_internalFormat,
+			texType,
 			NULL );
 
 		GLenum errorStatus = glGetError();
@@ -178,7 +178,7 @@ namespace osgCuda
 	void Texture1D::syncModifiedCounter( const osgCompute::Context& context ) const
 	{
 		if( !getImagePtr() )
-			return; 
+			return;
 
 		osg::Texture1D::getModifiedCount(context.getState()->getContextID()) = getImagePtr()->getModifiedCount();
 	}
@@ -323,7 +323,7 @@ namespace osgCuda
 		}
 
 		// second chance
-		tex = osg::Texture::getTextureObject( stream._context->getId() ); 
+		tex = osg::Texture::getTextureObject( stream._context->getId() );
 		if( !tex )
 		{
 
@@ -396,7 +396,7 @@ namespace osgCuda
 			glTexImage1D(
 				GL_TEXTURE_1D, 0,
 				tex->_internalFormat,
-				tex->_width, 
+				tex->_width,
 				tex->_border,
 				tex->_internalFormat, texType, NULL );
 

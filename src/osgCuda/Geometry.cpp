@@ -1,4 +1,4 @@
-
+#include <memory.h>
 #include <osg/GL>
 #include <osg/RenderInfo>
 #include <cuda_runtime.h>
@@ -110,7 +110,7 @@ namespace osgCuda
 			}
 		}
 
-		osg::Geometry::releaseGLObjects( state ); 
+		osg::Geometry::releaseGLObjects( state );
 	}
 
 	//------------------------------------------------------------------------------
@@ -294,7 +294,7 @@ namespace osgCuda
 
 			if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
 			{
-				const osgCompute::BufferSubloadCallback* callback = 
+				const osgCompute::BufferSubloadCallback* callback =
 					dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer::getSubloadResourceCallback());
 				if( callback )
 				{
@@ -423,7 +423,7 @@ namespace osgCuda
 		//////////////////
 		if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
 		{
-			const osgCompute::BufferSubloadCallback* callback = 
+			const osgCompute::BufferSubloadCallback* callback =
 				dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer::getSubloadResourceCallback());
 			if( callback )
 			{

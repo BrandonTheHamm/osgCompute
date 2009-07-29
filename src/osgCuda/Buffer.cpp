@@ -1,3 +1,4 @@
+#include <memory.h>
 #include <osgCuda/Context>
 #include <cuda_runtime.h>
 #include <driver_types.h>
@@ -253,7 +254,7 @@ namespace osgCuda
 
 			if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
 			{
-				const osgCompute::BufferSubloadCallback* callback = 
+				const osgCompute::BufferSubloadCallback* callback =
 					dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer::getSubloadResourceCallback());
 				if( callback )
 				{
@@ -349,7 +350,7 @@ namespace osgCuda
 		//////////////////
 		if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
 		{
-			const osgCompute::BufferSubloadCallback* callback = 
+			const osgCompute::BufferSubloadCallback* callback =
 				dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer::getSubloadResourceCallback());
 			if( callback )
 			{
@@ -398,7 +399,7 @@ namespace osgCuda
 				osg::notify(osg::FATAL)
 					<< "osgCuda::Buffer::setupStream() for buffer \""<< osg::Object::getName()
 					<< "\": error during cudaMemcpy() within context \""
-					<< stream._context->getId() << "\"." 
+					<< stream._context->getId() << "\"."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 
@@ -440,7 +441,7 @@ namespace osgCuda
 				osg::notify(osg::FATAL)
 					<< "osgCuda::Buffer::setupStream() for buffer \""<< osg::Object::getName()
 					<< "\": error during cudaMemcpy() within context \""
-					<< stream._context->getId() << "\"." 
+					<< stream._context->getId() << "\"."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 

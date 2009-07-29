@@ -1,3 +1,4 @@
+#include <memory.h>
 #include <osg/GL>
 #include <osg/Texture>
 #include <cuda_runtime.h>
@@ -382,7 +383,7 @@ namespace osgCuda
 		// PROOF MAPPING //
 		///////////////////
 		if( (stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE ) ||
-			(stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST ) ) 
+			(stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST ) )
 		{
 			if( (stream._mapping & osgCompute::MAP_DEVICE) )
 				ptr = stream._devPtr;
@@ -447,7 +448,7 @@ namespace osgCuda
 				osg::notify(osg::WARN)
 					<< "osgCuda::Texture::mapStream() for texture \""<< asObject()->getName()
 					<< "\": error during cudaGLMapBufferObject() for context \""
-					<< stream._context->getId()<<"\"." 
+					<< stream._context->getId()<<"\"."
 					<< " " << cudaGetErrorString( res ) << "."
 					<< std::endl;
 
@@ -473,7 +474,7 @@ namespace osgCuda
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( getImagePtr() && getImagePtr()->getModifiedCount() != stream._modifyCount ) 
+			if( getImagePtr() && getImagePtr()->getModifiedCount() != stream._modifyCount )
 				if( !setupStream( mapping, stream ) )
 					return NULL;
 
@@ -491,7 +492,7 @@ namespace osgCuda
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( getImagePtr() && getImagePtr()->getModifiedCount() != stream._modifyCount ) 
+			if( getImagePtr() && getImagePtr()->getModifiedCount() != stream._modifyCount )
 				if( !setupStream( mapping, stream ) )
 					return NULL;
 
@@ -601,7 +602,7 @@ namespace osgCuda
 				osg::notify(osg::FATAL)
 					<< "osgCuda::Buffer::setupStream() for buffer \""<< asObject()->getName()
 					<< "\": error during cudaMemcpy() within context \""
-					<< stream._context->getId() << "\"." 
+					<< stream._context->getId() << "\"."
 					<< " " << cudaGetErrorString( res ) << "."
 					<< std::endl;
 
@@ -634,7 +635,7 @@ namespace osgCuda
 				osg::notify(osg::FATAL)
 					<< "osgCuda::Buffer::setupStream() for buffer \""<< asObject()->getName()
 					<< "\": error during cudaMemcpy() within context \""
-					<< stream._context->getId() << "\"." 
+					<< stream._context->getId() << "\"."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 
@@ -754,18 +755,6 @@ namespace osgCuda
 		}
 
 		return false;
-	}
-
-	//------------------------------------------------------------------------------
-	bool Texture::getIsRenderTarget() const
-	{
-		return _isRenderTarget;
-	}
-
-	//------------------------------------------------------------------------------
-	void Texture::setIsRenderTarget( bool isRenderTarget )
-	{
-		_isRenderTarget = isRenderTarget;
 	}
 }
 
