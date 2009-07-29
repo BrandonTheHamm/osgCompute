@@ -84,6 +84,12 @@ namespace osgCompute
         return Resource::init();
     }
 
+	//------------------------------------------------------------------------------
+	unsigned int Buffer::getByteSize() const 
+	{ 
+		return getElementSize() * getNumElements(); 
+	}
+
     //------------------------------------------------------------------------------
     unsigned int Buffer::getMapping( const osgCompute::Context& context ) const
     {
