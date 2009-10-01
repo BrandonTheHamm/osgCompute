@@ -212,12 +212,11 @@ namespace osgCompute
 		if( _streams[context.getId()] != NULL )
 		{
 			std::vector<BufferStream*>::iterator itr = _streams.begin();
+			for( unsigned int sidx = 0; sidx != context.getId(); ++sidx )
+				++itr;
 
-			for( unsigned int sidx = 0; sidx != context.getId(); ++sidx, ++itr )
-			{
-				delete (*itr);
-				_streams.erase( itr );
-			}
+			delete (*itr);
+			_streams.erase( itr );
 		}
 	}
 
