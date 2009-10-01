@@ -209,13 +209,14 @@ namespace osgCompute
 	{
 		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 
-		if( _streams[context.getId()] != NULL )
+		BufferStream* curStream = _streams[context.getId()];
+		if( curStream != NULL )
 		{
 			std::vector<BufferStream*>::iterator itr = _streams.begin();
-			for( unsigned int sidx = 0; sidx != context.getId(); ++sidx )
-				++itr;
+			while( (*itr) != curStream )
+				itr++;
 
-			delete (*itr);
+			delete curStream;
 			_streams.erase( itr );
 		}
 	}
