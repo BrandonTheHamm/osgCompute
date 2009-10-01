@@ -32,13 +32,16 @@ namespace osgUtil
     class CullVisitor;
 }
 
-#define META_Computation( libraryname, classname, binlibrary, binclass, ctxlibrary, ctxclass )  \
-    META_Object( libraryname, classname )                                                       \
-    virtual std::string                 binLibraryName() const { return #binlibrary; }          \
-    virtual std::string                 binClassName() const { return #binclass; }              \
-    virtual std::string                 contextLibraryName() const { return #ctxlibrary; }      \
-    virtual std::string                 contextClassName() const { return #ctxclass; }          \
-    virtual osgCompute::Context*        newContext() const { return new ctxlibrary::ctxclass; }
+#define META_Computation( libraryname, classname, binlibrary, binclass, ctxlibrary, ctxclass, visitorlibrary, visitorclass )  \
+    META_Object( libraryname, classname )                                                       		\
+    virtual std::string                  binLibraryName() const { return #binlibrary; }          		\
+	virtual std::string                  binClassName() const { return #binclass; }              		\
+    virtual std::string                  contextLibraryName() const { return #ctxlibrary; }      		\
+    virtual std::string                  contextClassName() const { return #ctxclass; }          		\
+    virtual osgCompute::Context*         newContext() const { return new ctxlibrary::ctxclass; } 		\
+	virtual std::string                  visitorLibraryName() const { return #visitorlibrary; }      	\
+	virtual std::string                  visitorClassName() const { return #visitorclass; }          	\
+	virtual osgCompute::ResourceVisitor* newVisitor() const { return new visitorlibrary::visitorclass; }
 
 namespace osgCompute
 {
@@ -91,7 +94,14 @@ namespace osgCompute
         /** The derived class must provide a valid library name of the required computation bin. */
         virtual std::string binLibraryName() const = 0;
         /** The derived class must provide a valid class name of the required computation bin. */
-        virtual std::string binClassName() const = 0;
+		virtual std::string binClassName() const = 0;
+
+		/** The derived class must provide a valid library name of the required computation bin. */
+		virtual std::string visitorLibraryName() const = 0;
+		/** The derived class must provide a valid class name of the required computation bin. */
+		virtual std::string visitorClassName() const = 0;
+		/** The derived class must provide a method which allows to create new bins*/
+		virtual osgCompute::ResourceVisitor* newVisitor() const = 0;
 
         /** Load a module dynamically (not implemented yet) */
         virtual void loadModule( const std::string& modName );
@@ -136,36 +146,41 @@ namespace osgCompute
 
         virtual void resourcesChanged();
 
-        inline Computation* getParentComputation() const;
+        virtual Computation* getParentComputation() const;
 
-        inline void setLaunchCallback( LaunchCallback* lc );
-        inline LaunchCallback* getLaunchCallback();
-        inline const LaunchCallback* getLaunchCallback() const;
+        virtual void setLaunchCallback( LaunchCallback* lc );
+        virtual LaunchCallback* getLaunchCallback();
+        virtual const LaunchCallback* getLaunchCallback() const;
 
         /** 
         * The compute order is used to decide when to execute the computation 
         * during the rendering ( see osgCompute::osgComputationBin for further information )
         */
-        inline void setComputeOrder( ComputeOrder co );
+        virtual void setComputeOrder( ComputeOrder co );
 
         /** Returns the compute order */
-        inline ComputeOrder getComputeOrder();
+        virtual ComputeOrder getComputeOrder();
 
 
-        inline void setAutoCollectResources( bool autoCollectResources );
-        inline bool getAutoCollectResources();
+        virtual void setAutoCollectResources( bool autoCollectResources );
+        virtual bool getAutoCollectResources();
 
         /** Activates the computation (a computation is enabled by default) */
-        inline void enable();
+        virtual void enable();
 
         /** If the computation is disabled its modules won't be executed during rendering */
-        inline void disable();
+        virtual void disable();
 
         /** check whether the module is enabled */
-        inline bool isEnabled() const;
+        virtual bool isEnabled() const;
 
         /** Restore object to default state. Calls clearLocal(). */
         virtual void clear();
+
+		virtual bool setContext( Context& context );
+		virtual Context* getOrCreateContext( unsigned int ctxId );
+		virtual Context* getContext( unsigned int ctxId );
+		virtual void removeContext( unsigned int ctxId );
 
     protected:
         friend class ContextVisitor;
@@ -175,16 +190,11 @@ namespace osgCompute
 
         void clearLocal();
 
-        virtual bool setContext( Context& context );
-        virtual void removeContext( unsigned int ctxId );
-        virtual Context* getOrCreateContext( unsigned int ctxId );
-        virtual Context* getContext( unsigned int ctxId );
-
         virtual void setupBin( osgUtil::CullVisitor& cv );
         virtual void distributeContext( Context& context );
         virtual void update( osg::NodeVisitor& uv );
-        virtual void collectResources();
-        virtual void handleevent( osg::NodeVisitor& ev );
+		virtual void collectResources();
+		virtual void handleevent( osg::NodeVisitor& ev );
 
         virtual void setParentComputation( Computation* parentComputation );
 
@@ -211,79 +221,6 @@ namespace osgCompute
         /** Copy operator. This operator should not be called.*/
         Computation &operator=(const Computation &) { return *this; }
     };
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    inline void Computation::setLaunchCallback( LaunchCallback* lc ) 
-    { 
-        if( lc == _launchCallback )
-            return;
-
-        _launchCallback = lc; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline LaunchCallback* Computation::getLaunchCallback() 
-    { 
-        return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const LaunchCallback* Computation::getLaunchCallback() const 
-    { 
-        return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Computation::setComputeOrder( Computation::ComputeOrder co )
-    {
-        _computeOrder = co;
-    }
-
-    //------------------------------------------------------------------------------
-    inline Computation::ComputeOrder Computation::getComputeOrder()
-    {
-        return _computeOrder;
-    }
-
-    //------------------------------------------------------------------------------
-    inline Computation* Computation::getParentComputation() const
-    {
-        return _parentComputation;
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Computation::setAutoCollectResources( bool autoCollectResources )
-    {
-        _autoCollectResources = autoCollectResources;
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool Computation::getAutoCollectResources()
-    {
-        return _autoCollectResources;
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Computation::enable() 
-    { 
-        _enabled = true; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Computation::disable() 
-    { 
-        _enabled = false; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool Computation::isEnabled() const
-    {
-        return _enabled;
-    }
-
 }
 
 #endif //OSGCOMPUTE_COMPUTATION

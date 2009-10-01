@@ -4,7 +4,7 @@
 #include <osg/StateAttribute>
 #include <osgCompute/Visitor>
 #include <osgCompute/Computation>
-#include <osgCompute/Resource>
+#include <osgCompute/Interoperability>
 
 namespace osgCompute
 {   
@@ -89,16 +89,16 @@ namespace osgCompute
         {
             osg::StateSet::AttributeList& attr = ss->getAttributeList();
             for( osg::StateSet::AttributeList::iterator itr = attr.begin(); itr != attr.end(); ++itr )
-                if( Resource* res = dynamic_cast<Resource*>( (*itr).second.first.get() ) )
-                    addResource( *res );
+                if( InteropObject* res = dynamic_cast<InteropObject*>( (*itr).second.first.get() ) )
+                    addResource( *res->getOrCreateBuffer() );
 
             osg::StateSet::TextureAttributeList& texAttrList = ss->getTextureAttributeList();
             for( osg::StateSet::TextureAttributeList::iterator itr = texAttrList.begin(); itr != texAttrList.end(); ++itr )
             {
                 osg::StateSet::AttributeList& texAttr = (*itr);
                 for( osg::StateSet::AttributeList::iterator texitr = texAttr.begin(); texitr != texAttr.end(); ++texitr )
-                    if( Resource* res = dynamic_cast<Resource*>( (*texitr).second.first.get() ) )
-                        addResource( *res );
+                    if( InteropObject* res = dynamic_cast<InteropObject*>( (*texitr).second.first.get() ) )
+                        addResource( *res->getOrCreateBuffer() );
             }
         }
             
@@ -114,8 +114,8 @@ namespace osgCompute
         // collect drawables
         for( unsigned int d=0; d<geode.getNumDrawables(); ++d )
         {
-            if( Resource* res = dynamic_cast<Resource*>( geode.getDrawable(d) ) )
-                addResource( *res );
+            if( InteropObject* res = dynamic_cast<InteropObject*>( geode.getDrawable(d) ) )
+                addResource( *res->getOrCreateBuffer() );
         }
 
         osg::NodeVisitor::apply( geode );
@@ -153,6 +153,66 @@ namespace osgCompute
         // do not traverse the subgraph as it is
         // done by the computation itself
     }
+
+	//------------------------------------------------------------------------------
+	bool ResourceVisitor::isClear() const
+	{
+		return _clear;
+	}
+
+	//------------------------------------------------------------------------------
+	void ResourceVisitor::setComputation( Computation* computation )
+	{
+		_computation = computation;
+	}
+
+	//------------------------------------------------------------------------------
+	Computation* ResourceVisitor::getComputation()
+	{
+		return _computation;
+	}
+
+	//------------------------------------------------------------------------------
+	const Computation* ResourceVisitor::getComputation() const
+	{
+		return _computation;
+	}
+
+	//------------------------------------------------------------------------------
+	void ResourceVisitor::addResource( Resource& resource )
+	{
+		_ptrResources->insert( &resource );
+	}
+
+	//------------------------------------------------------------------------------
+	void ResourceVisitor::removeResource( Resource& resource )
+	{
+		ResourceSetItr itr = _ptrResources->find( &resource );
+		if( itr != _ptrResources->end() )
+			_ptrResources->erase( itr );
+	}
+
+	//------------------------------------------------------------------------------
+	bool ResourceVisitor::hasResource( Resource& resource )
+	{
+		ResourceSetItr itr = _ptrResources->find( &resource );
+		if( itr != _ptrResources->end() )
+			return true;
+
+		return false;
+	}
+
+	//------------------------------------------------------------------------------
+	ResourceSet& ResourceVisitor::getResources()
+	{
+		return *_ptrResources;
+	}
+
+	//------------------------------------------------------------------------------
+	const ResourceSet& ResourceVisitor::getResources() const
+	{
+		return *_ptrResources;
+	}
 
     //------------------------------------------------------------------------------
     void ResourceVisitor::reset() 
@@ -226,6 +286,30 @@ namespace osgCompute
 
         osg::NodeVisitor::apply( computation );
     }
+
+	//------------------------------------------------------------------------------
+	void ContextVisitor::setContext( Context* context )
+	{
+		_context = context;
+	}
+
+	//------------------------------------------------------------------------------
+	Context* ContextVisitor::getContext()
+	{
+		return _context.get();
+	}
+
+	//------------------------------------------------------------------------------
+	const Context* ContextVisitor::getContext() const
+	{
+		return _context.get();
+	}
+
+	//------------------------------------------------------------------------------
+	bool ContextVisitor::isClear() const
+	{
+		return _clear;
+	}
 
     //------------------------------------------------------------------------------
     void ContextVisitor::clear()

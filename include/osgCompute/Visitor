@@ -41,16 +41,16 @@ namespace osgCompute
         virtual void apply( osg::Geode& node );
         virtual void apply( Computation& computation );
         virtual void apply( osg::Group& group );
-        inline Computation* getComputation();
-        inline const Computation* getComputation() const;
+        virtual Computation* getComputation();
+        virtual const Computation* getComputation() const;
 
-        inline void addResource( Resource& resource );
-        inline void removeResource( Resource& resource );
-        inline bool hasResource( Resource& resource );
-        inline ResourceSet& getResources();
-        inline const ResourceSet& getResources() const;
+        virtual void addResource( Resource& resource );
+        virtual void removeResource( Resource& resource );
+        virtual bool hasResource( Resource& resource );
+        virtual ResourceSet& getResources();
+        virtual const ResourceSet& getResources() const;
 
-        inline bool isClear() const;
+        virtual bool isClear() const;
 
         virtual void reset();
         virtual void clear();
@@ -76,67 +76,6 @@ namespace osgCompute
         ResourceVisitor& operator=( const ResourceVisitor& copy ) { return (*this); }
     };
 
-    //------------------------------------------------------------------------------
-    inline bool ResourceVisitor::isClear() const
-    {
-        return _clear;
-    }
-
-    //------------------------------------------------------------------------------
-    inline void ResourceVisitor::setComputation( Computation* computation )
-    {
-        _computation = computation;
-    }
-
-    //------------------------------------------------------------------------------
-    inline Computation* ResourceVisitor::getComputation()
-    {
-        return _computation;
-    }
-
-    //------------------------------------------------------------------------------
-    inline const Computation* ResourceVisitor::getComputation() const
-    {
-        return _computation;
-    }
-
-    //------------------------------------------------------------------------------
-    inline void ResourceVisitor::addResource( Resource& resource )
-    {
-        _ptrResources->insert( &resource );
-    }
-
-    //------------------------------------------------------------------------------
-    inline void ResourceVisitor::removeResource( Resource& resource )
-    {
-        ResourceSetItr itr = _ptrResources->find( &resource );
-        if( itr != _ptrResources->end() )
-            _ptrResources->erase( itr );
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool ResourceVisitor::hasResource( Resource& resource )
-    {
-        ResourceSetItr itr = _ptrResources->find( &resource );
-        if( itr != _ptrResources->end() )
-                return true;
-
-        return false;
-    }
-
-    //------------------------------------------------------------------------------
-    inline ResourceSet& ResourceVisitor::getResources()
-    {
-        return *_ptrResources;
-    }
-
-    //------------------------------------------------------------------------------
-    inline const ResourceSet& ResourceVisitor::getResources() const
-    {
-        return *_ptrResources;
-    }
-
-
     /**
     */
     class LIBRARY_EXPORT ContextVisitor : public osg::NodeVisitor
@@ -151,9 +90,9 @@ namespace osgCompute
 
         virtual void apply(Computation& computation);
 
-        inline Context* getContext();
-        inline const Context* getContext() const;
-        inline bool isClear() const;
+        virtual Context* getContext();
+        virtual const Context* getContext() const;
+        virtual bool isClear() const;
 
         virtual void clear();
     protected:
@@ -161,7 +100,7 @@ namespace osgCompute
         virtual ~ContextVisitor() { clearLocal(); }
         void clearLocal();
 
-        inline void setContext( Context* context );
+        virtual void setContext( Context* context );
 
         osg::ref_ptr<osgCompute::Context>   _context;
         bool                                _clear;
@@ -171,30 +110,6 @@ namespace osgCompute
         ContextVisitor( const ContextVisitor&, const osg::CopyOp& ) {}
         ContextVisitor& operator=( const ContextVisitor& copy ) { return (*this); }
     };
-
-    //------------------------------------------------------------------------------
-    inline void ContextVisitor::setContext( Context* context )
-    {
-        _context = context;
-    }
-
-    //------------------------------------------------------------------------------
-    inline Context* ContextVisitor::getContext()
-    {
-        return _context.get();
-    }
-
-    //------------------------------------------------------------------------------
-    inline const Context* ContextVisitor::getContext() const
-    {
-        return _context.get();
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool ContextVisitor::isClear() const
-    {
-        return _clear;
-    }
 }
 
 #endif //OSGCOMPUTE_VISITOR

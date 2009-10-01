@@ -147,7 +147,7 @@ namespace osgCompute
     bool ComputationBin::hasModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->getName() == moduleName )
+            if( (*itr)->isAddressedByHandle(moduleName)  )
                 return true;
 
         return false;
@@ -157,7 +157,7 @@ namespace osgCompute
     bool ComputationBin::hasModule( Module& module ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->getName() == module.getName() )
+            if( (*itr) == &module )
                 return true;
 
         return false;
@@ -173,7 +173,7 @@ namespace osgCompute
     Module* ComputationBin::getModule( const std::string& moduleName )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->getName() == moduleName && (*itr).valid() )
+            if( (*itr)->isAddressedByHandle(moduleName) && (*itr).valid() )
                 return (*itr).get();
 
         return NULL;
@@ -183,7 +183,7 @@ namespace osgCompute
     const Module* ComputationBin::getModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->getName() == moduleName && (*itr).valid() )
+            if( (*itr)->isAddressedByHandle(moduleName) && (*itr).valid() )
                 return (*itr).get();
 
         return NULL;
@@ -206,6 +206,54 @@ namespace osgCompute
     { 
         return _modules.size(); 
     }
+
+	//------------------------------------------------------------------------------
+	bool ComputationBin::isClear() const
+	{ 
+		return _clear; 
+	}
+
+	//------------------------------------------------------------------------------
+	Computation* ComputationBin::getComputation()
+	{ 
+		return _computation; 
+	}
+
+	//------------------------------------------------------------------------------
+	const Computation* ComputationBin::getComputation() const
+	{ 
+		return _computation; 
+	}
+
+	//------------------------------------------------------------------------------
+	LaunchCallback* ComputationBin::getLaunchCallback()
+	{ 
+		return _launchCallback; 
+	}
+
+	//------------------------------------------------------------------------------
+	const LaunchCallback* ComputationBin::getLaunchCallback() const
+	{ 
+		return _launchCallback; 
+	}
+
+	//------------------------------------------------------------------------------
+	void ComputationBin::setContext( Context& context )
+	{
+		_context = &context;
+	}
+
+	//------------------------------------------------------------------------------
+	Context* ComputationBin::getContext()
+	{
+		return _context.get();
+	}
+
+	//------------------------------------------------------------------------------
+	const Context* ComputationBin::getContext() const
+	{
+		return _context.get();
+	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
@@ -239,8 +287,6 @@ namespace osgCompute
         {
             if( (*itr)->isEnabled() )
             {
-                if( (*itr)->getLaunchCallback() ) 
-                    (*(*itr)->getLaunchCallback())( *(*itr), *_context );
                 // launch module
                 (*itr)->launch( *_context );
             }

@@ -13,10 +13,12 @@
  * The full license is in LICENSE file included with this distribution.
 */
 
+#include <vector_types.h>
 #include <math.h>
 #include <cstdlib>
 #include "PtclEmitter"
 
+//------------------------------------------------------------------------------
 extern "C"
 void reseed( unsigned int numBlocks,
              unsigned int numThreads,
@@ -24,8 +26,8 @@ void reseed( unsigned int numBlocks,
              void* seeds,
              unsigned int seedCount,
              unsigned int seedIdx,
-             osg::Vec3f bbmin,
-             osg::Vec3f bbmax );
+             float3 bbmin,
+             float3 bbmax );
 
 
 namespace PtclDemo
@@ -39,10 +41,10 @@ namespace PtclDemo
     //------------------------------------------------------------------------------
     bool PtclEmitter::init()
     {
-        if( !_ptcls || !_seeds )
+        if( !_ptcls.valid() || !_seeds.valid() )
         {
             osg::notify( osg::WARN )
-                << "ParticleDemo::ParticleMover::init(): params are missing."
+                << "ParticleDemo::ParticleMover::init(): buffers are missing."
                 << std::endl;
 
             return false;
@@ -60,7 +62,7 @@ namespace PtclDemo
     }
 
     //------------------------------------------------------------------------------
-    void PtclEmitter::launch( const osgCompute::Context& context ) const
+    void PtclEmitter::launch( const osgCompute::Context& ctx ) const
     {
         if( isClear() )
             return;
@@ -69,21 +71,28 @@ namespace PtclDemo
         // PARAMS //
         ////////////
         unsigned int seedIdx = static_cast<unsigned int>(rand());
-        void* ptcls = _ptcls->map( context );
-        void* seeds = _seeds->map( context );
+		float3 bbmin;
+		bbmin.x = _seedBoxMin.x();
+		bbmin.y = _seedBoxMin.y();
+		bbmin.z = _seedBoxMin.z();
 
-        ///////////////
-        // RESEEDING //
-        ///////////////
+		float3 bbmax;
+		bbmax.x = _seedBoxMax.x();
+		bbmax.y = _seedBoxMax.y();
+		bbmax.z = _seedBoxMax.z();
+
+        ////////////
+        // RESEED //
+        ////////////
         reseed(
             _numBlocks,
             _numThreads,
-            ptcls,
-            seeds,
+            _ptcls->map( ctx ),
+            _seeds->map( ctx ),
             _seeds->getDimension(0),
             seedIdx,
-            _seedBoxMin,
-            _seedBoxMax );
+            bbmin,
+            bbmax );
     }
 
     //------------------------------------------------------------------------------
@@ -103,7 +112,6 @@ namespace PtclDemo
     {
         _numBlocks = 1;
         _numThreads = 1;
-
         _ptcls = NULL;
         _seeds = NULL;
         _seedBoxMin = osg::Vec3f(0,0,0);

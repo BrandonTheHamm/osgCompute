@@ -12,48 +12,50 @@
  *
  * The full license is in LICENSE file included with this distribution.
 */
-                                                                      
-#include <memory.h>
 #include <osg/Notify>
 #include <osgCuda/Buffer>
 #include <osgCuda/Context>
 #include <osgCompute/Module>
 
+//------------------------------------------------------------------------------
 extern "C"
 void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* bytes );
 
+
+/**
+*/
 class SwapModule : public osgCompute::Module
 {
 public:
     SwapModule() : osgCompute::Module() {clearLocal();}
 
-    META_Module( , SwapModule )
-    virtual bool init();
-    virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+    META_Object( , SwapModule )
+	virtual bool init();
+	virtual void launch( const osgCompute::Context& context ) const;
+
     inline void setBuffer( osgCompute::Buffer* buffer ) { _buffer = buffer; }
-    inline osgCompute::Buffer* getBuffer() { return _buffer; }
 
-    virtual void launch( const osgCompute::Context& context ) const;
-
+	virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
 protected:
     virtual ~SwapModule() { clearLocal(); }
     void clearLocal() { _buffer = NULL; }
 
     unsigned int                                     _numThreads;
     unsigned int                                     _numBlocks;
-    osgCompute::Buffer*                              _buffer;
+	osg::ref_ptr<osgCompute::Buffer>                 _buffer;
 
 private:
     SwapModule(const SwapModule&, const osg::CopyOp& ) {}
     inline SwapModule &operator=(const SwapModule &) { return *this; }
 };
 
-void SwapModule::launch( const osgCompute::Context& context ) const
+//------------------------------------------------------------------------------
+void SwapModule::launch( const osgCompute::Context& ctx ) const
 {
-    void* bufferPtr = _buffer->map( context );
-    swapEndianness( _numBlocks, _numThreads, bufferPtr );
+    swapEndianness( _numBlocks, _numThreads, _buffer->map( ctx ) );
 }
 
+//------------------------------------------------------------------------------
 bool SwapModule::init()
 {
     if( !_buffer )
@@ -65,31 +67,51 @@ bool SwapModule::init()
     return osgCompute::Module::init();
 }
 
-
+//------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::INFO );
 
+	// You can use modules and buffers in the update cycle or everywhere
+	// you want. But please make sure that the context is still active at 
+	// computation time if you use osgCuda::Geometry or osgCuda::Texture objects!!!
+
+	///////////////////
+	// BEFORE LAUNCH //
+	///////////////////
     unsigned int bigEndians[] = { 0x3faff7b4, 0x32332323, 0xffccaadd, 0xaaaacccc };
     unsigned int numEndians = sizeof(bigEndians)/sizeof(unsigned int);
 
-    // create context
+	osg::notify(osg::INFO)<<"Before conversion: "<<std::endl;
+	for( unsigned int v=0; v<numEndians; ++v )
+		osg::notify(osg::INFO)<<std::hex<< bigEndians[v] <<std::endl;
+
+	////////////////////
+	// CREATE CONTEXT //
+	////////////////////
+	// You have to provide a context to run on. If this module
+	// is attached to the scene graph then you do not need to
+	// prepare a context, the computation node will take care of it.
     osg::ref_ptr<osgCompute::Context> context = new osgCuda::Context;
     if( !context.valid() )
         return -1;
+	// The context must have an id and device.
     context->setId( 0 );
+	context->setDevice( 0 );
 
     // activate context
     context->apply();
 
-    // create buffer
+    // create a buffer
     osg::ref_ptr<osgCuda::Buffer> buffer = new osgCuda::Buffer;
 	buffer->setElementSize( sizeof(unsigned int) );
     buffer->setDimension(0, numEndians);
     buffer->init();
 
 
-    // create module
+	///////////////////
+	// LAUNCH MODULE //
+	///////////////////
     osg::ref_ptr<SwapModule> module = new SwapModule;
     if( !module.valid() )
         return -1;
@@ -97,23 +119,19 @@ int main(int argc, char *argv[])
     module->setBuffer( buffer.get() );
     module->init();
 
-    // print numbers
-    osg::notify(osg::INFO)<<"Before conversion: "<<std::endl;
-    for( unsigned int v=0; v<numEndians; ++v )
-        osg::notify(osg::INFO)<<std::hex<< bigEndians[v] <<std::endl;
-
-
+	// instead of attaching a osg::Array you can map the buffer to the
+	// CPU memory and fill it directly. The TARGET specifier in MAP_HOST_TARGET
+	// tells osgCompute that the buffer is updated on the CPU. This has an effect
+	// on later mappings of the GPU memory (e.g. MAP_DEVICE): before a pointer
+	// is returned the CPU data is copied to the GPU memory. 
     unsigned int* bufferPtr = (unsigned int*)buffer->map( *context, osgCompute::MAP_HOST_TARGET );
     memcpy( bufferPtr, bigEndians, sizeof(bigEndians) );
 
-
-    ///////////////////
-    // LAUNCH MODULE //
-    ///////////////////
     module->launch( *context );
 
-
-    // print result
+	//////////////////
+	// AFTER LAUNCH //
+	//////////////////
     bufferPtr = (unsigned int*)buffer->map( *context, osgCompute::MAP_HOST_SOURCE );
     osg::notify(osg::INFO)<<std::endl<<"After conversion: "<<std::endl;
     for( unsigned int v=0; v<buffer->getDimension(0); ++v )

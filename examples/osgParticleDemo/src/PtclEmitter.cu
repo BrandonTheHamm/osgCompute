@@ -43,7 +43,7 @@ float4 reseed( float* seeds, unsigned int seedCount, unsigned int seedIdx, unsig
 
 //------------------------------------------------------------------------------
 inline __device__
-unsigned int globalThreadIdx()
+unsigned int thIdx()
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -58,14 +58,14 @@ unsigned int globalThreadIdx()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void k_reseed( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int seedIdx, float3 bbmin, float3 bbmax )
+void reseedKernel( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int seedIdx, float3 bbmin, float3 bbmax )
 {
-    // compute particle idx
-    unsigned int ptclIdx = globalThreadIdx();
+    // Receive particle pos
+    unsigned int ptclIdx = thIdx();
     float4 curPtcl = ptcls[ptclIdx];
 
     // Reseed Particles if they
-    // moved out of the bounding box
+    // have moved out of the bounding box
     if( curPtcl.x < bbmin.x ||
         curPtcl.y < bbmin.y ||
         curPtcl.z < bbmin.z ||
@@ -79,8 +79,6 @@ void k_reseed( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // HOST FUNCTIONS ////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include <osg/Vec4f>
-
 //------------------------------------------------------------------------------
 extern "C" __host__
 void reseed( unsigned int numBlocks, 
@@ -89,17 +87,17 @@ void reseed( unsigned int numBlocks,
              void* seeds, 
              unsigned int seedCount, 
              unsigned int seedIdx, 
-             osg::Vec3f bbmin, 
-             osg::Vec3f bbmax )
+             float3 bbmin, 
+             float3 bbmax )
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );
 
-    k_reseed<<< blocks, threads >>>(
+    reseedKernel<<< blocks, threads >>>(
                         reinterpret_cast<float4*>(ptcls),
                         reinterpret_cast<float*>(seeds),
                         seedCount,
                         seedIdx,
-                        *reinterpret_cast<float3*>(&bbmin),
-                        *reinterpret_cast<float3*>(&bbmax) );
+                        bbmin,
+                        bbmax );
 }

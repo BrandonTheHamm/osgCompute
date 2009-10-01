@@ -25,7 +25,7 @@ float4 operator+(float4 a, float4 b)
 
 //------------------------------------------------------------------------------
 inline __device__
-unsigned int globalThreadIdx()
+unsigned int thIdx()
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -40,10 +40,11 @@ unsigned int globalThreadIdx()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void k_move( float4* ptcls, float etime )
+void moveKernel( float4* ptcls, float etime )
 {
-    unsigned int ptclIdx = globalThreadIdx();
+    unsigned int ptclIdx = thIdx();
 
+	// perform a euler step
     ptcls[ptclIdx] = ptcls[ptclIdx] + make_float4(0,etime*0.8f,0,0);
 }
 
@@ -51,8 +52,6 @@ void k_move( float4* ptcls, float etime )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // HOST FUNCTIONS ////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include <osg/Vec4f>
-
 //------------------------------------------------------------------------------
 extern "C" __host__
 void move( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime )
@@ -60,5 +59,5 @@ void move( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float e
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );
 
-    k_move<<< blocks, threads >>>(reinterpret_cast<float4*>(ptcls),etime);
+    moveKernel<<< blocks, threads >>>(reinterpret_cast<float4*>(ptcls),etime);
 }

@@ -21,49 +21,29 @@
 #include <set>
 #include <osg/Object>
 #include <osg/State>
-#include "osgCompute/Export"
+#include <osgCompute/Export>
+#include <osgCompute/Resource>
 
 namespace osgCompute
 {
     class Context;
     class Resource;
 
-    typedef std::set< const Context* >                                         ContextSet;
-    typedef std::set< const Context* >::iterator                               ContextSetItr;
-    typedef std::set< const Context* >::const_iterator                         ContextSetCnstItr;
-
-    typedef std::map< Resource*, osg::ref_ptr<osg::Object> >                   ResourceMap;
-    typedef std::map< Resource*, osg::ref_ptr<osg::Object> >::iterator         ResourceMapItr;
-    typedef std::map< Resource*, osg::ref_ptr<osg::Object> >::const_iterator   ResourceMapCnstItr;
-
-    typedef std::set< Resource* >                                              ResourceSet;
-    typedef std::set< Resource* >::iterator                                    ResourceSetItr;
-    typedef std::set< Resource* >::const_iterator                              ResourceSetCnstItr;
-
-    typedef std::vector< Resource* >                                           ResourceList;
-    typedef std::vector< Resource* >::iterator                                 ResourceListItr;
-    typedef std::vector< Resource* >::const_iterator                           ResourceListCnstItr;
-
     typedef std::map<unsigned int, osg::ref_ptr<Context> >                     ContextMap;
     typedef std::map<unsigned int, osg::ref_ptr<Context> >::iterator           ContextMapItr;
     typedef std::map<unsigned int, osg::ref_ptr<Context> >::const_iterator     ContextMapCnstItr;
 
-    typedef std::set< std::string >                                            HandleSet;
-    typedef std::set< std::string >::iterator                                  HandleSetItr;
-    typedef std::set< std::string >::const_iterator                            HandleSetCnstItr;
 
     /**
     */
-    class LIBRARY_EXPORT Context : public osg::Object
+    class LIBRARY_EXPORT Context : public osg::Referenced
     {
     public:
         Context();
 
         virtual bool init();
-        virtual void clear();
         virtual void apply();
 
-        virtual bool isClear() const;
         virtual void setId( unsigned int id );
         virtual unsigned int getId() const;
         virtual void setState( osg::State& state );
@@ -74,23 +54,19 @@ namespace osgCompute
         virtual void setDevice( int device );
         virtual int getDevice() const;
 
+		virtual void clear();
+		virtual bool isClear() const;
+
+		static const Context* getContext( unsigned int id );
     protected:
-        friend class Resource;
 
         virtual ~Context();
         void clearLocal();
-
-        virtual void clearResources() const;
-
-        virtual bool isRegistered( Resource& resource ) const;
-        virtual void registerResource( Resource& resource ) const;
-        virtual void unregisterResource( Resource& resource ) const;
 
         unsigned int                        _id;
         osg::ref_ptr<osg::State>            _state;
         bool                                _clear;
         mutable OpenThreads::Mutex          _mutex;
-        mutable ResourceList                _resources;
         int                                 _device;
         bool                                _embedded;
 

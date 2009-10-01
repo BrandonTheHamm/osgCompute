@@ -17,6 +17,7 @@
 #define OSGCUDA_COMPUTATION 1
 
 #include <osgCompute/Computation>
+#include <osgCompute/Visitor>
 #include <osgCuda/Export>
 #include <osgCuda/Context>
 
@@ -29,7 +30,7 @@ namespace osgCuda
     public:
         Computation();
 
-        META_Computation( osgCuda, Computation, osgCompute, ComputationBin, osgCuda, Context )
+        META_Computation( osgCuda, Computation, osgCompute, ComputationBin, osgCuda, Context, osgCompute, ResourceVisitor )
 
         virtual void clear();
 

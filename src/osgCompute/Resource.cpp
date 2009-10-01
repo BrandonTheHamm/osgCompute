@@ -14,6 +14,7 @@
 */
 
 #include <osg/Notify>
+#include <osgCompute/Context>
 #include <osgCompute/Resource>
 
 namespace osgCompute
@@ -33,50 +34,9 @@ namespace osgCompute
         if( !isClear() )
             return true;
 
-        if( _handles.empty() )
-        {
-            addHandle( "notaddressed" );
-        }
-
         _clear = false;
         return true;
     }
-
-	//------------------------------------------------------------------------------
-	void Resource::setUpdateResourceCallback( ResourceCallback* uc ) 
-	{ 
-		_updateCallback = uc; 
-	}
-
-	//------------------------------------------------------------------------------
-	ResourceCallback* Resource::getUpdateResourceCallback() 
-	{ 
-		return _updateCallback.get(); 
-	}
-
-	//------------------------------------------------------------------------------
-	const ResourceCallback* Resource::getUpdateResourceCallback() const 
-	{ 
-		return _updateCallback.get(); 
-	}
-
-	//------------------------------------------------------------------------------
-	void Resource::setEventResourceCallback( ResourceCallback* ec ) 
-	{ 
-		_eventCallback = ec; 
-	}
-
-	//------------------------------------------------------------------------------
-	ResourceCallback* Resource::getEventResourceCallback() 
-	{ 
-		return _eventCallback.get(); 
-	}
-
-	//------------------------------------------------------------------------------
-	const ResourceCallback* Resource::getEventResourceCallback() const 
-	{ 
-		return _eventCallback.get(); 
-	}
 
 	//------------------------------------------------------------------------------
 	void Resource::addHandle( const std::string& handle )
@@ -94,13 +54,25 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
-	bool Resource::isAddressedByHandle( const std::string& handle )
+	bool Resource::isAddressedByHandle( const std::string& handle ) const
 	{
-		HandleSetItr itr = _handles.find( handle ); 
+		HandleSetCnstItr itr = _handles.find( handle ); 
 		if( itr == _handles.end() )
 			return false;
 
 		return true;
+	}
+
+	//------------------------------------------------------------------------------
+	HandleSet& Resource::getHandles()
+	{
+		return _handles;
+	}
+
+	//------------------------------------------------------------------------------
+	const HandleSet& Resource::getHandles() const
+	{
+		return _handles;
 	}
 
 	//------------------------------------------------------------------------------
@@ -127,51 +99,13 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Resource::clearLocal()
     {
-        while( !_contexts.empty() )
-        {
-            ContextSetItr itr = _contexts.begin();
-
-            if( (*itr) != NULL )
-                clear( *(*itr) );
-        }
-        _contexts.clear();
-        _updateCallback = NULL;
-        _eventCallback = NULL;
         _clear = true;
+		_handles.clear();
     } 
 
-    //------------------------------------------------------------------------------
-    bool Resource::init( const Context& context ) const
-    {
-        if( context.isRegistered(const_cast<Resource&>(*this)) )
-            return true;
-
-        context.registerResource(const_cast<Resource&>(*this));
-
-        ContextSetCnstItr itr = _contexts.find( &context );
-        if( itr == _contexts.end() || (*itr) == NULL )
-            _contexts.insert( &context );
-
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
-    void Resource::clear( const Context& context ) const
-    {
-        context.unregisterResource(const_cast<Resource&>(*this));
-
-        ContextSetItr itr = _contexts.find( &context );
-        if( itr != _contexts.end() && (*itr) != NULL )
-            _contexts.erase( itr );
-    }
-
-    //------------------------------------------------------------------------------
-    const Context* Resource::getContext( unsigned int ctxId ) const
-    {
-        for( ContextSetCnstItr itr = _contexts.begin(); itr != _contexts.end(); ++itr )
-            if( (*itr) != NULL && (*itr)->getId() == ctxId )
-                return (*itr);
-
-        return NULL;
-    }
+	//------------------------------------------------------------------------------
+	void Resource::setHandles( HandleSet& handles )
+	{
+		_handles = handles;
+	}
 }

@@ -24,37 +24,17 @@
 
 namespace osgCuda
 {
-    /**
-    */
-	class LIBRARY_EXPORT BufferStream : public osgCompute::BufferStream
-    {
-    public:
-        void*							_devPtr;
-        bool                            _devPtrAllocated;
-        bool                            _syncDevice;
-        void*							_hostPtr;
-        bool                            _hostPtrAllocated;
-        bool                            _syncHost;
-        unsigned int                    _modifyCount;
-
-        BufferStream();
-        virtual ~BufferStream();
-
-    private:
-        // not allowed to call copy-constructor or copy-operator
-        BufferStream( const BufferStream& ) {}
-        BufferStream& operator=( const BufferStream& ) { return *this; }
-    };
+	class BufferStream;
 
     /**
 	*/
-	class LIBRARY_EXPORT Buffer : public osgCompute::Buffer, public osg::Object
+	class LIBRARY_EXPORT Buffer : public osgCompute::Buffer
     {
 
     public:
         Buffer();
-
-        META_Buffer( osgCuda, Buffer )
+		
+		META_Object(osgCuda,Buffer)
 
         virtual bool init();
         virtual void clear();

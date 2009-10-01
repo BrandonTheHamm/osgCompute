@@ -17,64 +17,56 @@
 #define OSGCOMPUTE_PARAM 1
 
 #include <vector>
+#include <set>
 #include <map>
 #include <osg/ref_ptr>
-#include <osg/Object>
+#include <osg/Referenced>
 #include <osgCompute/Export>
-#include <osgCompute/Context>
 #include <osgCompute/Callback>
 
 namespace osgCompute
 {
-    class Module;
+	typedef std::set< std::string >                                           	HandleSet;
+	typedef std::set< std::string >::iterator                                 	HandleSetItr;
+	typedef std::set< std::string >::const_iterator                           	HandleSetCnstItr;
 
-#define META_Resource( libraryname, classname, asModuleType )						\
-    META_Object( libraryname, classname )											\
-    virtual osg::Object* asObject() { return this; }								\
-    virtual const osg::Object* asObject() const { return this; }					\
-	virtual void release() { this->unref(); }
-	
+	typedef std::vector< osg::ref_ptr<Resource> >                              	ResourceList;
+	typedef std::vector< osg::ref_ptr<Resource> >::iterator                    	ResourceListItr;
+	typedef std::vector< osg::ref_ptr<Resource> >::const_iterator              	ResourceListCnstItr;
+
+	typedef std::set< osg::ref_ptr<Resource> >                                  ResourceSet;
+	typedef std::set< osg::ref_ptr<Resource> >::iterator                        ResourceSetItr;
+	typedef std::set< osg::ref_ptr<Resource> >::const_iterator                  ResourceSetCnstItr;
+
+	typedef std::map< Resource*, osg::ref_ptr<Resource> >						ResourceMap;
+	typedef std::map< Resource*, osg::ref_ptr<Resource> >::iterator				ResourceMapItr;
+	typedef std::map< Resource*, osg::ref_ptr<Resource> >::const_iterator		ResourceMapCnstItr;
+
     /**
     */
-	class LIBRARY_EXPORT Resource
+	class LIBRARY_EXPORT Resource : public osg::Object
     {
     public:
 		Resource();
 
-		virtual void release() = 0;
-        virtual osg::Object* asObject() = 0;
-        virtual const osg::Object* asObject() const = 0;
-
         virtual bool init();
-
-        virtual void setUpdateResourceCallback( ResourceCallback* uc );
-        virtual ResourceCallback* getUpdateResourceCallback();
-        virtual const ResourceCallback* getUpdateResourceCallback() const;
-        virtual void setEventResourceCallback( ResourceCallback* ec );
-        virtual ResourceCallback* getEventResourceCallback();
-        virtual const ResourceCallback* getEventResourceCallback() const;
 
         virtual void addHandle( const std::string& handle );
         virtual void removeHandle( const std::string& handle );
-        virtual bool isAddressedByHandle( const std::string& handle );
+        virtual bool isAddressedByHandle( const std::string& handle ) const;
+		virtual HandleSet& getHandles();
+		virtual const HandleSet& getHandles() const;
 
         virtual bool isClear() const;
         virtual void clear();
 
 	protected:
 		virtual ~Resource();
-        friend class Context;
+				
+		virtual void setHandles( HandleSet& handles );
 
         void clearLocal();
 
-        virtual bool init( const Context& context ) const;
-        virtual void clear( const Context& context ) const;
-        virtual const Context* getContext( unsigned int ctxId ) const;
-
-        mutable ContextSet                  _contexts;
-
-        osg::ref_ptr<ResourceCallback>      _updateCallback;
-        osg::ref_ptr<ResourceCallback>      _eventCallback;
         HandleSet                           _handles;
         bool                                _clear;
 

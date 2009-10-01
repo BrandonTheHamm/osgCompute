@@ -23,10 +23,6 @@
 #include <osgCompute/Resource>
 #include <osgCompute/Callback>
 
-#define META_Module( libraryname, classname )                           \
-    META_Resource( libraryname, classname, this )                       \
-
-    
 namespace osgCompute
 {
     class Context;
@@ -38,7 +34,7 @@ namespace osgCompute
 
     /**
     */
-    class LIBRARY_EXPORT Module : public Resource, public osg::Object
+    class LIBRARY_EXPORT Module : public Resource
     {
     public:
         Module() { clearLocal(); }
@@ -47,16 +43,19 @@ namespace osgCompute
         virtual void clear();
         virtual void launch( const Context& context ) const = 0;
 
-        virtual void setLaunchCallback( LaunchCallback* pc );
-        virtual LaunchCallback* getLaunchCallback();
-        virtual const LaunchCallback* getLaunchCallback() const;
-
         virtual void acceptResource( Resource& resource );
         virtual bool usesResource( const std::string& handle ) const;
         virtual void removeResource( const Resource& resource );
         virtual void removeResource( const std::string& handle );
         virtual Resource* getResource( const std::string& handle );
         virtual const Resource* getResource( const std::string& handle ) const;
+
+		virtual void setUpdateCallback( ModuleCallback* uc );
+		virtual ModuleCallback* getUpdateCallback();
+		virtual const ModuleCallback* getUpdateCallback() const;
+		virtual void setEventCallback( ModuleCallback* ec );
+		virtual ModuleCallback* getEventCallback();
+		virtual const ModuleCallback* getEventCallback() const;
 
         virtual void enable();
         virtual void disable();
@@ -66,10 +65,8 @@ namespace osgCompute
         virtual ~Module() { clearLocal(); }
         void clearLocal();
 
-        virtual bool init( const Context& context ) const;
-        virtual void clear( const Context& context ) const;
-
-        osg::ref_ptr<LaunchCallback>   _launchCallback;
+		osg::ref_ptr<ModuleCallback>   _updateCallback;
+		osg::ref_ptr<ModuleCallback>   _eventCallback;
         bool                           _enabled;
 
     private:

@@ -20,20 +20,72 @@
 
 namespace osgCompute
 {
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	static OpenThreads::Mutex	s_sharedMutex;
+	static std::set< Context* >	s_Contexts;
+
+	//------------------------------------------------------------------------------
+	static void addContext( Context& context )
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
+
+		for( std::set< Context* >::iterator itr = s_Contexts.begin();
+			  itr != s_Contexts.end();
+			  ++itr )
+			if( (*itr) == &context )
+				return;
+
+		s_Contexts.insert( &context );
+	}
+
+	//------------------------------------------------------------------------------
+	static void removeContext( Context& context )
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
+
+		for( std::set< Context* >::iterator itr = s_Contexts.begin();
+			itr != s_Contexts.end();
+			++itr )
+			if( (*itr) == &context )
+			{
+				s_Contexts.erase( itr );
+				return;
+			}
+	}
+
+	//------------------------------------------------------------------------------
+	const Context* Context::getContext( unsigned int id )
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
+
+		for( std::set< Context* >::iterator itr = s_Contexts.begin();
+			itr != s_Contexts.end();
+			++itr )
+			if( (*itr)->getId() == id )
+				return (*itr);
+
+		return NULL;
+	}
+
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
     Context::Context()
-        : osg::Object()
+        : osg::Referenced()
     {
         clearLocal();
+		addContext( *this );
     }
 
     //------------------------------------------------------------------------------
     Context::~Context()
     {
         clearLocal();
+		removeContext( *this );
     }
 
 
@@ -129,9 +181,6 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Context::clearLocal()
     {
-        // free context dependent memory
-        clearResources();
-
         // do not clear the id!!!
         _state = NULL;
         _clear = true;
@@ -139,53 +188,4 @@ namespace osgCompute
         // default use device 0
         _device = 0;
     }
-
-    //------------------------------------------------------------------------------
-    void Context::clearResources() const
-    {
-        while( !_resources.empty() )
-        {
-            Resource* curResource = _resources.front();
-
-            // each of the resources calls unregisterResource()
-            // within the clear(\"CONTEXT\") function
-            if( curResource )
-                curResource->clear( *this );
-        }
-    }
-
-	//------------------------------------------------------------------------------
-	bool osgCompute::Context::isRegistered( Resource& resource ) const
-	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
-		for( ResourceListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-			if( (*itr) == &resource )
-				return true;
-
-		return false;
-	}
-
-	//------------------------------------------------------------------------------
-	void Context::registerResource( Resource& resource ) const
-	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
-		_resources.push_back( &resource );
-	}
-
-	//------------------------------------------------------------------------------
-	void Context::unregisterResource( Resource& resource ) const
-	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
-		for( ResourceListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-		{
-			if( (*itr) == &resource )
-			{
-				_resources.erase( itr );
-				return;
-			}
-		}
-	}
 }

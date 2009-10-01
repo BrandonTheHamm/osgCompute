@@ -1,113 +1,124 @@
 #include <osg/GL>
-#include <osg/Texture>
 #include <cuda_runtime.h>
 #include <driver_types.h>
 #include <cuda_gl_interop.h>
 #include <osgCuda/Context>
-#include <osgCuda/Texture1D>
+#include <osgCuda/Texture>
 
 namespace osgCuda
 {
+	/**
+	*/
+	class Texture1DBuffer : public osgCuda::TextureBuffer
+	{
+	public:
+		Texture1DBuffer();
+		
+		META_Object(osgCuda,Texture1DBuffer)
+
+		virtual bool init();
+
+		virtual osgCompute::InteropObject* getObject() { return _texref.get(); }
+		virtual osg::Texture* asTexture() { return _texref.get(); }            
+		virtual const osg::Texture* asTexture() const { return _texref.get(); }
+
+		virtual bool getIsRenderTarget() const;
+
+		virtual void clear( const osgCompute::Context& context ) const;
+		virtual void clear();
+	protected:
+		friend class Texture1D;
+		virtual ~Texture1DBuffer();
+		void clearLocal();
+
+		virtual void syncModifiedCounter( const osgCompute::Context& context ) const;
+		virtual bool allocPBO( TextureStream& stream ) const;
+		virtual void syncPBO( TextureStream& stream ) const;
+		virtual void syncTexture( TextureStream& stream ) const;
+
+		osg::ref_ptr<osgCuda::Texture1D> _texref;
+		bool							 _isRenderTarget;
+	private:
+		// copy constructor and operator should not be called
+		Texture1DBuffer( const Texture1DBuffer& , const osg::CopyOp& ) {}
+		Texture1DBuffer& operator=(const Texture1DBuffer&) { return (*this); }
+	};
+
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//------------------------------------------------------------------------------
-	Texture1D::Texture1D()
-		: osgCuda::Texture(),
-          osg::Texture1D()
+	Texture1DBuffer::Texture1DBuffer()
+		: osgCuda::TextureBuffer()
 	{
 		clearLocal();
 	}
 
 	//------------------------------------------------------------------------------
-	Texture1D::~Texture1D()
+	Texture1DBuffer::~Texture1DBuffer()
 	{
+		clearLocal();
+
+		// notify Texture1D that proxy is now 
+		// deleted
+		_texref->_proxy = NULL;
+		// reattach handles
+		_texref->_handles = getHandles();
+		// decrease reference count of texture reference
+		_texref = NULL;
+	}
+
+	//------------------------------------------------------------------------------
+	void Texture1DBuffer::clear()
+	{
+		osgCuda::TextureBuffer::clear();
 		clearLocal();
 	}
 
 	//------------------------------------------------------------------------------
-	void Texture1D::clear()
+	void Texture1DBuffer::clear( const osgCompute::Context& context ) const
 	{
-		Texture::clear();
-		clearLocal();
+		TextureBuffer::clear( context );
 	}
 
 	//------------------------------------------------------------------------------
-	bool Texture1D::init()
+	bool Texture1DBuffer::init()
 	{
-		return Texture::init();
-	}
+		if( !isClear() )
+			return true;
 
-
-	//------------------------------------------------------------------------------
-	void Texture1D::releaseGLObjects( osg::State* state/*=0*/ ) const
-	{
-		if( state != NULL )
-		{
-			const osgCompute::Context* curCtx = getContext( state->getContextID() );
-			if( curCtx )
-			{
-				if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
-					unmap( *curCtx );
-			}
-		}
-
-		osg::Texture1D::releaseGLObjects( state );
+		if( !_texref.valid() )
+			return false;
+			
+		return osgCuda::TextureBuffer::init();
 	}
 
 	//------------------------------------------------------------------------------
-	void Texture1D::apply( osg::State& state ) const
+	bool Texture1DBuffer::getIsRenderTarget() const
 	{
-		const osgCompute::Context* curCtx = getContext( state.getContextID() );
-		if( curCtx )
-		{
-			if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
-				unmap( *curCtx );
-		}
-
-		osg::Texture1D::apply( state );
-	}
-
-	//------------------------------------------------------------------------------
-	bool Texture1D::initDimension()
-	{
-		if( getNumDimensions() != 0 )
-		{
-			setTextureWidth( getDimension(0) );
-		}
-		else
-		{
-			if( getImage(0) && getTextureWidth() == 0)
-				setTextureWidth( getImage(0)->s() );
-
-			setDimension(0, getTextureWidth() );
-		}
-
-		return Texture::initDimension();
-	}
-
-	//------------------------------------------------------------------------------
-	osg::Image* Texture1D::getImagePtr()
-	{
-		return this->getImage();
-	}
-
-	//------------------------------------------------------------------------------
-	const osg::Image* Texture1D::getImagePtr() const
-	{
-		return this->getImage();
+		return false;
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//------------------------------------------------------------------------------
-	void Texture1D::clearLocal()
+	void Texture1DBuffer::clearLocal()
 	{
+		_isRenderTarget = false;
 	}
 
 	//------------------------------------------------------------------------------
-	void Texture1D::syncTexture( TextureStream& stream ) const
+	void Texture1DBuffer::syncModifiedCounter( const osgCompute::Context& context ) const
+	{
+		if( !_texref->getImage() )
+			return; 
+
+		_texref->getModifiedCount(context.getState()->getContextID()) = _texref->getImage()->getModifiedCount();
+	}
+
+	//------------------------------------------------------------------------------
+	void Texture1DBuffer::syncTexture( TextureStream& stream ) const
 	{
 		if( stream._bo == UINT_MAX )
 			return;
@@ -116,35 +127,33 @@ namespace osgCuda
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::syncTexture() for texture \""
-				<< osg::Object::getName()<< "\": cannot find required extensions for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::syncTexture(): cannot find required extension for context \""<<stream._context->getId()<<"\"."
 				<< std::endl;
 
 			return;
 		}
 
-		osg::Texture::TextureObject* tex = osg::Texture::getTextureObject( stream._context->getId() );
+		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getId() );
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::syncTexture() for texture \""
-				<< osg::Object::getName()<< "\": texture object not allocated for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::syncTexture(): texture object not allocated for context \""<<stream._context->getId()<<"\"."
 				<< std::endl;
 
 			return;
 		}
 
 		GLenum texType = GL_NONE;
-		if( osg::Texture::getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT )
+		if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT )
 		{
-			if( !getImage() )
+			if( !_texref->getImage() )
 				return;
 
-			texType = getImage()->getDataType();
+			texType = _texref->getImage()->getDataType();
 		}
 		else
 		{
-			texType = osg::Texture::getSourceType();
+			texType = asTexture()->getSourceType();
 		}
 
 		bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB,  stream._bo );
@@ -162,8 +171,7 @@ namespace osgCuda
 		if( errorStatus != GL_NO_ERROR )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::syncTexture() for buffer \""
-				<< osg::Object::getName()<< "\": error during glTex(Sub)ImageXD() for context \""
+				<< "osgCuda::Texture1DBuffer::syncTexture(): error during glTex(Sub)ImageXD() for context \""
 				<< stream._context->getId()<<"\". Returned code is "
 				<< std::hex<<errorStatus<<"."
 				<< std::endl;
@@ -175,16 +183,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void Texture1D::syncModifiedCounter( const osgCompute::Context& context ) const
-	{
-		if( !getImagePtr() )
-			return;
-
-		osg::Texture1D::getModifiedCount(context.getState()->getContextID()) = getImagePtr()->getModifiedCount();
-	}
-
-	//------------------------------------------------------------------------------
-	void Texture1D::syncPBO( TextureStream& stream ) const
+	void Texture1DBuffer::syncPBO( TextureStream& stream ) const
 	{
 		if( stream._bo == UINT_MAX )
 			return;
@@ -193,40 +192,37 @@ namespace osgCuda
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::syncPBO() for texture \""
-				<< osg::Object::getName()<< "\": cannot find required extension for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::syncPBO(): cannot find required extension for context \""<<stream._context->getId()<<"\"."
 				<< std::endl;
 
 			return;
 		}
 
-		osg::Texture::TextureObject* tex = osg::Texture::getTextureObject( stream._context->getId() );
+		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getId() );
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::syncPBO() for texture \""
-				<< osg::Object::getName()<< "\": texture object not allocated for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::syncPBO() : texture object not allocated for context \""<<stream._context->getId()<<"\"."
 				<< std::endl;
 
 			return;
 		}
 
 		GLenum texType = GL_NONE;
-		if( osg::Texture::getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
-			getImage() )
+		if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
+			_texref->getImage() )
 		{
-			texType = getImage()->getDataType();
+			texType = _texref->getImage()->getDataType();
 		}
 		else
 		{
-			texType = osg::Texture::getSourceType();
+			texType = asTexture()->getSourceType();
 		}
 
 		if( texType == GL_NONE )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::syncPBO() for texture \""
-				<< osg::Object::getName()<< "\": texture type unknown."
+				<< "osgCuda::Texture1DBuffer::syncPBO(): texture type unknown."
 				<< std::endl;
 
 			return;
@@ -239,10 +235,8 @@ namespace osgCuda
 		if( cudaSuccess != res )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::syncPBO() for texture \""
-				<< osg::Object::getName()<< "\": error during cudaGLUnregisterBufferObject() for context \""
-				<< stream._context->getId()<<"\"."
-				<< " " << cudaGetErrorString( res ) <<"."
+				<< "osgCuda::Texture1DBuffer::syncPBO(): error during cudaGLUnregisterBufferObject() for context \""
+				<< stream._context->getId()<<"\"." << " " << cudaGetErrorString( res ) <<"."
 				<< std::endl;
 
 			return;
@@ -261,8 +255,7 @@ namespace osgCuda
 		if( errorStatus != GL_NO_ERROR )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::syncPBO() for texture \""
-				<< osg::Object::getName()<< "\": error during glGetTexImage() for context \""
+				<< "osgCuda::Texture1DBuffer::syncPBO(): error during glGetTexImage() for context \""
 				<< stream._context->getId()<<"\". Returned code is "
 				<< std::hex<<errorStatus<<"."
 				<< std::endl;
@@ -278,10 +271,8 @@ namespace osgCuda
 		if( cudaSuccess != res )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::syncPBO() for texture \""
-				<< osg::Object::getName()<< "\": error during cudaGLRegisterBufferObject() for context \""
-				<< stream._context->getId()<<"\"."
-				<< " " << cudaGetErrorString( res ) <<"."
+				<< "osgCuda::Texture1DBuffer::syncPBO(): error during cudaGLRegisterBufferObject() for context \""
+				<< stream._context->getId()<<"\"." << " " << cudaGetErrorString( res ) << "."
 				<< std::endl;
 		}
 
@@ -289,7 +280,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool Texture1D::allocPBO( TextureStream& stream ) const
+	bool Texture1DBuffer::allocPBO( TextureStream& stream ) const
 	{
 		/////////////////////
 		// COMPILE TEXTURE //
@@ -298,73 +289,129 @@ namespace osgCuda
 		if( !bufferExt  )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::allocPBO() for texture \""
-				<< osg::Object::getName()<< "\": cannot find required extensions for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::allocPBO(): cannot find required extensions for context \""<<stream._context->getId()<<"\"."
 				<< std::endl;
 
 			return false;
 		}
 
-		osg::Texture::TextureObject* tex = osg::Texture::getTextureObject( stream._context->getId() );
+		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getId() );
 		if( !tex )
 		{
-			apply( *stream._context->getState() );
+			asTexture()->apply( *stream._context->getState() );
 			glBindTexture( GL_TEXTURE_1D, 0 );
 			GLenum errorStatus = glGetError();
 			if( errorStatus != GL_NO_ERROR )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::Texture1D::allocPBO() for buffer \""
-					<< osg::Object::getName()<<"\": apply() failed on texture resource."
+					<< "osgCuda::Texture1DBuffer::allocPBO(): apply() failed on texture resource. Maybe context is not active."
 					<< std::endl;
 
 				return false;
 			}
+
+
+			// second chance
+			tex = asTexture()->getTextureObject( stream._context->getId() );
 		}
 
-		// second chance
-		tex = osg::Texture::getTextureObject( stream._context->getId() );
 		if( !tex )
 		{
 
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::allocPBO() for texture \""
-				<< osg::Object::getName()<< "\": cannot allocate texture object for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::allocPBO(): cannot allocate texture object. Maybe context is not active."
 				<< std::endl;
 
 			return false;
 		}
 
 		GLenum texType = GL_NONE;
-		if( osg::Texture::getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
-			getImage() )
+		if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
+			asTexture()->getImage(0) )
 		{
-			texType = getImage()->getDataType();
+			texType = asTexture()->getImage(0)->getDataType();
 		}
 		else
 		{
-			texType = osg::Texture::getSourceType();
+			texType = asTexture()->getSourceType();
 		}
 
 		if( texType == GL_NONE )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::allocPBO() for texture \""
-				<< osg::Object::getName()<< "\": texture type unknown."
+				<< "osgCuda::Texture1DBuffer::allocPBO(): texture type unknown."
 				<< std::endl;
 
 			return false;
 		}
 
 		///////////////
-		// SETUP PBO //
+		// ALLOC PBO //
 		///////////////
-		stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( getByteSize() );
+		bufferExt->glGenBuffers( 1, &stream._bo );
+		GLenum errorNo = glGetError();
+		if( 0 == stream._bo  || errorNo )
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::Texture1DBuffer::allocPBO(): cannot generate BufferObject (glGenBuffers())."
+				<< std::endl;
+
+			return UINT_MAX;
+		}
+
+		////////////////////
+		// INITIALIZE PBO //
+		////////////////////
+		// Allocate temporary memory
+		void *tmpData = malloc(getByteSize());
+		memset( tmpData, 0x0, getByteSize() );
+
+		// Initialize PixelBufferObject
+		bufferExt->glBindBuffer( GL_ARRAY_BUFFER_ARB, stream._bo );
+		errorNo = glGetError();
+		if (errorNo != GL_NO_ERROR)
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::Texture1DBuffer::allocPBO(): cannot bind BufferObject (glBindBuffer())."
+				<< std::endl;
+
+			return UINT_MAX;
+		}
+
+		bufferExt->glBufferData( GL_ARRAY_BUFFER_ARB, getByteSize(), tmpData, GL_DYNAMIC_DRAW );
+		errorNo = glGetError();
+		if (errorNo != GL_NO_ERROR)
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::Texture1DBuffer::allocPBO(): cannot initialize BufferObject (glBufferData())."
+				<< std::endl;
+
+			return UINT_MAX;
+		}
+		bufferExt->glBindBuffer( GL_ARRAY_BUFFER_ARB, 0 );
+
+		// Free temporary memory
+		if( tmpData )
+			free(tmpData);
+			
+		//////////////////
+		// REGISTER PBO //
+		//////////////////
+		cudaError res = cudaGLRegisterBufferObject( stream._bo );
+		if( cudaSuccess != res )
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::Texture1DBuffer::allocPBO(): something goes wrong within cudaGLRegisterBufferObject()."
+				<< cudaGetErrorString(res) << "."
+				<< std::endl;
+
+			return UINT_MAX;
+		}
+
 		if( UINT_MAX == stream._bo )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1D::allocPBO() for Buffer \""
-				<< osg::Object::getName()<< "\": Could not generate buffer object (glGenBuffers()) for context \""
+				<< "osgCuda::Texture1DBuffer::allocPBO(): Could not generate buffer object (glGenBuffers()) for context \""
 				<< stream._context->getId()<<"\"."
 				<< std::endl;
 
@@ -380,53 +427,161 @@ namespace osgCuda
 			//////////////
 			// SYNC PBO //
 			//////////////
-			// Sync PBO with Texture-Data if Texture is allocated
+			// Sync PBO with texture-data 
+			// if it is already allocated
 			syncPBO( stream );
-		}
-		else if( !getIsRenderTarget() )
-		{
-			///////////////////////////
-			// ALLOCATE CLEAN MEMORY //
-			///////////////////////////
-			// else allocate the memory.
-			glBindTexture( GL_TEXTURE_1D, tex->_id );
-
-			// Allocate memory for texture if not done so far in order to allow slot
-			// to call glTexSubImage() during runtime
-			glTexImage1D(
-				GL_TEXTURE_1D, 0,
-				tex->_internalFormat,
-				tex->_width,
-				tex->_border,
-				tex->_internalFormat, texType, NULL );
-
-			GLenum errorNo = glGetError();
-			if( errorNo != GL_NO_ERROR )
-			{
-				osg::notify(osg::FATAL)
-					<< "osgCuda::Texture1D::allocPBO() for buffer \""
-					<< osg::Object::getName()<< "\": error during glTexImageXD() for context \""
-					<< stream._context->getId()<<"\". Returned code is "
-					<< std::hex<<errorNo<<"."
-					<< std::endl;
-
-				glBindTexture( GL_TEXTURE_1D, 0 );
-				bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
-				return false;
-			}
-
-			glBindTexture( GL_TEXTURE_1D, 0 );
-
-			// Mark context based Texture-Object as allocated
-			tex->setAllocated( true );
 		}
 
 		return true;
 	}
 
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//------------------------------------------------------------------------------
-	osgCompute::BufferStream* Texture1D::newStream( const osgCompute::Context& context ) const
+	Texture1D::Texture1D()
+		: osg::Texture1D(),
+		  _proxy(NULL)
 	{
-		return new TextureStream;
+		// some flags for textures are not available right now
+		// like resize to a power of two and mipmaps
+		asTexture()->setResizeNonPowerOfTwoHint( false );
+		asTexture()->setUseHardwareMipMapGeneration( false );
+	}
+
+	//------------------------------------------------------------------------------
+	Texture1D::~Texture1D()
+	{
+		if( _proxy != NULL )
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::Texture1D::destructor(): proxy is still valid!!!."
+				<< std::endl;
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	osgCompute::InteropBuffer* Texture1D::getBuffer()
+	{
+		return _proxy;
+	}
+
+	//------------------------------------------------------------------------------
+	const osgCompute::InteropBuffer* Texture1D::getBuffer() const
+	{
+		return _proxy;
+	}
+
+	//------------------------------------------------------------------------------
+	osgCompute::InteropBuffer* Texture1D::getOrCreateBuffer()
+	{
+		// create proxy buffer on demand
+		if( _proxy == NULL )
+		{
+			_proxy = new Texture1DBuffer;
+			_proxy->_texref = this;
+			_proxy->setHandles( _handles );
+			_handles.clear();
+			if( !_proxy->init() )
+			{
+				_proxy->unref();
+				_proxy = NULL;
+			}
+		}
+
+		return _proxy;
+	}
+
+	//------------------------------------------------------------------------------
+	void Texture1D::addHandle( const std::string& handle )
+	{ 
+		if( _proxy != NULL )
+		{
+			_proxy->addHandle( handle );
+		}
+		else
+		{
+			if( !isAddressedByHandle(handle) )
+				_handles.insert( handle );
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	void Texture1D::removeHandle( const std::string& handle )
+	{
+		if( _proxy != NULL )
+		{
+			_proxy->removeHandle( handle );
+		}
+		else
+		{
+			osgCompute::HandleSetItr itr = _handles.find( handle ); 
+			if( itr != _handles.end() )
+				_handles.erase( itr );
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	bool Texture1D::isAddressedByHandle( const std::string& handle ) const
+	{
+		if( _proxy != NULL )
+		{
+			return _proxy->isAddressedByHandle( handle );
+		}
+		else
+		{
+			osgCompute::HandleSetCnstItr itr = _handles.find( handle ); 
+			if( itr == _handles.end() )
+				return false;
+
+			return true;
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	void Texture1D::releaseGLObjects( osg::State* state/*=0*/ ) const
+	{
+		if( state != NULL )
+		{
+			const osgCompute::Context* curCtx = osgCompute::Context::getContext( state->getContextID() );
+			if( curCtx )
+			{
+				if( NULL != _proxy )
+					_proxy->clear( *curCtx );
+			}
+		}
+
+		osg::Texture1D::releaseGLObjects( state );
+	}
+
+	//------------------------------------------------------------------------------
+	void Texture1D::apply( osg::State& state ) const
+	{
+		const osgCompute::Context* curCtx = osgCompute::Context::getContext( state.getContextID() );
+		if( curCtx )
+		{
+			if( NULL != _proxy && _proxy->getMapping( *curCtx ) != osgCompute::UNMAPPED )
+				_proxy->unmap( *curCtx );
+		}
+
+		osg::Texture1D::apply( state );
+	}
+
+	//------------------------------------------------------------------------------
+	void Texture1D::clear()
+	{
+		clearLocal();
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	void Texture1D::clearLocal()
+	{
+		if( NULL != _proxy )
+			_proxy->clear();
+
+		_handles.clear();
 	}
 }

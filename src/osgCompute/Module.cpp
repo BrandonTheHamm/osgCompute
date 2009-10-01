@@ -34,6 +34,42 @@ namespace osgCompute
         return Resource::init();
     }
 
+	//------------------------------------------------------------------------------
+	void Module::setUpdateCallback( ModuleCallback* uc ) 
+	{ 
+		_updateCallback = uc; 
+	}
+
+	//------------------------------------------------------------------------------
+	ModuleCallback* Module::getUpdateCallback() 
+	{ 
+		return _updateCallback.get(); 
+	}
+
+	//------------------------------------------------------------------------------
+	const ModuleCallback* Module::getUpdateCallback() const 
+	{ 
+		return _updateCallback.get(); 
+	}
+
+	//------------------------------------------------------------------------------
+	void Module::setEventCallback( ModuleCallback* ec ) 
+	{ 
+		_eventCallback = ec; 
+	}
+
+	//------------------------------------------------------------------------------
+	ModuleCallback* Module::getEventCallback() 
+	{ 
+		return _eventCallback.get(); 
+	}
+
+	//------------------------------------------------------------------------------
+	const ModuleCallback* Module::getEventCallback() const 
+	{ 
+		return _eventCallback.get(); 
+	}
+
     //------------------------------------------------------------------------------
     void Module::acceptResource( Resource& resource ) 
     {
@@ -68,24 +104,6 @@ namespace osgCompute
     }
 
 	//------------------------------------------------------------------------------
-	void Module::setLaunchCallback( LaunchCallback* pc ) 
-	{ 
-		_launchCallback = pc; 
-	}
-
-	//------------------------------------------------------------------------------
-	LaunchCallback* Module::getLaunchCallback() 
-	{ 
-		return _launchCallback; 
-	}
-
-	//------------------------------------------------------------------------------
-	const LaunchCallback* Module::getLaunchCallback() const 
-	{ 
-		return _launchCallback; 
-	}
-
-	//------------------------------------------------------------------------------
 	void Module::enable() 
 	{ 
 		_enabled = true; 
@@ -109,23 +127,9 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Module::clearLocal()
     {
-        _launchCallback = NULL;
+		_eventCallback = NULL;
+		_updateCallback = NULL;
         _enabled = true;
         _clear = true;
-    }
-
-    //------------------------------------------------------------------------------
-    bool Module::init( const Context& context ) const
-    {
-        return Resource::init( context );
-    }
-
-    //------------------------------------------------------------------------------
-    void Module::clear( const Context& context ) const
-    {
-        if( _launchCallback )
-            _launchCallback->clear( context );
-
-        return Resource::clear( context );
     }
 }

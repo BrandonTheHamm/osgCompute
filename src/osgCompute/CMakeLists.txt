@@ -49,6 +49,7 @@ SET(TARGET_H
 	${HEADER_PATH}/Context
 	${HEADER_PATH}/Export	
 	${HEADER_PATH}/Module
+	${HEADER_PATH}/Interoperability
 	${HEADER_PATH}/Resource
 	${HEADER_PATH}/Computation
 	${HEADER_PATH}/ComputationBin

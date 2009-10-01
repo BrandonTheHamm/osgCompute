@@ -16,28 +16,8 @@
 #ifndef OSGCOMPUTE_BUFFER
 #define OSGCOMPUTE_BUFFER 1
 
-#include <osgCompute/Resource>
-
-#define META_Buffer( libraryname, classname )              \
-    META_Resource( libraryname, classname, false )                      
-
-namespace osg
-{
-    class Image;
-    class Vec2b;
-    class Vec3b;
-    class Vec4b;
-    class Vec4ub;
-    class Vec2s;
-    class Vec3s;
-    class Vec4s;
-    class Vec2f;
-    class Vec3f;
-    class Vec4f;
-    class Vec2d;
-    class Vec3d;
-    class Vec4d;
-}
+#include <osgCompute/Resource>               
+#include <osgCompute/Context>               
 
 namespace osgCompute
 {
@@ -67,7 +47,7 @@ namespace osgCompute
     {
     public:
         unsigned int                    _mapping;
-        osg::ref_ptr<Context>           _context;
+		osg::ref_ptr<Context>			_context;
         unsigned int                    _allocHint;
 
         BufferStream();
@@ -105,20 +85,18 @@ namespace osgCompute
         virtual void setAllocHint( unsigned int allocHint );
         virtual unsigned int getAllocHint() const;
 
-        virtual void setSubloadResourceCallback( SubloadCallback* sc );
-        virtual SubloadCallback* getSubloadResourceCallback();
-        virtual const SubloadCallback* getSubloadResourceCallback() const;
+        virtual void setSubloadCallback( SubloadCallback* sc );
+        virtual SubloadCallback* getSubloadCallback();
+        virtual const SubloadCallback* getSubloadCallback() const;
 
 		virtual void swap( unsigned int incr = 1 );
 		virtual unsigned int getSwapCount() const;
 
+		virtual void clear( const Context& context ) const;
         virtual void clear();
 	protected:
 		virtual ~Buffer();
         void clearLocal();
-
-        virtual bool init( const Context& context ) const;
-        virtual void clear( const Context& context ) const;
 
         virtual BufferStream* newStream( const Context& context ) const;
         virtual BufferStream* lookupStream( const Context& context ) const;

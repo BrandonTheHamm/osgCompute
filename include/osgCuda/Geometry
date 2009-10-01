@@ -12,80 +12,54 @@
 *
 * The full license is in LICENSE file included with this distribution.
 */
-#ifndef OSGCUDA_GEOMETRY
-#define OSGCUDA_GEOMETRY 1
+#ifndef OSGCUDA_GEOMETRYBUFFER_H
+#define OSGCUDA_GEOMETRYBUFFER_H 1
 
 #include <osg/Geometry>
-#include <osgCompute/Buffer>
-#include <osgCuda/Export>
+#include <osgCompute/Interoperability>
 
 namespace osgCuda
 {
+	class GeometryBuffer;
     /**
     */
-    class LIBRARY_EXPORT GeometryStream : public osgCompute::BufferStream
-    {
-    public:
-        void*					 _hostPtr;
-        bool                     _hostPtrAllocated;
-        bool                     _syncHost;
-        void*					 _devPtr;
-        bool                     _syncDevice;
-        GLuint                   _bo;
-        bool                     _boRegistered;
-
-        GeometryStream();
-        virtual ~GeometryStream();
-
-
-    private:
-        // not allowed to call copy-constructor or copy-operator
-        GeometryStream( const GeometryStream& ) {}
-        GeometryStream& operator=( const GeometryStream& ) { return *this; }
-    };
-
-    /**
-    */
-    class LIBRARY_EXPORT Geometry : public osgCompute::Buffer, public osg::Geometry
+    class LIBRARY_EXPORT Geometry : public osg::Geometry, public osgCompute::InteropObject
     {
     public:
         Geometry();
 
-        META_Buffer( osgCuda, Geometry )
+        META_Object( osgCuda, Geometry )
+					
+		virtual osgCompute::InteropBuffer* getBuffer();
+		virtual const osgCompute::InteropBuffer* getBuffer() const;
+		virtual osgCompute::InteropBuffer* getOrCreateBuffer();
+
+		virtual void addHandle( const std::string& handle );
+		virtual void removeHandle( const std::string& handle );
+		virtual bool isAddressedByHandle( const std::string& handle ) const;
 
         virtual bool init();
 
         virtual void drawImplementation(osg::RenderInfo& renderInfo) const;
         virtual void releaseGLObjects(osg::State* state=0) const;
 
-        virtual bool setMemory( const osgCompute::Context& context, int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 ) const;
-        virtual void* map( const osgCompute::Context& context, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) const;
-        virtual void unmap( const osgCompute::Context& context, unsigned int hint = 0 ) const;
-
+		virtual bool isClear();
         virtual void clear();
 
     protected:
+		friend class GeometryBuffer;
         virtual ~Geometry();
         void clearLocal();
 
-        virtual void* mapStream( GeometryStream& stream, unsigned int mapping, unsigned int offset ) const;
-        virtual void unmapStream( GeometryStream& stream ) const;
-
-        bool setupStream( unsigned int mapping, GeometryStream& stream ) const;
-        bool allocStream( unsigned int mapping, GeometryStream& stream ) const;
-        bool syncStream( unsigned int mapping, GeometryStream& stream ) const;
-
-        virtual void clear( const osgCompute::Context& context ) const;
-        virtual osgCompute::BufferStream* newStream( const osgCompute::Context& context ) const;
+		mutable GeometryBuffer* 	_proxy;
+		bool						_clear;
+		osgCompute::HandleSet		_handles;
 
     private:
         // copy constructor and operator should not be called
         Geometry( const Geometry& , const osg::CopyOp& ) {}
         Geometry& operator=(const Geometry&) { return (*this); }
     };
-
-    
 }
 
-
-#endif //OSGCUDA_GEOMETRY
+#endif //OSGCUDA_GEOMETRYBUFFER_H

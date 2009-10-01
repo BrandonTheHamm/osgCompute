@@ -1,0 +1,71 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+*
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCUDA_INTEROPERABILITY_H
+#define OSGCUDA_INTEROPERABILITY_H 1
+
+#include <osgCompute/Buffer>
+#include <osgCuda/Export>
+
+namespace osgCompute
+{
+	class InteropObject;
+	class InteropBuffer;
+
+	/**
+		Interface for all scene based objects 
+	*/
+	class LIBRARY_EXPORT InteropObject
+	{
+	public:
+		InteropObject() {}
+
+		virtual InteropBuffer* getBuffer() = 0;
+		virtual const InteropBuffer* getBuffer() const= 0;
+		virtual InteropBuffer* getOrCreateBuffer() = 0;
+
+		virtual void addHandle( const std::string& handle ) = 0;
+		virtual void removeHandle( const std::string& handle ) = 0;
+		virtual bool isAddressedByHandle( const std::string& handle ) const = 0;
+
+	protected:
+		virtual ~InteropObject() {}
+
+	private:
+		// copy constructor and operator should not be called
+		InteropObject( const InteropObject& , const osg::CopyOp& ) {}
+		InteropObject& operator=(const InteropObject&) { return (*this); }
+	};
+
+	/**
+	*/
+	class LIBRARY_EXPORT InteropBuffer : public osgCompute::Buffer
+	{
+	public:
+		InteropBuffer() {}
+
+		virtual InteropObject* getObject() = 0;
+
+	protected:
+		virtual ~InteropBuffer() {}
+
+	private:
+		// copy constructor and operator should not be called
+		InteropBuffer( const InteropBuffer& , const osg::CopyOp& ) {}
+		InteropBuffer& operator=(const InteropBuffer&) { return (*this); }
+	};
+}
+
+#endif //OSGCUDA_INTEROPERABILITY_H

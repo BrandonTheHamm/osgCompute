@@ -63,10 +63,10 @@ namespace osgCompute
                 {
                     update( nv );
                 }
-                else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
-                {
-                    handleevent( nv );
-                }
+				else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
+				{
+					handleevent( nv );
+				}
 
                 nv.apply( *this );
             }
@@ -94,12 +94,13 @@ namespace osgCompute
             module.acceptResource( *curResource );
         }
 
-        // increment traversal counter if required
-        if( module.getEventResourceCallback() )
-            osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() + 1 );
+		// increment traversal counter if required
+		if( module.getEventCallback() )
+			osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() + 1 );
 
-        if( module.getUpdateResourceCallback() )
-            osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() + 1 );
+		if( module.getUpdateCallback() )
+			osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() + 1 );
+
 
         _modules.push_back( &module );
         resourcesChanged();
@@ -112,12 +113,12 @@ namespace osgCompute
         {
             if( (*itr) == &module )
             {
-                // decrement traversal counter if necessary
-                if( module.getEventResourceCallback() )
-                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
+				// decrement traversal counter if necessary
+				if( module.getEventCallback() )
+					osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
 
-                if( module.getUpdateResourceCallback() )
-                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
+				if( module.getUpdateCallback() )
+					osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
 
                 _modules.erase( itr );
                 resourcesChanged();
@@ -134,12 +135,13 @@ namespace osgCompute
         {
             if( (*itr)->isAddressedByHandle( moduleHandle ) )
             {
-                // decrement traversal counter if necessary
-                if( (*itr)->getEventResourceCallback() )
-                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
+				// decrement traversal counter if necessary
+				if( (*itr)->getEventCallback() )
+					osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
 
-                if( (*itr)->getUpdateResourceCallback() )
-                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
+				if( (*itr)->getUpdateCallback() )
+					osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
+
 
                 _modules.erase( itr );
                 itr = _modules.begin();
@@ -155,22 +157,22 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Computation::removeModules()
     {
-        ModuleListItr itr = _modules.begin();
-        while( itr != _modules.end() )
+        ModuleListItr itr;
+        while( !_modules.empty() )
         {
-            Module* curModule = (*itr).get();
-            if( curModule != NULL )
-            {
-                // decrement traversal counter if necessary
-                if( curModule->getEventResourceCallback() )
-                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
+			itr = _modules.begin();
 
-                if( curModule->getUpdateResourceCallback() )
-                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
-            }
+			Module* curModule = (*itr).get();
+			if( curModule != NULL )
+			{
+				// decrement traversal counter if necessary
+				if( curModule->getEventCallback() )
+					osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
 
-            _modules.erase( itr );
-            itr = _modules.begin();
+				if( curModule->getUpdateCallback() )
+					osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
+			}
+			_modules.erase( itr );
         }
 
         resourcesChanged();
@@ -253,17 +255,10 @@ namespace osgCompute
         if( hasResource(resource) )
             return;
 
-        // increment traversal counter if required
-        if( resource.getEventResourceCallback() )
-            osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() + 1 );
-
-        if( resource.getUpdateResourceCallback() )
-            osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() + 1 );
-
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             (*itr)->acceptResource( resource );
 
-        _resources.insert( std::make_pair< Resource*, osg::ref_ptr<osg::Object> > ( &resource, resource.asObject() ) );
+        _resources.insert( std::make_pair< Resource*, osg::ref_ptr<Resource> > ( &resource, &resource ) );
         resourcesChanged();
     }
 
@@ -281,13 +276,6 @@ namespace osgCompute
 
             if( curResource->isAddressedByHandle( handle ) )
             {
-                // decrement traversal counter if necessary
-                if( curResource->getEventResourceCallback() )
-                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
-
-                if( curResource->getUpdateResourceCallback() )
-                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
-
                 for( ModuleListItr moditr = _modules.begin(); moditr != _modules.end(); ++moditr )
                     (*moditr)->removeResource( *curResource );
 
@@ -308,13 +296,6 @@ namespace osgCompute
         ResourceMapItr itr = _resources.find( &resource );
         if( itr != _resources.end() )
         {
-            // decrement traversal counter if necessary
-            if( resource.getEventResourceCallback() )
-                osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
-
-            if( resource.getUpdateResourceCallback() )
-                osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
-
             for( ModuleListItr moditr = _modules.begin(); moditr != _modules.end(); ++moditr )
                 (*moditr)->removeResource( resource );
 
@@ -332,13 +313,6 @@ namespace osgCompute
             Resource* curResource = (*itr).first;
             if( curResource != NULL )
             {
-                // decrement traversal counter if necessary
-                if( curResource->getEventResourceCallback() )
-                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
-
-                if( curResource->getUpdateResourceCallback() )
-                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
-
                 for( ModuleListItr moditr = _modules.begin(); moditr != _modules.end(); ++moditr )
                     (*moditr)->removeResource( *curResource );
             }
@@ -380,6 +354,81 @@ namespace osgCompute
         _resourcesCollected = false;
     }
 
+
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	void Computation::setLaunchCallback( LaunchCallback* lc ) 
+	{ 
+		if( lc == _launchCallback )
+			return;
+
+		_launchCallback = lc; 
+	}
+
+	//------------------------------------------------------------------------------
+	LaunchCallback* Computation::getLaunchCallback() 
+	{ 
+		return _launchCallback; 
+	}
+
+	//------------------------------------------------------------------------------
+	const LaunchCallback* Computation::getLaunchCallback() const 
+	{ 
+		return _launchCallback; 
+	}
+
+	//------------------------------------------------------------------------------
+	void Computation::setComputeOrder( Computation::ComputeOrder co )
+	{
+		_computeOrder = co;
+	}
+
+	//------------------------------------------------------------------------------
+	Computation::ComputeOrder Computation::getComputeOrder()
+	{
+		return _computeOrder;
+	}
+
+	//------------------------------------------------------------------------------
+	Computation* Computation::getParentComputation() const
+	{
+		return _parentComputation;
+	}
+
+	//------------------------------------------------------------------------------
+	void Computation::setAutoCollectResources( bool autoCollectResources )
+	{
+		_autoCollectResources = autoCollectResources;
+	}
+
+	//------------------------------------------------------------------------------
+	bool Computation::getAutoCollectResources()
+	{
+		return _autoCollectResources;
+	}
+
+	//------------------------------------------------------------------------------
+	void Computation::enable() 
+	{ 
+		_enabled = true; 
+	}
+
+	//------------------------------------------------------------------------------
+	void Computation::disable() 
+	{ 
+		_enabled = false; 
+	}
+
+	//------------------------------------------------------------------------------
+	bool Computation::isEnabled() const
+	{
+		return _enabled;
+	}
+
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -390,7 +439,7 @@ namespace osgCompute
         _resourcesCollected = false;
         removeResources();
         removeModules();
-        _computeOrder = PRE_COMPUTE_POST_TRAVERSAL;
+        _computeOrder = PRE_COMPUTE_PRE_TRAVERSAL;
         _launchCallback = NULL;
         _enabled = true;
         _autoCollectResources = false;
@@ -460,10 +509,6 @@ namespace osgCompute
 
 
             context->setId( ctxId );
-            std::stringstream contextName;
-            contextName << getName() <<"_Context_" << ctxId; 
-            context->setName( contextName.str() );
-
             _contextMap.insert( std::make_pair< unsigned int, osg::ref_ptr<Context> >( ctxId, context) );
         }
         else
@@ -557,6 +602,9 @@ namespace osgCompute
         pb->init( *this );
         pb->setContext( *ctx );
 
+		//////////////
+		// TRAVERSE //
+		//////////////
         cv.setCurrentRenderBin( pb );
         cv.apply( *this );
         cv.setCurrentRenderBin( oldRB );
@@ -631,24 +679,14 @@ namespace osgCompute
 
         if( getUpdateCallback() )
             (*getUpdateCallback())( this, &uv );
-        else
-        {
-            Resource* curResource = NULL;
-            for( ResourceMapItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-            {
-                curResource = (*itr).first;
-                if( !curResource || dynamic_cast<Module*>(curResource) != NULL )
-                    continue;
-                if( curResource->getUpdateResourceCallback() )
-                    (*curResource->getUpdateResourceCallback())( *curResource, uv );
-            }
-
-            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            {
-                if( (*itr)->getUpdateResourceCallback() )
-                    (*(*itr)->getUpdateResourceCallback())( *(*itr), uv );
-            }
-        }
+		else
+		{
+			for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+			{
+				if( (*itr)->getUpdateCallback() )
+					(*(*itr)->getUpdateCallback())( *(*itr), uv );
+			}
+		}
     }
 
     //------------------------------------------------------------------------------
@@ -656,7 +694,7 @@ namespace osgCompute
     {
         if( !_resourceVisitor.valid() )
         {
-            _resourceVisitor = new ResourceVisitor;
+            _resourceVisitor = newVisitor();
             _resourceVisitor->setComputation( this );
             if( !_resourceVisitor->init() )
             {
@@ -678,29 +716,19 @@ namespace osgCompute
         _resourcesCollected = true;
     }
 
-    //------------------------------------------------------------------------------
-    void Computation::handleevent( osg::NodeVisitor& ev )
-    {
-        if( getEventCallback() )
-            (*getEventCallback())( this, &ev );
-        else
-        {
-            Resource* curResource = NULL;
-            for( ResourceMapItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-            {
-                curResource = (*itr).first;
-                if( !curResource || dynamic_cast<Module*>(curResource) != NULL )
-                    continue;
+	//------------------------------------------------------------------------------
+	void Computation::handleevent( osg::NodeVisitor& ev )
+	{
+		if( getEventCallback() )
+			(*getEventCallback())( this, &ev );
+		else
+		{
+			for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+			{
+				if( (*itr)->getEventCallback() )
+					(*(*itr)->getEventCallback())( *(*itr), ev );
+			}
+		}
+	}  
 
-                if( curResource->getEventResourceCallback() )
-                    (*curResource->getEventResourceCallback())( *curResource, ev );
-            }
-
-            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            {
-                if( (*itr)->getEventResourceCallback() )
-                    (*(*itr)->getEventResourceCallback())( *(*itr), ev );
-            }
-        }
-    }   
 }

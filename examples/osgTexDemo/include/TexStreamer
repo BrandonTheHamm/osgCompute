@@ -17,6 +17,7 @@
 #define TEXSTREAMER_H 1
 
 #include <osg/ref_ptr>
+#include <vector_types.h>
 #include <osgCompute/Module>
 #include <osgCompute/Buffer>
 
@@ -27,29 +28,24 @@ namespace TexDemo
     public:
         TexStreamer() : osgCompute::Module() {clearLocal();}
         
-        META_Module( TexDemo, TexStreamer )
+        META_Object( TexDemo, TexStreamer )
 
+		// Modules have to implement at least this
+		// three methods:
         virtual bool init();
-
-        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
-
         virtual void launch( const osgCompute::Context& context ) const;
-
         virtual void acceptResource( osgCompute::Resource& resource );
-        virtual bool usesResource( const std::string& handle ) const;
-        virtual void removeResource( const std::string& handle );
-        virtual osgCompute::Resource* getResource( const std::string& handle );
-        virtual const osgCompute::Resource* getResource( const std::string& handle ) const;
 
+		virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
     protected:
         virtual ~TexStreamer() { clearLocal(); }
         void clearLocal();
 
-        mutable osg::Vec2s                                _numBlocks;
-        mutable osg::Vec2s                                _numThreads;
-        osgCompute::Buffer*                               _srcArray;
-        osgCompute::Buffer*                               _trgTmpBuffer;
-        osgCompute::Buffer*                               _trgBuffer;
+        dim3											_blocks;
+        dim3											_threads;
+		osg::ref_ptr<osgCompute::Buffer>				_srcArray;
+        osg::ref_ptr<osgCompute::Buffer>                _tmpBuffer;
+        osg::ref_ptr<osgCompute::Buffer>                _trgBuffer;
 
     private:
         TexStreamer(const TexStreamer&, const osg::CopyOp& ) {} 

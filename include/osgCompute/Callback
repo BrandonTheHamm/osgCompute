@@ -17,58 +17,56 @@
 #define OSGCOMPUTE_CALLBACK 1
 
 #include <osg/Object>
+#include <osg/NodeVisitor>
 #include <osgCompute/Export>
-
-namespace osg
-{
-    class NodeVisitor;
-}
 
 namespace osgCompute
 {
     class Resource;
     class Context;
-    class ComputationBin;
+	class Module;
+
+	//! Module callback class
+	/**
+	* Callback class which is used for adding event callbacks or update callbacks to modules.<br>
+	* This allows users to customize a callback function during the update cycle or the event traversal.
+	*
+	*/
+	class LIBRARY_EXPORT ModuleCallback : public virtual osg::Object
+	{
+	public:
+		/** Constructor. The object will be initialized with default values. */
+		inline ModuleCallback() { clearLocal(); }
+
+		/** Do customized callback code.*/
+		virtual void operator()( Module& module, osg::NodeVisitor& nv ) = 0;
+
+		/** Restore object to default state. Calls clearLocal(). */
+		virtual void clear() { clearLocal(); }
+	protected:
+
+		/** Destructor. Release the memory by calling clearLocal(). */
+		virtual ~ModuleCallback() { clearLocal(); }
+
+		/** Clear local members.*/
+		void clearLocal() {}
+
+	private:
+
+		/** Copy constructor. This constructor should not be called. */
+		ModuleCallback( const ModuleCallback&, const osg::CopyOp& ) {}
+
+		/** Copy operator. This operator should not be called. */
+		ModuleCallback &operator=(const ModuleCallback &) { return *this; }
+	};
 
     /**
     */
     class LIBRARY_EXPORT SubloadCallback : public virtual osg::Object
     {
-
     public:
-
         /** Constructor. The object will be initialized with default values. */
-        inline SubloadCallback() : osg::Object() { clearLocal(); }
-
-        /** Restore object to default state. Calls clearLocal(). */
-        virtual void clear() { clearLocal(); }
-
-    protected:
-
-        /** Destructor. Release the memory by calling clearLocal(). */
-        virtual ~SubloadCallback() { clearLocal(); }
-        
-        /** Clear local members.*/
-        void clearLocal() {}
-
-    private:
-
-        /** Copy constructor. This constructor should not be called. */
-        SubloadCallback(const SubloadCallback&, const osg::CopyOp&) {}
-
-        /** Copy operator. This operator should not be called. */
-        SubloadCallback &operator=(const SubloadCallback&) { return *this; }
-    };
-
-    /**
-    */
-    class LIBRARY_EXPORT BufferSubloadCallback : public SubloadCallback
-    {
-
-    public:
-
-        /** Constructor. The object will be initialized with default values. */
-        inline BufferSubloadCallback() : SubloadCallback() { clearLocal(); }
+        inline SubloadCallback() { clearLocal(); }
 
         /** Restore object to default state. Calls clearLocal(). */
         virtual void clear() { clearLocal(); }
@@ -80,7 +78,7 @@ namespace osgCompute
     protected:
 
         /** Destructor. Release the memory by calling clearLocal(). */
-        virtual ~BufferSubloadCallback() { clearLocal(); }
+        virtual ~SubloadCallback() { clearLocal(); }
         
         /** Clear local members.*/
         void clearLocal() {}
@@ -88,51 +86,11 @@ namespace osgCompute
     private:
 
         /** Copy constructor. This constructor should not be called.*/
-        BufferSubloadCallback(const BufferSubloadCallback&, const osg::CopyOp&) {}
+        SubloadCallback(const SubloadCallback&, const osg::CopyOp&) {}
 
         /** Copy operator. This operator should not be called.*/
-        BufferSubloadCallback &operator=(const BufferSubloadCallback&) { return *this; }
+        SubloadCallback &operator=(const SubloadCallback&) { return *this; }
     };
-
-
-    //! Resource callback class
-    /**
-    * Callback class which is used for adding event callbacks or update callbacks to objects of type Resource and Module.<br>
-    * This allows users to customize a callback function during the update cycle or the event traversal.
-    *
-    */
-    class LIBRARY_EXPORT ResourceCallback : public virtual osg::Object
-    {
-    public:
-        /** Constructor. The object will be initialized with default values. */
-        inline ResourceCallback() { clearLocal(); }
-
-        /** Restore object to default state. Calls clearLocal(). */
-        virtual void clear() { clearLocal(); }
-
-        /** Clear object with regard to the given context. */
-        virtual void clear( const Context& context ) const {}
-
-        /** Do customized callback code.*/
-        virtual void operator()( Resource& resource, osg::NodeVisitor& nv ) = 0;
-
-    protected:
-
-        /** Destructor. Release the memory by calling clearLocal(). */
-        virtual ~ResourceCallback() { clearLocal(); }
-        
-        /** Clear local members.*/
-        void clearLocal() {}
-
-    private:
-
-        /** Copy constructor. This constructor should not be called. */
-        ResourceCallback( const ResourceCallback&, const osg::CopyOp& ) {}
-
-        /** Copy operator. This operator should not be called. */
-        ResourceCallback &operator=(const ResourceCallback &) { return *this; }
-    };
-
 
     //! Computation callback class
     /**
@@ -149,11 +107,8 @@ namespace osgCompute
         /** Restore object to default state. Calls clearLocal(). */
         virtual void clear() { clearLocal(); }
 
-        /** Clear object with regard to the given context. */
-        virtual void clear( const Context& context ) const {}
-
         /** Do customized callback code.*/
-        virtual void operator()( const osg::Object& exObject, const Context& context ) const = 0;
+        virtual void operator()( const osg::Referenced& reference, const Context& context ) const = 0;
 
     protected:
 

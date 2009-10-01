@@ -12,10 +12,9 @@
  *
  * The full license is in LICENSE file included with this distribution.
 */
-
-#include <math.h>
 #include "PtclMover"
 
+//------------------------------------------------------------------------------
 extern "C"
 void move( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime );
 
@@ -33,7 +32,7 @@ namespace PtclDemo
         if( !_ptcls )
         {
             osg::notify( osg::WARN ) 
-                << "ParticleDemo::ParticleMover::init(): particle buffer is missing."
+                << "PtclDemo::PtclMover::init(): particle buffer is missing."
                 << std::endl;
 
             return false;
@@ -51,43 +50,42 @@ namespace PtclDemo
     }
 
     //------------------------------------------------------------------------------  
-    void PtclMover::launch( const osgCompute::Context& context ) const
+    void PtclMover::launch( const osgCompute::Context& ctx ) const
     {
         if( isClear() )
             return;
 
-        if( context.getState() == NULL || context.getState()->getFrameStamp() == NULL )
+        if( ctx.getState() == NULL  )
             return;
 
         /////////////
         // ADVANCE //
         /////////////
-        if( _frameStamp == NULL )
-        {
-            _frameStamp = context.getState()->getFrameStamp();
-            _lastTime = _frameStamp->getSimulationTime();
-        }
+		const osg::FrameStamp* fs = ctx.getState()->getFrameStamp();
+        if( fs == NULL )
+			return;
 
-        float etime = static_cast<float>(_frameStamp->getSimulationTime() - _lastTime);
-        _lastTime = _frameStamp->getSimulationTime();
+		if( _firstFrame )
+		{
+			_lastTime = fs->getSimulationTime();
+			_firstFrame = false;
+		}
+        float elapsedtime = static_cast<float>(fs->getSimulationTime() - _lastTime);
+        _lastTime = fs->getSimulationTime();
 
-        /////////////
-        // MAPPING //
-        /////////////
-        void* ptcls = _ptcls->map( context );
-
-        ///////////////
-        // ADVECTION //
-        ///////////////
+        ////////////////////
+        // MOVE PARTICLES //
+        ////////////////////
         move( _numBlocks, 
               _numThreads, 
-              ptcls, 
-              etime );
+              _ptcls->map( ctx ), 
+              elapsedtime );
     }
 
     //------------------------------------------------------------------------------
     void PtclMover::acceptResource( osgCompute::Resource& resource )
     {
+		// Search for the particle buffer
         if( resource.isAddressedByHandle("PTCL_BUFFER") )
             _ptcls = dynamic_cast<osgCompute::Buffer*>( &resource );
     }
@@ -104,6 +102,6 @@ namespace PtclDemo
         _ptcls = NULL;
 
         _lastTime = 0.0;
-        _frameStamp = NULL;
+        _firstFrame = true;
     }
 }

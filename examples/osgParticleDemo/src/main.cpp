@@ -13,6 +13,8 @@
  * The full license is in LICENSE file included with this distribution.
 */
 
+#include <iostream>
+#include <sstream>
 #include <osg/ArgumentParser>
 #include <osg/Texture2D>
 #include <osg/Viewport>
@@ -22,27 +24,22 @@
 #include <osg/Point>
 #include <osg/Array>
 #include <osg/PointSprite>
-#include <osgViewer/Viewer>
-#include <osgGA/TrackballManipulator>
-#include <osgViewer/ViewerEventHandlers>
+#include <osg/Geometry>
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
+#include <osgDB/FileUtils>
 #include <osgDB/Registry>
+#include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Computation>
 #include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
-
-#include <iostream>
-#include <sstream>
-#include <osg/Geometry>
-#include <osgDB/ReadFile>
-#include <osgDB/FileUtils>
 
 #include "PtclMover"
 #include "PtclEmitter"
 
 
-osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
+osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
     osg::Geometry* bbgeom = new osg::Geometry;
 
@@ -67,7 +64,6 @@ osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     // indices
     osg::DrawElementsUShort* indices = new osg::DrawElementsUShort(GL_LINES);
 
-    // front
     indices->push_back(0);
     indices->push_back(1);
     indices->push_back(1);
@@ -77,7 +73,6 @@ osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     indices->push_back(3);
     indices->push_back(0);
 
-    // back
     indices->push_back(4);
     indices->push_back(5);
     indices->push_back(5);
@@ -87,7 +82,6 @@ osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     indices->push_back(7);
     indices->push_back(4);
 
-    // rest of line segments
     indices->push_back(1);
     indices->push_back(5);
     indices->push_back(2);
@@ -98,7 +92,7 @@ osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     indices->push_back(4);
     bbgeom->addPrimitiveSet( indices );
 
-    // do color
+    // color
     osg::Vec4Array* color = new osg::Vec4Array;
     color->push_back( osg::Vec4(0.5f, 0.5f, 0.5f, 1.f) );
     bbgeom->setColorArray( color );
@@ -110,7 +104,7 @@ osg::Geode* getBBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     osg::Geode* bbox = new osg::Geode;
     bbox->addDrawable( bbgeom );
 
-    // disable lighting
+    // Disable lighting
     bbox->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 
     return bbox;
@@ -160,12 +154,13 @@ osg::Geode* getGeode( unsigned int numParticles )
 {
     osg::Geode* geode = new osg::Geode;
 
-    // GEOMETRY
+	//////////////
+	// GEOMETRY //
+	//////////////
     osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
 
-    // initialize the vertices
+    // Initialize the Particles
     osg::Vec4Array* coords = new osg::Vec4Array(numParticles);
-    coords->setName("particles");
     for( unsigned int v=0; v<coords->size(); ++v )
         (*coords)[v].set(-1,-1,-1,0);
 
@@ -173,10 +168,7 @@ osg::Geode* getGeode( unsigned int numParticles )
     ptclGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
     ptclGeom->addHandle( "PTCL_BUFFER" );
 
-    //////////
-    // GEOM //
-    //////////
-    // add particles
+    // Add particles
     geode->addDrawable( ptclGeom.get() );
 
     ////////////
@@ -194,13 +186,13 @@ osg::Geode* getGeode( unsigned int numParticles )
     ////////////
     // SHADER //
     ////////////
-    // add program
+    // Add program
     osg::Program* program = new osg::Program;
     program->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile("osgParticleDemo/shader/PtclSprite.vsh")));
     program->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile("osgParticleDemo/shader/PtclSprite.fsh")));
     geode->getOrCreateStateSet()->setAttribute(program);
 
-    // screen resolution for particle sprite
+    // Screen resolution for particle sprite
     osg::Uniform* pixelsize = new osg::Uniform();
     pixelsize->setName( "pixelsize" );
     pixelsize->setType( osg::Uniform::FLOAT_VEC2 );
@@ -219,29 +211,60 @@ int main(int argc, char *argv[])
     osg::Vec3 bbmax(4,4,4);
     unsigned int numParticles = 64000;
 
+	///////////////
+	// RESOURCES //
+	///////////////
+	// Seeds
+	osg::FloatArray* seedValues = new osg::FloatArray();
+	for( unsigned int s=0; s<numParticles; ++s )
+		seedValues->push_back( float(rand()) / RAND_MAX );
+
+	osgCuda::Buffer* seedBuffer = new osgCuda::Buffer;
+	seedBuffer->setElementSize( sizeof(float) );
+	seedBuffer->setName( "ptclSeedBuffer" );
+	seedBuffer->setDimension(0,numParticles);
+	seedBuffer->setArray( seedValues );
+	seedBuffer->addHandle( "PTCL_SEEDS" );
+
+	///////////////////
+	// SETUP MODULES //
+	///////////////////
+	// Create module
+	PtclDemo::PtclMover* ptclMover = new PtclDemo::PtclMover;
+	ptclMover->setName( "ptclMover" );
+
+	PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
+	ptclEmitter->setName( "ptclEmitter" );
+	ptclEmitter->setSeedBox( bbmin, bbmax );
+
+	osgCuda::Computation* computation = new osgCuda::Computation;
+	computation->setName("computation");
+	computation->addModule( *ptclEmitter );    
+	computation->addModule( *ptclMover );
+	computation->addResource( *seedBuffer );
+	// Particles are located in the subgraph of
+	// the modules
+	computation->addChild( getGeode( numParticles ) );
+
     /////////////////
     // SETUP SCENE //
     /////////////////
     osg::Group* scene = new osg::Group;
-
-    osgCompute::Computation* computation = getComputation( bbmin, bbmax );
-    computation->addChild( getGeode( numParticles ) );
     scene->addChild( computation );
-    scene->addChild( getBBox( bbmin, bbmax ) );
+    scene->addChild( getBoundingBox( bbmin, bbmax ) );
 
-    ////////////
-    // VIEWER //
-    ////////////
+    //////////////////
+    // SETUP VIEWER //
+    //////////////////
     osg::ArgumentParser arguments(&argc, argv);
     osgViewer::Viewer viewer(arguments);
     viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.setUpViewInWindow( 50, 50, 640, 480);
 
-    // if you have OSG Version 2.8.1 or the current OSG SVN Version (2.9.1 or later)
-    // then try multithreaded
-    // otherwise the application will finish with segmentation fault
-    //viewer.setThreadingModel(osgViewer::Viewer::CullDrawThreadPerContext);
+	// You must use the single threaded version since osgCompute currently
+	// does only support single threaded applications. Please ask in the
+	// forum for the multi-threaded version if you need it.
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
     viewer.setSceneData( scene );

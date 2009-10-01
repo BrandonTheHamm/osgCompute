@@ -24,7 +24,6 @@
 
 namespace osgCuda
 {
-    class ReleaseOperation;
     struct ContextMemory;
 
     /**
@@ -34,30 +33,10 @@ namespace osgCuda
     public:
         Context();
 
-        META_Object( osgCuda, Context );
-
         virtual bool init();
         virtual void apply();
 
         inline const cudaDeviceProp* getDeviceProperties() const;
-
-        void* mallocHostMemory( unsigned int byteSize ) const;
-        void* mallocDeviceMemory( unsigned int byteSize ) const;
-        void* mallocDeviceHostMemory( unsigned int byteSize ) const;
-        void* mallocDevice2DMemory( unsigned int widthPitch, unsigned int height ) const;
-        void* mallocDevice3DMemory( unsigned int widthPitch, unsigned int height, unsigned int depth ) const;
-        cudaArray* mallocDeviceArray( unsigned int width, const cudaChannelFormatDesc& desc ) const;
-        cudaArray* mallocDevice2DArray( unsigned int width, unsigned int height, const cudaChannelFormatDesc& desc ) const;
-        cudaArray* mallocDevice3DArray( unsigned int width, unsigned int height, unsigned int depth, const cudaChannelFormatDesc& desc ) const;
-
-        GLuint mallocBufferObject( unsigned int byteSize ) const;
-        bool registerBufferObject( GLuint bo, unsigned int byteSize ) const;
-        
-        void freeMemory( void* buffer ) const;
-        void freeMemory( cudaArray* array ) const;
-        void freeBufferObject( GLuint bo ) const;
-
-        inline const OpenThreads::Thread* getAssignedThread() const;
 
         virtual void clear();
 
@@ -66,12 +45,7 @@ namespace osgCuda
         virtual ~Context() { clearLocal(); }
         void clearLocal();
 
-        void clearMemory();
-
-        ReleaseOperation*            _releaseOp;
-        mutable ContextMemory*       _ctxmem;
         cudaDeviceProp               _deviceProperties;
-        OpenThreads::Thread*         _asgThread;
 
     private:
         // copy constructor and operator should not be called
@@ -83,12 +57,6 @@ namespace osgCuda
     inline const cudaDeviceProp* Context::getDeviceProperties() const 
     { 
         return &_deviceProperties; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const OpenThreads::Thread* Context::getAssignedThread() const
-    {
-        return _asgThread;
     }
 }
 

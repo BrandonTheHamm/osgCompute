@@ -25,6 +25,8 @@
 
 namespace osgCuda
 {
+	class ArrayStream;
+
     enum ALLOC_HINTS
     {
         ALLOC_LINEAR = 0x0,
@@ -32,38 +34,14 @@ namespace osgCuda
         ALLOC_DYNAMIC = 0x2
     };
 
-	/**
-	*/
-	class LIBRARY_EXPORT ArrayStream : public osgCompute::BufferStream
-	{
-	public:
-		cudaArray*                      _devArray;
-		bool                            _devArrayAllocated;
-		bool                            _syncDevice;
-		void*							_hostPtr;
-		bool                            _hostPtrAllocated;
-		bool                            _syncHost;
-		unsigned int                    _allocHint;
-		unsigned int                    _modifyCount;
-
-		ArrayStream();
-		virtual ~ArrayStream();
-
-	private:
-		// not allowed to call copy-constructor or copy-operator
-		ArrayStream( const ArrayStream& ) {}
-		ArrayStream& operator=( const ArrayStream& ) { return *this; }
-	};
-
     /**
     */
-    class LIBRARY_EXPORT Array : public osgCompute::Buffer, public osg::Object
+    class LIBRARY_EXPORT Array : public osgCompute::Buffer
     {
-
     public:
         Array();
 
-        META_Buffer( osgCuda, Array )
+		META_Object(osgCuda,Array)
 
         virtual bool init();
         virtual void clear();

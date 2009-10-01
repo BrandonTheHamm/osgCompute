@@ -59,7 +59,7 @@ namespace osgCompute
         if( _dimensions.empty() )
         {
             osg::notify(osg::FATAL)  
-                << "Buffer::init() for buffer \""<<asObject()->getName()<<"\": no dimensions specified."                  
+                << "Buffer::init(): no dimensions specified."                  
                 << std::endl;
 
             return false;
@@ -68,7 +68,7 @@ namespace osgCompute
 		if( _elementSize == 0 )
 		{
 			osg::notify(osg::FATAL)  
-				<< "Buffer::init() for buffer \""<<asObject()->getName()<<"\": no element size specified."                  
+				<< "Buffer::init(): no element size specified."                  
 				<< std::endl;
 
 			return false;
@@ -154,25 +154,25 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
-	void Buffer::setSubloadResourceCallback( SubloadCallback* sc ) 
+	void Buffer::setSubloadCallback( SubloadCallback* sc ) 
 	{ 
 		_subloadCallback = sc; 
 	}
 
 	//------------------------------------------------------------------------------
-	SubloadCallback* Buffer::getSubloadResourceCallback() 
+	SubloadCallback* Buffer::getSubloadCallback() 
 	{ 
 		return _subloadCallback.get(); 
 	}
 
 	//------------------------------------------------------------------------------
-	const SubloadCallback* Buffer::getSubloadResourceCallback() const 
+	const SubloadCallback* Buffer::getSubloadCallback() const 
 	{ 
 		return _subloadCallback.get(); 
 	}
 
     //------------------------------------------------------------------------------
-    unsigned int Buffer::getMapping( const osgCompute::Context& context, unsigned int ) const
+    unsigned int Buffer::getMapping( const Context& context, unsigned int ) const
     {
         if( isClear() )
             return osgCompute::UNMAPPED;
@@ -181,8 +181,7 @@ namespace osgCompute
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)  
-                << "Buffer::getMapping() for buffer \""
-                << asObject()->getName() <<"\": could not receive stream for context \""
+                << "Buffer::getMapping(): cannot receive stream for \""
                 << context.getId() << "\"."
                 << std::endl;
 
@@ -195,14 +194,31 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	void Buffer::swap( unsigned int incr /*= 1 */ )
 	{
-		// Function is implemented by PingPongBuffers.
+		// Function should be implemented by swap buffers.
 	}
 
 	//------------------------------------------------------------------------------
 	unsigned int Buffer::getSwapCount() const
 	{
-		// Function is implemented by PingPongBuffers.
+		// Function should be implemented by swap buffers.
 		return 0;
+	}
+
+	//------------------------------------------------------------------------------
+	void Buffer::clear( const Context& context ) const
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+
+		if( _streams[context.getId()] != NULL )
+		{
+			std::vector<BufferStream*>::iterator itr = _streams.begin();
+
+			for( unsigned int sidx = 0; sidx != context.getId(); ++sidx, ++itr )
+			{
+				delete (*itr);
+				_streams.erase( itr );
+			}
+		}
 	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -217,44 +233,17 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	void Buffer::clearLocal()
 	{
-		_streams.clear();
 		_dimensions.clear();
 		_numElements = 0;
 		_elementSize = 0;
 		_allocHint = NO_ALLOC_HINT;
 		_subloadCallback = NULL;
+
+		for( unsigned int s=0; s<_streams.size(); ++s )
+			if( _streams[s] != NULL )
+				delete _streams[s];
+		_streams.clear();
 	}
-
-    //------------------------------------------------------------------------------
-    bool Buffer::init( const Context& context ) const
-    {
-        if( _streams.size()<=context.getId() )
-            _streams.resize(context.getId()+1,NULL);
-
-        // Allocate stream array for context
-        if( NULL == _streams[context.getId()] )
-        {
-            _streams[context.getId()] = newStream( context );
-
-            if( NULL == _streams[context.getId()] )
-            {
-                osg::notify( osg::FATAL )  
-                    << "Buffer::init( \"CONTEXT\" ) for buffer \"" << asObject()->getName()
-                    << "\": data stream is not available for context \"" 
-                    << context.getId() << "\"."
-                    << std::endl;
-
-                return false;
-            }
-
-            _streams[context.getId()]->_context = const_cast<osgCompute::Context*>( &context );
-            _streams[context.getId()]->_allocHint = getAllocHint();
-        }
-
-        // Register param if valid stream-array 
-        // is allocated
-        return Resource::init( context );
-    }
 
 	//------------------------------------------------------------------------------
 	BufferStream* Buffer::lookupStream( const Context& context ) const
@@ -264,32 +253,35 @@ namespace osgCompute
 		/////////////////////
 		// ALLOCATE STREAM //
 		/////////////////////
-		// Init stream array and register at context
-		if( _streams.size()<=context.getId() ||
-			_streams[context.getId()] == NULL )
-			init( context );
+		if( _streams.size()<= context.getId() )
+			_streams.resize( context.getId()+1, NULL );
+
+		// Allocate stream array for context
+		// if necessary
+		if( NULL == _streams[context.getId()] )
+		{
+			_streams[context.getId()] = newStream( context );
+
+			if( NULL == _streams[context.getId()] )
+			{
+				osg::notify( osg::FATAL )  
+					<< "Buffer::lookupStream(): allocation of data stream failed for context \""<<context.getId()<<"\"."
+					<< std::endl;
+
+				return false;
+			}
+			_streams[context.getId()]->_allocHint = getAllocHint();
+			_streams[context.getId()]->_mapping = UNMAPPED;
+			_streams[context.getId()]->_context = const_cast<osgCompute::Context*>( &context );
+		}
 
 		return _streams[context.getId()];
 	}
 
 	//------------------------------------------------------------------------------
-	BufferStream* Buffer::newStream( const Context& context ) const
+	BufferStream* Buffer::newStream( const Context& ) const
 	{
+		// implemented in the sub-classes
 		return NULL;
 	}
-
-    //------------------------------------------------------------------------------
-    void Buffer::clear( const Context& context ) const
-    {
-        if( _streams.size() > context.getId() &&
-            NULL != _streams[context.getId()] )
-        {
-            // delete stream
-            delete _streams[context.getId()];
-            _streams[context.getId()] = NULL;
-        }
-
-        // Unregister context
-        return Resource::clear( context );
-    }
 }

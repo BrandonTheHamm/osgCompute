@@ -64,14 +64,14 @@ namespace osgCompute
         virtual const ModuleList* getModules() const;
         virtual unsigned int getNumModules() const;
 
-        inline void setContext( Context& context );
-        inline Context* getContext();
-        inline const Context* getContext() const;
-        inline bool isClear() const;
-        inline Computation* getComputation();
-        inline const Computation* getComputation() const;
-        inline LaunchCallback* getLaunchCallback();
-        inline const LaunchCallback* getLaunchCallback() const;
+        virtual void setContext( Context& context );
+        virtual Context* getContext();
+        virtual const Context* getContext() const;
+        virtual bool isClear() const;
+        virtual Computation* getComputation();
+        virtual const Computation* getComputation() const;
+        virtual LaunchCallback* getLaunchCallback();
+        virtual const LaunchCallback* getLaunchCallback() const;
 
         virtual void clear();
 
@@ -79,7 +79,6 @@ namespace osgCompute
         friend class Computation;
         virtual ~ComputationBin() { clearLocal(); }
         void clearLocal();
-
 
         virtual void launch() const;
         virtual void drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
@@ -95,60 +94,8 @@ namespace osgCompute
     private:
         // copy constructor and operator should not be called
         ComputationBin(const ComputationBin&, const osg::CopyOp& ) {}
-        inline ComputationBin &operator=(const ComputationBin &) { return *this; }
+        ComputationBin &operator=(const ComputationBin &) { return *this; }
     };
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    inline bool ComputationBin::isClear() const
-    { 
-        return _clear; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline Computation* ComputationBin::getComputation()
-    { 
-        return _computation; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const Computation* ComputationBin::getComputation() const
-    { 
-        return _computation; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline LaunchCallback* ComputationBin::getLaunchCallback()
-    { 
-        return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const LaunchCallback* ComputationBin::getLaunchCallback() const
-    { 
-        return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void ComputationBin::setContext( Context& context )
-    {
-        _context = &context;
-    }
-
-    //------------------------------------------------------------------------------
-    inline Context* ComputationBin::getContext()
-    {
-        return _context.get();
-    }
-
-    //------------------------------------------------------------------------------
-    inline const Context* ComputationBin::getContext() const
-    {
-        return _context.get();
-    }
-
 }
 
 #endif //OSGCOMPUTE_COMPUTATIONBIN

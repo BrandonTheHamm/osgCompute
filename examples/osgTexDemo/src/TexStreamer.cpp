@@ -12,14 +12,15 @@
  *
  * The full license is in LICENSE file included with this distribution.
 */
-
+#include <osgCuda/Buffer>
 #include "TexStreamer"
         
+// Declare CUDA-kernel functions
 extern "C"
-void swap( osg::Vec2s& numBlocks, osg::Vec2s& numThreads, void* target, void* source );
+void gauss( const dim3& numBlocks, const dim3& numThreads, void* target, void* source, unsigned int byteSize );
 
 extern "C"
-void filter( osg::Vec2s& numBlocks, osg::Vec2s& numThreads, void* trgBuffer, void* srcArray );
+void swap( const dim3& numBlocks, const dim3& numThreads, void* trgBuffer, void* srcArray );
 
 namespace TexDemo
 {
@@ -29,106 +30,81 @@ namespace TexDemo
     //------------------------------------------------------------------------------  
     bool TexStreamer::init() 
     { 
-        if( !_trgBuffer || !_trgTmpBuffer || !_srcArray )
+        if( !_trgBuffer || !_srcArray )
         {
-            osg::notify( osg::WARN ) << "TexDemo::TexStreamer::init(): params are missing."
-                                     << std::endl;
+            osg::notify( osg::WARN ) 
+				<< "TexDemo::TexStreamer::init(): buffers are missing."
+				<< std::endl;
             return false;
         }
+
+		// Create an internal buffer
+		_tmpBuffer = new osgCuda::Buffer;
+		_tmpBuffer->setElementSize( sizeof(osg::Vec4ub) );
+		_tmpBuffer->setName( "trgTmpBuffer" );
+		_tmpBuffer->setDimension( 0, _srcArray->getDimension(0) );
+		_tmpBuffer->setDimension( 1, _srcArray->getDimension(1) );
+		if( !_tmpBuffer->init() )
+		{
+			osg::notify( osg::WARN ) 
+				<< "TexDemo::TexStreamer::init(): cannot allocate temporary buffer."
+				<< std::endl;
+			return false;
+		}
+
 
         /////////////////////////
         // COMPUTE KERNEL SIZE //
         /////////////////////////
-        // texture size must be a multiple of 16x16 texels
-        _numThreads = osg::Vec2s( 16, 16 );
-        _numBlocks = osg::Vec2s( _trgBuffer->getDimension(0)/16, 
-                                 _trgBuffer->getDimension(1)/16 );
+        // In this case we restrict our texture size to a multiple of 16 for
+		// each dimension
+        _threads = dim3( 16, 16, 1 );
+        _blocks = dim3( _trgBuffer->getDimension(0)/16, 
+                        _trgBuffer->getDimension(1)/16, 1 );
 
+		// Do not forget to call osgCompute::Module::init()!!!
         return osgCompute::Module::init();
     }
   
     //------------------------------------------------------------------------------  
-    void TexStreamer::launch( const osgCompute::Context& context ) const
+    void TexStreamer::launch( const osgCompute::Context& ctx ) const
     {
         if( isClear() )
             return;
 
-        // map params
-        void* srcArray = _srcArray->map( context );
-        void* trgTmpBuffer = _trgTmpBuffer->map( context );
-        void* trgBuffer = _trgBuffer->map( context );
+        // Swap RGB channels 
+        swap(  _blocks, 
+               _threads,
+               _tmpBuffer->map( ctx ),
+               _srcArray->map( ctx ) );
 
-        // KERNEL CALL 0 
-        filter(  _numBlocks, 
-                 _numThreads,
-                 trgTmpBuffer,
-                 srcArray );
-                 //srcDesc );
+		// You can also use the map function at any time 
+		// in order to copy memory from GPU to CPU and vice versa.
+		// To do so use the MAPPING flags (e.g. MAP_HOST_SOURCE).
+		// Each time map() is called the buffer intern checks whether
+		// he has to synchronize the memory.
+		// Uncomment the following line if you want to observe the
+		// generated memory of the swap() kernel.
 
-        // KERNEL CALL 1 
-        swap( _numBlocks, 
-              _numThreads, 
-              trgBuffer, 
-              trgTmpBuffer );
+		// unsigned char* data = static_cast<unsigned char*>( _tmpBuffer->map( ctx, osgCompute::MAP_HOST_SOURCE ) );
+
+        // Run a 5x5 gauss filter 
+        gauss( _blocks, 
+			   _threads, 
+               _trgBuffer->map( ctx ), 
+               _tmpBuffer->map( ctx ),
+			   _tmpBuffer->getByteSize() );
     }
 
     //------------------------------------------------------------------------------
     void TexStreamer::acceptResource( osgCompute::Resource& resource )
     {
+		// Search for your handles. This Method is called for each resource
+		// located in the subgraph of this module.
         if( resource.isAddressedByHandle( "TRG_BUFFER" ) )
             _trgBuffer = dynamic_cast<osgCompute::Buffer*>( &resource );
-        if( resource.isAddressedByHandle( "TRG_TMP_BUFFER" ) )
-            _trgTmpBuffer = dynamic_cast<osgCompute::Buffer*>( &resource );
         if( resource.isAddressedByHandle( "SRC_ARRAY" ) )
             _srcArray = dynamic_cast<osgCompute::Buffer*>( &resource );
-    }
-
-    //------------------------------------------------------------------------------
-    bool TexStreamer::usesResource( const std::string& handle ) const
-    {
-        if( handle == "TRG_BUFFER" ||
-            handle == "SRC_ARRAY" ||
-            handle == "TRG_TMP_BUFFER" )
-            return true;
-
-        return false;
-    }
-
-    //------------------------------------------------------------------------------
-    void TexStreamer::removeResource( const std::string& handle )
-    {
-        if( handle == "TRG_BUFFER" )
-            _trgBuffer = NULL;
-        if( handle == "SRC_ARRAY" )
-            _srcArray = NULL;
-        if( handle == "TRG_TMP_BUFFER" )
-            _trgTmpBuffer = NULL;
-    }
-
-    //------------------------------------------------------------------------------
-    osgCompute::Resource* TexStreamer::getResource( const std::string& handle )
-    {
-        if( handle == "TRG_BUFFER" )
-            return _trgBuffer;
-        if( handle == "SRC_ARRAY" )
-            return _srcArray; 
-        if( handle == "TRG_TMP_BUFFER" )
-            return _trgTmpBuffer;
-
-        return NULL;
-    }
-
-    //------------------------------------------------------------------------------
-    const osgCompute::Resource* TexStreamer::getResource( const std::string& handle ) const
-    {
-        if( handle == "TRG_BUFFER" )
-            return _trgBuffer;
-        if( handle == "SRC_ARRAY" )
-            return _srcArray;
-        if( handle == "TRG_TMP_BUFFER" )
-            return _trgTmpBuffer;
-
-        return NULL;
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -137,12 +113,10 @@ namespace TexDemo
     //------------------------------------------------------------------------------  
     void TexStreamer::clearLocal() 
     { 
-        _numBlocks[0] = 1;
-        _numBlocks[1] = 1;
-        _numThreads[0] = 1;
-        _numThreads[1] = 1;
+		_threads = dim3(0,0,0);
+        _blocks = dim3(0,0,0);
         _trgBuffer = NULL;
-        _trgTmpBuffer = NULL;
+        _tmpBuffer = NULL;
         _srcArray = NULL;
     }
 }

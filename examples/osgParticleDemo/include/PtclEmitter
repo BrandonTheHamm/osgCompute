@@ -22,21 +22,22 @@
 
 namespace PtclDemo
 {
+	/**
+	*/
     class PtclEmitter : public osgCompute::Module 
     {
     public:
         PtclEmitter() : osgCompute::Module() {clearLocal();}
 
-        META_Module( PtclDemo, PtclEmitter )
+        META_Object( PtclDemo, PtclEmitter )
 
         virtual bool init();
-        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
-
-        inline void setSeedBox( osg::Vec3f& seedMin, osg::Vec3f& seedMax ) { _seedBoxMin = seedMin; _seedBoxMax = seedMax; }
         virtual void launch( const osgCompute::Context& context ) const;
-
         virtual void acceptResource( osgCompute::Resource& resource );
 
+		inline void setSeedBox( osg::Vec3f& seedMin, osg::Vec3f& seedMax ) { _seedBoxMin = seedMin; _seedBoxMax = seedMax; }
+
+		virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
     protected:
         virtual ~PtclEmitter();
         void clearLocal();
@@ -46,8 +47,8 @@ namespace PtclDemo
 
         osg::Vec3f                                        _seedBoxMin;
         osg::Vec3f                                        _seedBoxMax;
-        osgCompute::Buffer*                               _ptcls;
-        osgCompute::Buffer*                               _seeds;
+		osg::ref_ptr<osgCompute::Buffer>                  _ptcls;
+        osg::ref_ptr<osgCompute::Buffer>                  _seeds;
 
     private:
         PtclEmitter(const PtclEmitter&, const osg::CopyOp& ) {} 
