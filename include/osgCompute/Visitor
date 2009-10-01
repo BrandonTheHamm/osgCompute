@@ -59,7 +59,7 @@ namespace osgCompute
         virtual ~ResourceVisitor() { clearLocal(); }
         void clearLocal();
 
-        inline void setComputation( Computation* computation );
+        virtual void setComputation( Computation* computation );
 
         Computation*                       _computation;
 
