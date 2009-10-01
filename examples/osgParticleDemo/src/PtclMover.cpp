@@ -74,7 +74,7 @@ namespace PtclDemo
         /////////////
         // MAPPING //
         /////////////
-        void* ptcls = _ptcls->map( context, osgCompute::MAP_DEVICE );
+        void* ptcls = _ptcls->map( context );
 
         ///////////////
         // ADVECTION //

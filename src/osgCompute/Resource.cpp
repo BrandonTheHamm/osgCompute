@@ -42,6 +42,73 @@ namespace osgCompute
         return true;
     }
 
+	//------------------------------------------------------------------------------
+	void Resource::setUpdateResourceCallback( ResourceCallback* uc ) 
+	{ 
+		_updateCallback = uc; 
+	}
+
+	//------------------------------------------------------------------------------
+	ResourceCallback* Resource::getUpdateResourceCallback() 
+	{ 
+		return _updateCallback.get(); 
+	}
+
+	//------------------------------------------------------------------------------
+	const ResourceCallback* Resource::getUpdateResourceCallback() const 
+	{ 
+		return _updateCallback.get(); 
+	}
+
+	//------------------------------------------------------------------------------
+	void Resource::setEventResourceCallback( ResourceCallback* ec ) 
+	{ 
+		_eventCallback = ec; 
+	}
+
+	//------------------------------------------------------------------------------
+	ResourceCallback* Resource::getEventResourceCallback() 
+	{ 
+		return _eventCallback.get(); 
+	}
+
+	//------------------------------------------------------------------------------
+	const ResourceCallback* Resource::getEventResourceCallback() const 
+	{ 
+		return _eventCallback.get(); 
+	}
+
+	//------------------------------------------------------------------------------
+	void Resource::addHandle( const std::string& handle )
+	{
+		if( !isAddressedByHandle(handle) )
+			_handles.insert( handle ); 
+	}
+
+	//------------------------------------------------------------------------------
+	void Resource::removeHandle( const std::string& handle )
+	{
+		HandleSetItr itr = _handles.find( handle ); 
+		if( itr != _handles.end() )
+			_handles.erase( itr );
+	}
+
+	//------------------------------------------------------------------------------
+	bool Resource::isAddressedByHandle( const std::string& handle )
+	{
+		HandleSetItr itr = _handles.find( handle ); 
+		if( itr == _handles.end() )
+			return false;
+
+		return true;
+	}
+
+	//------------------------------------------------------------------------------
+	bool Resource::isClear() const 
+	{ 
+		return _clear; 
+	}
+
     //------------------------------------------------------------------------------
     void Resource::clear()
     {

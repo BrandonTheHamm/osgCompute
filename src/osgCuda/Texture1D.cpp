@@ -47,7 +47,7 @@ namespace osgCuda
 			const osgCompute::Context* curCtx = getContext( state->getContextID() );
 			if( curCtx )
 			{
-				if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+				if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
 					unmap( *curCtx );
 			}
 		}
@@ -61,7 +61,7 @@ namespace osgCuda
 		const osgCompute::Context* curCtx = getContext( state.getContextID() );
 		if( curCtx )
 		{
-			if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+			if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
 				unmap( *curCtx );
 		}
 
@@ -71,16 +71,16 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	bool Texture1D::initDimension()
 	{
-		if( osgCompute::Buffer::getNumDimensions() != 0 )
+		if( getNumDimensions() != 0 )
 		{
-			setTextureWidth( osgCompute::Buffer::getDimension(0) );
+			setTextureWidth( getDimension(0) );
 		}
 		else
 		{
 			if( getImage(0) && getTextureWidth() == 0)
 				setTextureWidth( getImage(0)->s() );
 
-			osgCompute::Buffer::setDimension(0, getTextureWidth() );
+			setDimension(0, getTextureWidth() );
 		}
 
 		return Texture::initDimension();
@@ -153,7 +153,7 @@ namespace osgCuda
 		// UNPACK the PBO data
 		glTexSubImage1D(
 			GL_TEXTURE_1D, 0, 0,
-			osgCompute::Buffer::getDimension(0),
+			getDimension(0),
 			tex->_internalFormat,
 			texType,
 			NULL );
@@ -359,7 +359,7 @@ namespace osgCuda
 		///////////////
 		// SETUP PBO //
 		///////////////
-		stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( osgCompute::Buffer::getByteSize() );
+		stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( getByteSize() );
 		if( UINT_MAX == stream._bo )
 		{
 			osg::notify(osg::FATAL)

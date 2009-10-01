@@ -69,8 +69,8 @@ namespace PtclDemo
         // PARAMS //
         ////////////
         unsigned int seedIdx = static_cast<unsigned int>(rand());
-        void* ptcls = _ptcls->map( context, osgCompute::MAP_DEVICE );
-        void* seeds = _seeds->map( context, osgCompute::MAP_DEVICE_SOURCE );
+        void* ptcls = _ptcls->map( context );
+        void* seeds = _seeds->map( context );
 
         ///////////////
         // RESEEDING //

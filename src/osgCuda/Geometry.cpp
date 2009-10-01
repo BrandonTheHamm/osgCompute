@@ -76,7 +76,7 @@ namespace osgCuda
 
 			return false;
 		}
-		osgCompute::Buffer::setDimension( 0, osg::Geometry::getVertexArray()->getNumElements() );
+		setDimension( 0, osg::Geometry::getVertexArray()->getNumElements() );
 
 
 		osg::Geometry::ArrayList arrayList;
@@ -105,7 +105,7 @@ namespace osgCuda
 			const osgCompute::Context* curCtx = getContext( state->getContextID() );
 			if( curCtx )
 			{
-				if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+				if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
 					unmap( *curCtx );
 			}
 		}
@@ -119,7 +119,7 @@ namespace osgCuda
 		const osgCompute::Context* curCtx = getContext( renderInfo.getState()->getContextID() );
 		if( curCtx )
 		{
-			if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+			if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
 				unmap( *curCtx );
 		}
 
@@ -127,7 +127,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void* Geometry::map( const osgCompute::Context& context, unsigned int mapping ) const
+	void* Geometry::map( const osgCompute::Context& context, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int ) const
 	{
 		if( osgCompute::Resource::isClear() )
 		{
@@ -149,7 +149,7 @@ namespace osgCuda
 			return NULL;
 		}
 
-		GeometryStream* stream = static_cast<GeometryStream*>( osgCompute::Buffer::lookupStream(context) );
+		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
@@ -164,7 +164,7 @@ namespace osgCuda
 
 		void* ptr = NULL;
 		if( mapping != osgCompute::UNMAPPED )
-			ptr = mapStream( *stream, mapping );
+			ptr = mapStream( *stream, mapping, offset );
 		else
 			unmapStream( *stream );
 
@@ -172,7 +172,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void Geometry::unmap( const osgCompute::Context& context ) const
+	void Geometry::unmap( const osgCompute::Context& context, unsigned int ) const
 	{
 		if( osgCompute::Resource::isClear() )
 		{
@@ -194,7 +194,7 @@ namespace osgCuda
 			return;
 		}
 
-		GeometryStream* stream = static_cast<GeometryStream*>( osgCompute::Buffer::lookupStream(context) );
+		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
@@ -210,7 +210,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool osgCuda::Geometry::setMemory( const osgCompute::Context& context, int value, unsigned int mapping, unsigned int offset, unsigned int count ) const
+	bool osgCuda::Geometry::setMemory( const osgCompute::Context& context, int value, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int count/* = UINT_MAX*/, unsigned int ) const
 	{
 		unsigned char* data = static_cast<unsigned char*>( map( context, mapping ) );
 		if( NULL == data )
@@ -265,14 +265,14 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	void Geometry::clear( const osgCompute::Context& context ) const
 	{
-		if( osgCompute::Buffer::getMapping( context ) != osgCompute::UNMAPPED )
+		if( getMapping( context ) != osgCompute::UNMAPPED )
 			unmap( context );
 
 		osgCompute::Buffer::clear( context );
 	}
 
 	//------------------------------------------------------------------------------
-	void* Geometry::mapStream( GeometryStream& stream, unsigned int mapping ) const
+	void* Geometry::mapStream( GeometryStream& stream, unsigned int mapping, unsigned int offset ) const
 	{
 		void* ptr = NULL;
 
@@ -292,19 +292,19 @@ namespace osgCuda
 			else
 				ptr = stream._hostPtr;
 
-			if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
+			if( getSubloadResourceCallback() && NULL != ptr )
 			{
 				const osgCompute::BufferSubloadCallback* callback =
-					dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer::getSubloadResourceCallback());
+					dynamic_cast<const osgCompute::BufferSubloadCallback*>(getSubloadResourceCallback());
 				if( callback )
 				{
 					// subload data before returning the pointer
-					callback->subload( ptr, mapping, *this, *stream._context );
+					callback->subload( ptr, mapping, offset, *this, *stream._context );
 				}
 			}
 
 			stream._mapping = mapping;
-			return ptr;
+			return &static_cast<char*>(ptr)[offset];
 		}
 		else if( stream._mapping != osgCompute::UNMAPPED )
 		{
@@ -421,22 +421,22 @@ namespace osgCuda
 		//////////////////
 		// LOAD/SUBLOAD //
 		//////////////////
-		if( osgCompute::Buffer::getSubloadResourceCallback() && NULL != ptr )
+		if( getSubloadResourceCallback() && NULL != ptr )
 		{
 			const osgCompute::BufferSubloadCallback* callback =
-				dynamic_cast<const osgCompute::BufferSubloadCallback*>(osgCompute::Buffer::getSubloadResourceCallback());
+				dynamic_cast<const osgCompute::BufferSubloadCallback*>(getSubloadResourceCallback());
 			if( callback )
 			{
 				// load or subload data before returning the host pointer
 				if( firstLoad )
-					callback->load( ptr, mapping, *this, *stream._context );
+					callback->load( ptr, mapping, offset, *this, *stream._context );
 				else
-					callback->subload( ptr, mapping, *this, *stream._context );
+					callback->subload( ptr, mapping, offset, *this, *stream._context );
 			}
 		}
 
 		stream._mapping = mapping;
-		return ptr;
+		return &static_cast<char*>(ptr)[offset];
 	}
 
 	//------------------------------------------------------------------------------
@@ -500,7 +500,7 @@ namespace osgCuda
 		//////////////////
 		// REGISTER VBO //
 		//////////////////
-		if( !static_cast<const Context*>( stream._context.get() )->registerBufferObject( stream._bo, osgCompute::Buffer::getByteSize() ) )
+		if( !static_cast<const Context*>( stream._context.get() )->registerBufferObject( stream._bo, getByteSize() ) )
 		{
 			osg::notify(osg::FATAL)
 				<< "osgCuda::Geometry::setupStream() for geometry \""
@@ -526,7 +526,7 @@ namespace osgCuda
 
 			if( (stream._allocHint & osgCompute::ALLOC_DYNAMIC) == osgCompute::ALLOC_DYNAMIC )
 			{
-				stream._hostPtr = static_cast<Context*>(stream._context.get())->mallocDeviceHostMemory( osgCompute::Buffer::getByteSize() );
+				stream._hostPtr = static_cast<Context*>(stream._context.get())->mallocDeviceHostMemory( getByteSize() );
 				if( NULL == stream._hostPtr )
 				{
 					osg::notify(osg::FATAL)
@@ -540,7 +540,7 @@ namespace osgCuda
 			}
 			else
 			{
-				stream._hostPtr = static_cast<Context*>(stream._context.get())->mallocHostMemory( osgCompute::Buffer::getByteSize() );
+				stream._hostPtr = static_cast<Context*>(stream._context.get())->mallocHostMemory( getByteSize() );
 				if( NULL == stream._hostPtr )
 				{
 					osg::notify(osg::FATAL)
@@ -582,7 +582,7 @@ namespace osgCuda
 			//////////////////
 			if( !stream._boRegistered )
 			{
-				if( !static_cast<const Context*>( stream._context.get() )->registerBufferObject( stream._bo, osgCompute::Buffer::getByteSize() ) )
+				if( !static_cast<const Context*>( stream._context.get() )->registerBufferObject( stream._bo, getByteSize() ) )
 				{
 					osg::notify(osg::FATAL)
 						<< "osgCuda::Geometry::allocStream() for geometry \""
@@ -609,7 +609,7 @@ namespace osgCuda
 		cudaError res;
 		if( mapping & osgCompute::MAP_DEVICE )
 		{
-			res = cudaMemcpy( stream._devPtr, stream._hostPtr, osgCompute::Buffer::getByteSize(), cudaMemcpyHostToDevice );
+			res = cudaMemcpy( stream._devPtr, stream._hostPtr, getByteSize(), cudaMemcpyHostToDevice );
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::FATAL)
@@ -626,7 +626,7 @@ namespace osgCuda
 		}
 		else if( mapping & osgCompute::MAP_HOST )
 		{
-			res = cudaMemcpy( stream._hostPtr, stream._devPtr, osgCompute::Buffer::getByteSize(), cudaMemcpyDeviceToHost );
+			res = cudaMemcpy( stream._hostPtr, stream._devPtr, getByteSize(), cudaMemcpyDeviceToHost );
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::FATAL)

@@ -41,15 +41,15 @@ namespace osgCompute
     class LIBRARY_EXPORT Module : public Resource, public osg::Object
     {
     public:
-        Module() : Resource(), osg::Object() { clearLocal(); }
+        Module() { clearLocal(); }
 
         virtual bool init();
         virtual void clear();
         virtual void launch( const Context& context ) const = 0;
 
-        inline void setLaunchCallback( LaunchCallback* pc );
-        inline LaunchCallback* getLaunchCallback();
-        inline const LaunchCallback* getLaunchCallback() const;
+        virtual void setLaunchCallback( LaunchCallback* pc );
+        virtual LaunchCallback* getLaunchCallback();
+        virtual const LaunchCallback* getLaunchCallback() const;
 
         virtual void acceptResource( Resource& resource );
         virtual bool usesResource( const std::string& handle ) const;
@@ -58,9 +58,9 @@ namespace osgCompute
         virtual Resource* getResource( const std::string& handle );
         virtual const Resource* getResource( const std::string& handle ) const;
 
-        inline void enable();
-        inline void disable();
-        inline bool isEnabled() const;
+        virtual void enable();
+        virtual void disable();
+        virtual bool isEnabled() const;
 
     protected:
         virtual ~Module() { clearLocal(); }
@@ -74,45 +74,9 @@ namespace osgCompute
 
     private:
         // copy constructor and operator should not be called
-        Module( const Module&, const osg::CopyOp& ) {}
+		Module( const Module&, const osg::CopyOp& ){}
         Module& operator=( const Module& copy ) { return (*this); }
     };
-
-    //------------------------------------------------------------------------------
-    inline void Module::setLaunchCallback( LaunchCallback* pc ) 
-    { 
-        _launchCallback = pc; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline LaunchCallback* Module::getLaunchCallback() 
-    { 
-        return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const LaunchCallback* Module::getLaunchCallback() const 
-    { 
-        return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Module::enable() 
-    { 
-        _enabled = true; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Module::disable() 
-    { 
-        _enabled = false; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool Module::isEnabled() const
-    {
-        return _enabled;
-    }
 }
 
 #endif //OSGCOMPUTE_MODULE

@@ -46,7 +46,7 @@ namespace osgCuda
 			const osgCompute::Context* curCtx = this->getContext( state->getContextID() );
 			if( curCtx )
 			{
-				if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+				if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
 					this->unmap( *curCtx );
 			}
 		}
@@ -60,7 +60,7 @@ namespace osgCuda
 		const osgCompute::Context* curCtx = this->getContext( state.getContextID() );
 		if( curCtx )
 		{
-			if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+			if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
 				this->unmap( *curCtx );
 		}
 
@@ -70,10 +70,10 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	bool TextureRectangle::initDimension()
 	{
-		if( osgCompute::Buffer::getNumDimensions() != 0 )
+		if( getNumDimensions() != 0 )
 		{
-			setTextureWidth( osgCompute::Buffer::getDimension(0) );
-			setTextureHeight( osgCompute::Buffer::getDimension(1) );
+			setTextureWidth( getDimension(0) );
+			setTextureHeight( getDimension(1) );
 		}
 		else
 		{
@@ -83,8 +83,8 @@ namespace osgCuda
 			if( getImage(0) && getTextureHeight() == 0)
 				setTextureHeight( getImage(0)->t() );
 
-			osgCompute::Buffer::setDimension(0, getTextureWidth() );
-			osgCompute::Buffer::setDimension(1, getTextureHeight() );
+			setDimension(0, getTextureWidth() );
+			setDimension(1, getTextureHeight() );
 		}
 
 		return osgCuda::Texture::initDimension();
@@ -166,8 +166,8 @@ namespace osgCuda
 		// UNPACK the PBO data
 		glTexSubImage2D(
 			GL_TEXTURE_RECTANGLE, 0, 0, 0,
-			osgCompute::Buffer::getDimension(0),
-			osgCompute::Buffer::getDimension(1),
+			getDimension(0),
+			getDimension(1),
 			tex->_internalFormat,
 			texType,
 			NULL );
@@ -354,7 +354,7 @@ namespace osgCuda
 		///////////////
 		// SETUP PBO //
 		///////////////
-		stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( osgCompute::Buffer::getByteSize() );
+		stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( getByteSize() );
 		if( UINT_MAX == stream._bo )
 		{
 			osg::notify(osg::FATAL)

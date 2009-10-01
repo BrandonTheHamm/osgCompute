@@ -54,9 +54,9 @@ namespace TexDemo
             return;
 
         // map params
-        void* srcArray = _srcArray->map( context, osgCompute::MAP_DEVICE_SOURCE );
-        void* trgTmpBuffer = _trgTmpBuffer->map( context, osgCompute::MAP_DEVICE );
-        void* trgBuffer = _trgBuffer->map( context, osgCompute::MAP_DEVICE_TARGET );
+        void* srcArray = _srcArray->map( context );
+        void* trgTmpBuffer = _trgTmpBuffer->map( context );
+        void* trgBuffer = _trgBuffer->map( context );
 
         // KERNEL CALL 0 
         filter(  _numBlocks, 

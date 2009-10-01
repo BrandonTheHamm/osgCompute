@@ -603,7 +603,7 @@ namespace osgCompute
             for( ResourceMapItr itr = _resources.begin(); itr != _resources.end(); ++itr )
             {
                 curResource = (*itr).first;
-                if( !curResource || curResource->asModule() != NULL )
+                if( !curResource || dynamic_cast<Module*>( curResource ) != NULL )
                     continue;
 
                 if( curResource->isClear() )
@@ -637,7 +637,7 @@ namespace osgCompute
             for( ResourceMapItr itr = _resources.begin(); itr != _resources.end(); ++itr )
             {
                 curResource = (*itr).first;
-                if( !curResource || curResource->asModule() != NULL )
+                if( !curResource || dynamic_cast<Module*>(curResource) != NULL )
                     continue;
                 if( curResource->getUpdateResourceCallback() )
                     (*curResource->getUpdateResourceCallback())( *curResource, uv );
@@ -689,7 +689,7 @@ namespace osgCompute
             for( ResourceMapItr itr = _resources.begin(); itr != _resources.end(); ++itr )
             {
                 curResource = (*itr).first;
-                if( !curResource || curResource->asModule() != NULL )
+                if( !curResource || dynamic_cast<Module*>(curResource) != NULL )
                     continue;
 
                 if( curResource->getEventResourceCallback() )

@@ -63,22 +63,23 @@ namespace osgCompute
         virtual void clear();
         virtual void apply();
 
-        inline bool isClear() const;
-        inline void setId( unsigned int id );
-        inline unsigned int getId() const;
-        inline void setState( osg::State& state );
-        inline osg::State* getState();
-        inline const osg::State* getState() const;
-        inline void removeState();
-        inline bool isStateValid() const;
-        inline void setDevice( int device );
-        inline int getDevice() const;
+        virtual bool isClear() const;
+        virtual void setId( unsigned int id );
+        virtual unsigned int getId() const;
+        virtual void setState( osg::State& state );
+        virtual osg::State* getState();
+        virtual const osg::State* getState() const;
+        virtual void removeState();
+        virtual bool isStateValid() const;
+        virtual void setDevice( int device );
+        virtual int getDevice() const;
 
     protected:
         friend class Resource;
 
         virtual ~Context();
-        inline void clearLocal();
+        void clearLocal();
+
         virtual void clearResources() const;
 
         virtual bool isRegistered( Resource& resource ) const;
@@ -98,75 +99,6 @@ namespace osgCompute
         Context(const Context& ,const osg::CopyOp& ) {}
         Context &operator=(const Context&) { return *this; }
     };
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    inline void Context::setId( unsigned int id )
-    {
-        if( !isClear() )
-            return;
-
-        _id = id;
-    }
-
-    //------------------------------------------------------------------------------
-    inline unsigned int Context::getId() const
-    {
-        return _id;
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Context::setState( osg::State& state )
-    {
-        if( !isClear() )
-            return;
-
-        _state = &state;
-    }
-
-    //------------------------------------------------------------------------------
-    inline osg::State* Context::getState()
-    {
-        return _state.get();
-    }
-
-    //------------------------------------------------------------------------------
-    inline const osg::State* Context::getState() const
-    {
-        return _state.get();
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Context::removeState()
-    {
-        _state = NULL;
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool Context::isStateValid() const
-    {
-        return _state.valid();
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Context::setDevice( int device )
-    { 
-        _device = device;  
-    }
-
-    //------------------------------------------------------------------------------
-    inline int Context::getDevice() const 
-    { 
-        return _device; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool Context::isClear() const
-    {
-        return _clear;
-    }
 }
 
 #endif //OSGCOMPUTE_CONTEXT

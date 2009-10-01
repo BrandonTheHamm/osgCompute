@@ -28,46 +28,44 @@ namespace osgCompute
 {
     class Module;
 
-#define META_Resource( libraryname, classname, asModuleType )                   \
-    META_Object( libraryname, classname )                                       \
-    virtual osg::Object* asObject() { return this; }                            \
-    virtual const osg::Object* asObject() const { return this; }                \
-    virtual osgCompute::Module* asModule() { return (asModuleType); }           \
-    virtual const osgCompute::Module* asModule() const { return (asModuleType); }
-
+#define META_Resource( libraryname, classname, asModuleType )						\
+    META_Object( libraryname, classname )											\
+    virtual osg::Object* asObject() { return this; }								\
+    virtual const osg::Object* asObject() const { return this; }					\
+	virtual void release() { this->unref(); }
+	
     /**
     */
-    class LIBRARY_EXPORT Resource
+	class LIBRARY_EXPORT Resource
     {
     public:
-        Resource();
+		Resource();
 
+		virtual void release() = 0;
         virtual osg::Object* asObject() = 0;
         virtual const osg::Object* asObject() const = 0;
-        virtual Module* asModule() { return NULL; }
-        virtual const Module* asModule() const { return NULL; }
 
         virtual bool init();
 
-        inline void setUpdateResourceCallback( ResourceCallback* uc );
-        inline ResourceCallback* getUpdateResourceCallback();
-        inline const ResourceCallback* getUpdateResourceCallback() const;
-        inline void setEventResourceCallback( ResourceCallback* ec );
-        inline ResourceCallback* getEventResourceCallback();
-        inline const ResourceCallback* getEventResourceCallback() const;
+        virtual void setUpdateResourceCallback( ResourceCallback* uc );
+        virtual ResourceCallback* getUpdateResourceCallback();
+        virtual const ResourceCallback* getUpdateResourceCallback() const;
+        virtual void setEventResourceCallback( ResourceCallback* ec );
+        virtual ResourceCallback* getEventResourceCallback();
+        virtual const ResourceCallback* getEventResourceCallback() const;
 
-        inline void addHandle( const std::string& handle );
-        inline void removeHandle( const std::string& handle );
-        inline bool isAddressedByHandle( const std::string& handle );
+        virtual void addHandle( const std::string& handle );
+        virtual void removeHandle( const std::string& handle );
+        virtual bool isAddressedByHandle( const std::string& handle );
 
-        inline bool isClear() const;
+        virtual bool isClear() const;
         virtual void clear();
 
-    protected:
+	protected:
+		virtual ~Resource();
         friend class Context;
-        virtual ~Resource();
 
-        virtual void clearLocal();
+        void clearLocal();
 
         virtual bool init( const Context& context ) const;
         virtual void clear( const Context& context ) const;
@@ -85,76 +83,6 @@ namespace osgCompute
         Resource(const Resource& ,const osg::CopyOp& ) {}
         Resource &operator=(const Resource&) { return *this; }
     };
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    inline void Resource::setUpdateResourceCallback( ResourceCallback* uc ) 
-    { 
-        _updateCallback = uc; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline ResourceCallback* Resource::getUpdateResourceCallback() 
-    { 
-        return _updateCallback.get(); 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const ResourceCallback* Resource::getUpdateResourceCallback() const 
-    { 
-        return _updateCallback.get(); 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Resource::setEventResourceCallback( ResourceCallback* ec ) 
-    { 
-        _eventCallback = ec; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline ResourceCallback* Resource::getEventResourceCallback() 
-    { 
-        return _eventCallback.get(); 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const ResourceCallback* Resource::getEventResourceCallback() const 
-    { 
-        return _eventCallback.get(); 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Resource::addHandle( const std::string& handle )
-    {
-        if( !isAddressedByHandle(handle) )
-            _handles.insert( handle ); 
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Resource::removeHandle( const std::string& handle )
-    {
-        HandleSetItr itr = _handles.find( handle ); 
-        if( itr != _handles.end() )
-            _handles.erase( itr );
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool Resource::isAddressedByHandle( const std::string& handle )
-    {
-        HandleSetItr itr = _handles.find( handle ); 
-        if( itr == _handles.end() )
-            return false;
-
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
-    inline bool Resource::isClear() const 
-    { 
-        return _clear; 
-    }
 }
 
 #endif //OSGCOMPUTE_PARAM

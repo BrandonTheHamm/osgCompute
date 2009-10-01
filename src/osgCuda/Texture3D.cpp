@@ -47,7 +47,7 @@ namespace osgCuda
 			const osgCompute::Context* curCtx = getContext( state->getContextID() );
 			if( curCtx )
 			{
-				if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+				if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
 					unmap( *curCtx );
 			}
 		}
@@ -61,7 +61,7 @@ namespace osgCuda
 		const osgCompute::Context* curCtx = getContext( state.getContextID() );
 		if( curCtx )
 		{
-			if( osgCompute::Buffer::getMapping( *curCtx ) != osgCompute::UNMAPPED )
+			if( getMapping( *curCtx ) != osgCompute::UNMAPPED )
 				unmap( *curCtx );
 		}
 
@@ -71,11 +71,11 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	bool Texture3D::initDimension()
 	{
-		if( osgCompute::Buffer::getNumDimensions() != 0 )
+		if( getNumDimensions() != 0 )
 		{
-			setTextureWidth( osgCompute::Buffer::getDimension(0) );
-			setTextureHeight( osgCompute::Buffer::getDimension(1) );
-			setTextureDepth( osgCompute::Buffer::getDimension(2) );
+			setTextureWidth( getDimension(0) );
+			setTextureHeight( getDimension(1) );
+			setTextureDepth( getDimension(2) );
 		}
 		else
 		{
@@ -88,9 +88,9 @@ namespace osgCuda
 			if( getImage(0) && getTextureDepth() == 0)
 				setTextureDepth( getImage(0)->r() );
 
-			osgCompute::Buffer::setDimension(0, getTextureWidth() );
-			osgCompute::Buffer::setDimension(1, getTextureHeight() );
-			osgCompute::Buffer::setDimension(2, getTextureDepth() );
+			setDimension(0, getTextureWidth() );
+			setDimension(1, getTextureHeight() );
+			setDimension(2, getTextureDepth() );
 		}
 
 		return Texture::initDimension();
@@ -173,9 +173,9 @@ namespace osgCuda
 		// UNPACK the PBO data
 		tex3DExt->glTexSubImage3D(
 			GL_TEXTURE_3D, 0, 0, 0, 0,
-			osgCompute::Buffer::getDimension(0),
-			osgCompute::Buffer::getDimension(1),
-			osgCompute::Buffer::getDimension(2),
+			getDimension(0),
+			getDimension(1),
+			getDimension(2),
 			tex->_internalFormat,
 			texType,
 			NULL );
@@ -373,7 +373,7 @@ namespace osgCuda
 		///////////////
 		// SETUP PBO //
 		///////////////
-		stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( osgCompute::Buffer::getByteSize() );
+		stream._bo = static_cast<const Context*>( stream._context.get() )->mallocBufferObject( getByteSize() );
 		if( UINT_MAX == stream._bo )
 		{
 			osg::notify(osg::FATAL)

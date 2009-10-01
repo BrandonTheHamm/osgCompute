@@ -85,13 +85,94 @@ namespace osgCompute
     }
 
 	//------------------------------------------------------------------------------
+	void Buffer::setElementSize( unsigned int elementSize ) 
+	{ 
+		if( !isClear() )
+			return;
+
+		_elementSize = elementSize; 
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int Buffer::getElementSize() const 
+	{ 
+		return _elementSize; 
+	}
+
+	//------------------------------------------------------------------------------
 	unsigned int Buffer::getByteSize() const 
 	{ 
 		return getElementSize() * getNumElements(); 
 	}
 
+	//------------------------------------------------------------------------------
+	void Buffer::setDimension( unsigned int dimIdx, unsigned int dimSize )
+	{
+		if( !isClear() )
+			return;
+
+		if (_dimensions.size()<=dimIdx)
+			_dimensions.resize(dimIdx+1,0);
+
+		_dimensions[dimIdx] = dimSize;
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int Buffer::getDimension( unsigned int dimIdx ) const
+	{ 
+		if( dimIdx > (_dimensions.size()-1) )
+			return 0;
+
+		return _dimensions[dimIdx];
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int Buffer::getNumDimensions() const
+	{ 
+		return _dimensions.size();
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int osgCompute::Buffer::getNumElements() const
+	{
+		return _numElements;
+	}
+
+	//------------------------------------------------------------------------------
+	void osgCompute::Buffer::setAllocHint( unsigned int allocHint )
+	{
+		if( !isClear() )
+			return;
+
+		_allocHint = (_allocHint | allocHint);
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int osgCompute::Buffer::getAllocHint() const
+	{
+		return _allocHint;
+	}
+
+	//------------------------------------------------------------------------------
+	void Buffer::setSubloadResourceCallback( SubloadCallback* sc ) 
+	{ 
+		_subloadCallback = sc; 
+	}
+
+	//------------------------------------------------------------------------------
+	SubloadCallback* Buffer::getSubloadResourceCallback() 
+	{ 
+		return _subloadCallback.get(); 
+	}
+
+	//------------------------------------------------------------------------------
+	const SubloadCallback* Buffer::getSubloadResourceCallback() const 
+	{ 
+		return _subloadCallback.get(); 
+	}
+
     //------------------------------------------------------------------------------
-    unsigned int Buffer::getMapping( const osgCompute::Context& context ) const
+    unsigned int Buffer::getMapping( const osgCompute::Context& context, unsigned int ) const
     {
         if( isClear() )
             return osgCompute::UNMAPPED;
@@ -111,9 +192,39 @@ namespace osgCompute
         return stream->_mapping;
     }
 
+	//------------------------------------------------------------------------------
+	void Buffer::swap( unsigned int incr /*= 1 */ )
+	{
+		// Function is implemented by PingPongBuffers.
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int Buffer::getSwapCount() const
+	{
+		// Function is implemented by PingPongBuffers.
+		return 0;
+	}
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	Buffer::~Buffer() 
+	{ 
+		clearLocal(); 
+	}
+
+	//------------------------------------------------------------------------------
+	void Buffer::clearLocal()
+	{
+		_streams.clear();
+		_dimensions.clear();
+		_numElements = 0;
+		_elementSize = 0;
+		_allocHint = NO_ALLOC_HINT;
+		_subloadCallback = NULL;
+	}
+
     //------------------------------------------------------------------------------
     bool Buffer::init( const Context& context ) const
     {
@@ -144,6 +255,22 @@ namespace osgCompute
         // is allocated
         return Resource::init( context );
     }
+
+	//------------------------------------------------------------------------------
+	BufferStream* Buffer::lookupStream( const Context& context ) const
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+
+		/////////////////////
+		// ALLOCATE STREAM //
+		/////////////////////
+		// Init stream array and register at context
+		if( _streams.size()<=context.getId() ||
+			_streams[context.getId()] == NULL )
+			init( context );
+
+		return _streams[context.getId()];
+	}
 
 	//------------------------------------------------------------------------------
 	BufferStream* Buffer::newStream( const Context& context ) const

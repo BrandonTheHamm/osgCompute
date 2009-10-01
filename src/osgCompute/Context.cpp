@@ -51,45 +51,76 @@ namespace osgCompute
             init();
     }
 
+	//------------------------------------------------------------------------------
+	void Context::setId( unsigned int id )
+	{
+		if( !isClear() )
+			return;
+
+		_id = id;
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int Context::getId() const
+	{
+		return _id;
+	}
+
+	//------------------------------------------------------------------------------
+	void Context::setState( osg::State& state )
+	{
+		if( !isClear() )
+			return;
+
+		_state = &state;
+	}
+
+	//------------------------------------------------------------------------------
+	osg::State* Context::getState()
+	{
+		return _state.get();
+	}
+
+	//------------------------------------------------------------------------------
+	const osg::State* Context::getState() const
+	{
+		return _state.get();
+	}
+
+	//------------------------------------------------------------------------------
+	void Context::removeState()
+	{
+		_state = NULL;
+	}
+
+	//------------------------------------------------------------------------------
+	bool Context::isStateValid() const
+	{
+		return _state.valid();
+	}
+
+	//------------------------------------------------------------------------------
+	void Context::setDevice( int device )
+	{ 
+		_device = device;  
+	}
+
+	//------------------------------------------------------------------------------
+	int Context::getDevice() const 
+	{ 
+		return _device; 
+	}
+
+	//------------------------------------------------------------------------------
+	bool Context::isClear() const
+	{
+		return _clear;
+	}
+
     //------------------------------------------------------------------------------
     void Context::clear()
     {
         clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    bool osgCompute::Context::isRegistered( Resource& resource ) const
-    {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
-        for( ResourceListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-            if( (*itr) == &resource )
-                return true;
-
-        return false;
-    }
-
-    //------------------------------------------------------------------------------
-    void Context::registerResource( Resource& resource ) const
-    {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
-        _resources.push_back( &resource );
-    }
-
-    //------------------------------------------------------------------------------
-    void Context::unregisterResource( Resource& resource ) const
-    {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
-        for( ResourceListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-        {
-            if( (*itr) == &resource )
-            {
-                _resources.erase( itr );
-                return;
-            }
-        }
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,4 +153,39 @@ namespace osgCompute
                 curResource->clear( *this );
         }
     }
+
+	//------------------------------------------------------------------------------
+	bool osgCompute::Context::isRegistered( Resource& resource ) const
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+
+		for( ResourceListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
+			if( (*itr) == &resource )
+				return true;
+
+		return false;
+	}
+
+	//------------------------------------------------------------------------------
+	void Context::registerResource( Resource& resource ) const
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+
+		_resources.push_back( &resource );
+	}
+
+	//------------------------------------------------------------------------------
+	void Context::unregisterResource( Resource& resource ) const
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+
+		for( ResourceListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
+		{
+			if( (*itr) == &resource )
+			{
+				_resources.erase( itr );
+				return;
+			}
+		}
+	}
 }

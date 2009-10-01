@@ -50,7 +50,7 @@ private:
 
 void SwapModule::launch( const osgCompute::Context& context ) const
 {
-    void* bufferPtr = _buffer->map( context, osgCompute::MAP_DEVICE );
+    void* bufferPtr = _buffer->map( context );
     swapEndianness( _numBlocks, _numThreads, bufferPtr );
 }
 

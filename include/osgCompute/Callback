@@ -74,8 +74,8 @@ namespace osgCompute
         virtual void clear() { clearLocal(); }
 
         /** Do customized callback code. */
-        virtual void subload( void* mappedPtr, unsigned int mapping, const Resource& buffer, const Context& context ) const = 0;
-        virtual void load( void* mappedPtr, unsigned int mapping, const Resource& buffer, const Context& context ) const = 0;
+        virtual void subload( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& buffer, const Context& context ) const = 0;
+        virtual void load( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& buffer, const Context& context ) const = 0;
 
     protected:
 

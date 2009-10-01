@@ -35,37 +35,73 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    inline void Module::acceptResource( Resource& resource ) 
+    void Module::acceptResource( Resource& resource ) 
     {
     }
 
     //------------------------------------------------------------------------------
-    inline bool Module::usesResource( const std::string& handle ) const 
+    bool Module::usesResource( const std::string& handle ) const 
     { 
         return false; 
     }
 
     //------------------------------------------------------------------------------
-    inline void Module::removeResource( const std::string& handle ) 
+    void Module::removeResource( const std::string& handle ) 
     {
     }
 
     //------------------------------------------------------------------------------
-    inline void Module::removeResource( const Resource& resource ) 
+    void Module::removeResource( const Resource& resource ) 
     {
     }
 
     //------------------------------------------------------------------------------
-    inline Resource* Module::getResource( const std::string& handle ) 
+    Resource* Module::getResource( const std::string& handle ) 
     { 
         return NULL; 
     }
 
     //------------------------------------------------------------------------------
-    inline const Resource* Module::getResource( const std::string& handle ) const 
+    const Resource* Module::getResource( const std::string& handle ) const 
     { 
         return NULL; 
     }
+
+	//------------------------------------------------------------------------------
+	void Module::setLaunchCallback( LaunchCallback* pc ) 
+	{ 
+		_launchCallback = pc; 
+	}
+
+	//------------------------------------------------------------------------------
+	LaunchCallback* Module::getLaunchCallback() 
+	{ 
+		return _launchCallback; 
+	}
+
+	//------------------------------------------------------------------------------
+	const LaunchCallback* Module::getLaunchCallback() const 
+	{ 
+		return _launchCallback; 
+	}
+
+	//------------------------------------------------------------------------------
+	void Module::enable() 
+	{ 
+		_enabled = true; 
+	}
+
+	//------------------------------------------------------------------------------
+	void Module::disable() 
+	{ 
+		_enabled = false; 
+	}
+
+	//------------------------------------------------------------------------------
+	bool Module::isEnabled() const
+	{
+		return _enabled;
+	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////

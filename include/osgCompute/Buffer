@@ -84,43 +84,44 @@ namespace osgCompute
     class LIBRARY_EXPORT Buffer : public Resource
     {  
     public:
-        Buffer();
+		Buffer();
 
         virtual bool init();
 
-        virtual bool setMemory( const Context& context, int value, unsigned int mapping, unsigned int offset = 0, unsigned int count = UINT_MAX ) const = 0;
-        virtual void* map( const Context& context, unsigned int mapping ) const = 0;
-        virtual void unmap( const Context& context ) const = 0;
+        virtual bool setMemory( const Context& context, int value, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 ) const = 0;
+        virtual void* map( const Context& context, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) const = 0;
+		virtual void unmap( const Context& context, unsigned int hint = 0 ) const = 0;
+		virtual unsigned int getMapping( const Context& context, unsigned int hint = 0 ) const;
 
-		inline void setElementSize( unsigned int elementSize );
-		inline unsigned int getElementSize() const;
+		virtual void setElementSize( unsigned int elementSize );
+		virtual unsigned int getElementSize() const;
         virtual unsigned int getByteSize() const;
 
-        inline void setDimension( unsigned int dimIdx, unsigned int dimSize );
-        inline unsigned int getDimension( unsigned int dimIdx ) const;
-        inline unsigned int getNumDimensions() const;
+        virtual void setDimension( unsigned int dimIdx, unsigned int dimSize );
+        virtual unsigned int getDimension( unsigned int dimIdx ) const;
+        virtual unsigned int getNumDimensions() const;
+        virtual unsigned int getNumElements() const;
 
-        inline unsigned int getNumElements() const;
+        virtual void setAllocHint( unsigned int allocHint );
+        virtual unsigned int getAllocHint() const;
 
-        inline void setAllocHint( unsigned int allocHint );
-        inline unsigned int getAllocHint() const;
+        virtual void setSubloadResourceCallback( SubloadCallback* sc );
+        virtual SubloadCallback* getSubloadResourceCallback();
+        virtual const SubloadCallback* getSubloadResourceCallback() const;
 
-        virtual unsigned int getMapping( const Context& context ) const;
-
-        inline void setSubloadResourceCallback( SubloadCallback* sc );
-        inline SubloadCallback* getSubloadResourceCallback();
-        inline const SubloadCallback* getSubloadResourceCallback() const;
+		virtual void swap( unsigned int incr = 1 );
+		virtual unsigned int getSwapCount() const;
 
         virtual void clear();
-    protected:
-        virtual ~Buffer() { clearLocal(); }
-        inline void clearLocal();
+	protected:
+		virtual ~Buffer();
+        void clearLocal();
 
         virtual bool init( const Context& context ) const;
         virtual void clear( const Context& context ) const;
 
         virtual BufferStream* newStream( const Context& context ) const;
-        inline BufferStream* lookupStream( const Context& context ) const;
+        virtual BufferStream* lookupStream( const Context& context ) const;
 
         unsigned int                                    _allocHint;
         std::vector<unsigned int>                       _dimensions;
@@ -136,121 +137,6 @@ namespace osgCompute
         Buffer( const Buffer&, const osg::CopyOp& ) {}
         Buffer& operator=( const Buffer& copy ) { return (*this); }
     };
-
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	//------------------------------------------------------------------------------
-	inline void Buffer::setElementSize( unsigned int elementSize ) 
-	{ 
-		if( !isClear() )
-			return;
-
-		_elementSize = elementSize; 
-	}
-
-	//------------------------------------------------------------------------------
-	inline unsigned int Buffer::getElementSize() const 
-	{ 
-		return _elementSize; 
-	}
-
-	//------------------------------------------------------------------------------
-	inline void Buffer::setDimension( unsigned int dimIdx, unsigned int dimSize )
-    {
-        if( !isClear() )
-            return;
-
-        if (_dimensions.size()<=dimIdx)
-            _dimensions.resize(dimIdx+1,0);
-
-        _dimensions[dimIdx] = dimSize;
-    }
-
-	//------------------------------------------------------------------------------
-	inline unsigned int Buffer::getDimension( unsigned int dimIdx ) const
-    { 
-        if( dimIdx > (_dimensions.size()-1) )
-            return 0;
-
-        return _dimensions[dimIdx];
-    }
-
-	//------------------------------------------------------------------------------
-	inline unsigned int Buffer::getNumDimensions() const
-    { 
-        return _dimensions.size();
-    }
-
-    //------------------------------------------------------------------------------
-    inline unsigned int osgCompute::Buffer::getNumElements() const
-    {
-        return _numElements;
-    }
-
-    //------------------------------------------------------------------------------
-    inline void osgCompute::Buffer::setAllocHint( unsigned int allocHint )
-    {
-        if( !isClear() )
-            return;
-
-        _allocHint = (_allocHint | allocHint);
-    }
-
-    //------------------------------------------------------------------------------
-    inline unsigned int osgCompute::Buffer::getAllocHint() const
-    {
-        return _allocHint;
-    }
-
-    //------------------------------------------------------------------------------
-    inline void Buffer::setSubloadResourceCallback( SubloadCallback* sc ) 
-    { 
-        _subloadCallback = sc; 
-    }
-
-    //------------------------------------------------------------------------------
-    inline SubloadCallback* Buffer::getSubloadResourceCallback() 
-    { 
-        return _subloadCallback.get(); 
-    }
-
-    //------------------------------------------------------------------------------
-    inline const SubloadCallback* Buffer::getSubloadResourceCallback() const 
-    { 
-        return _subloadCallback.get(); 
-    }
-
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    inline void Buffer::clearLocal()
-    {
-        _streams.clear();
-        _dimensions.clear();
-        _numElements = 0;
-		_elementSize = 0;
-        _allocHint = NO_ALLOC_HINT;
-        _subloadCallback = NULL;
-    }
-
-    //------------------------------------------------------------------------------
-    inline BufferStream* Buffer::lookupStream( const Context& context ) const
-    {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
-        /////////////////////
-        // ALLOCATE STREAM //
-        /////////////////////
-        // Init stream array and register at context
-        if( _streams.size()<=context.getId() ||
-            _streams[context.getId()] == NULL )
-            init( context );
-
-        return _streams[context.getId()];
-    }
 }
 
 #endif //OSGCOMPUTE_BUFFER
