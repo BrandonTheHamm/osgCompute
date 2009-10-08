@@ -1,5 +1,6 @@
 #include <osg/Node>
 #include <osg/Geode>
+#include <osg/Group>
 #include <osg/StateSet>
 #include <osg/StateAttribute>
 #include <osgCompute/Visitor>
@@ -284,8 +285,17 @@ namespace osgCompute
         if( computation.getContext( *_context->getState() ) != _context.get()  )
             computation.setContext( *_context );
 
-        osg::NodeVisitor::apply( computation );
+        osg::NodeVisitor::traverse( computation );
     }
+
+	//------------------------------------------------------------------------------
+	void ContextVisitor::apply( osg::Group& group )
+	{
+		if( Computation* comp = dynamic_cast<Computation*>( &group ) )
+			apply( *comp );
+		else
+			osg::NodeVisitor::apply( group );
+	}
 
 	//------------------------------------------------------------------------------
 	void ContextVisitor::setContext( Context* context )

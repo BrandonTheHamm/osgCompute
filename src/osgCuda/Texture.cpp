@@ -306,8 +306,9 @@ namespace osgCuda
 		///////////////////
 		// PROOF MAPPING //
 		///////////////////
-		if( (stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE ) ||
-			(stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST ) )
+		if( !getIsRenderTarget() && 
+			((stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE ) ||
+			(stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST )) )
 		{
 			if( (stream._mapping & osgCompute::MAP_DEVICE) )
 				ptr = stream._devPtr;
@@ -370,7 +371,7 @@ namespace osgCuda
 			{
 				osg::notify(osg::WARN)
 					<< "osgCuda::TextureBuffer::mapStream(): error during cudaGLMapBufferObject() for context \""
-					<< stream._context->getId()<<"\"."
+					<< stream._context->getState()->getContextID()<<"\"."
 					<< " " << cudaGetErrorString( res ) << "."
 					<< std::endl;
 
@@ -381,7 +382,6 @@ namespace osgCuda
 		//////////////
 		// MAP DATA //
 		//////////////
-
 		if( mapping & osgCompute::MAP_HOST )
 		{
 			if( NULL == stream._hostPtr )
@@ -472,7 +472,7 @@ namespace osgCuda
 			{
 				osg::notify(osg::WARN)
 					<< "osgCuda::TextureBuffer::unmapStream(): error during cudaGLUnmapBufferObject() for context \""
-					<< stream._context->getId()<<"\"."
+					<< stream._context->getState()->getContextID()<<"\"."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 				return;
@@ -518,7 +518,7 @@ namespace osgCuda
 			{
 				osg::notify(osg::FATAL)
 					<< "osgCuda::TextureBuffer::setupStream(): error during cudaMemcpy() within context \""
-					<< stream._context->getId() << "\"."
+					<< stream._context->getState()->getContextID() << "\"."
 					<< " " << cudaGetErrorString( res ) << "."
 					<< std::endl;
 
@@ -549,7 +549,7 @@ namespace osgCuda
 			{
 				osg::notify(osg::FATAL)
 					<< "osgCuda::TextureBuffer::setupStream(): error during cudaMemcpy() within context \""
-					<< stream._context->getId() << "\"."
+					<< stream._context->getState()->getContextID() << "\"."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 
@@ -579,7 +579,7 @@ namespace osgCuda
 			if( NULL == stream._hostPtr )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::allocStream(): something goes wrong within mallocHost() within context \""<<stream._context->getId()
+					<< "osgCuda::TextureBuffer::allocStream(): something goes wrong within mallocHost() within context \""<<stream._context->getState()->getContextID()
 					<< "\"."
 					<< std::endl;
 
@@ -622,7 +622,7 @@ namespace osgCuda
 			{
 				osg::notify(osg::FATAL)
 					<< "osgCuda::TextureBuffer::syncStream(): error during cudaMemcpy() to device within context \""
-					<< stream._context->getId() << "\"."
+					<< stream._context->getState()->getContextID() << "\"."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 				return false;
@@ -638,7 +638,7 @@ namespace osgCuda
 			{
 				osg::notify(osg::FATAL)
 					<< "osgCuda::TextureBuffer::syncStream(): something goes wrong within cudaMemcpy() to host within context \""
-					<< stream._context->getId() << "\"."
+					<< stream._context->getState()->getContextID() << "\"."
 					<< " " << cudaGetErrorString( res ) << "."
 					<< std::endl;
 

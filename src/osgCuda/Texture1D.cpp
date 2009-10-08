@@ -123,21 +123,21 @@ namespace osgCuda
 		if( stream._bo == UINT_MAX )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getId(),true );
+		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getState()->getContextID(),true );
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1DBuffer::syncTexture(): cannot find required extension for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::syncTexture(): cannot find required extension for context \""<<stream._context->getState()->getContextID()<<"\"."
 				<< std::endl;
 
 			return;
 		}
 
-		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getId() );
+		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getState()->getContextID() );
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1DBuffer::syncTexture(): texture object not allocated for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::syncTexture(): texture object not allocated for context \""<<stream._context->getState()->getContextID()<<"\"."
 				<< std::endl;
 
 			return;
@@ -172,7 +172,7 @@ namespace osgCuda
 		{
 			osg::notify(osg::FATAL)
 				<< "osgCuda::Texture1DBuffer::syncTexture(): error during glTex(Sub)ImageXD() for context \""
-				<< stream._context->getId()<<"\". Returned code is "
+				<< stream._context->getState()->getContextID()<<"\". Returned code is "
 				<< std::hex<<errorStatus<<"."
 				<< std::endl;
 		}
@@ -188,21 +188,21 @@ namespace osgCuda
 		if( stream._bo == UINT_MAX )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getId(),true );
+		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getState()->getContextID(),true );
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1DBuffer::syncPBO(): cannot find required extension for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::syncPBO(): cannot find required extension for context \""<<stream._context->getState()->getContextID()<<"\"."
 				<< std::endl;
 
 			return;
 		}
 
-		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getId() );
+		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getState()->getContextID() );
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1DBuffer::syncPBO() : texture object not allocated for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::syncPBO() : texture object not allocated for context \""<<stream._context->getState()->getContextID()<<"\"."
 				<< std::endl;
 
 			return;
@@ -236,7 +236,7 @@ namespace osgCuda
 		{
 			osg::notify(osg::FATAL)
 				<< "osgCuda::Texture1DBuffer::syncPBO(): error during cudaGLUnregisterBufferObject() for context \""
-				<< stream._context->getId()<<"\"." << " " << cudaGetErrorString( res ) <<"."
+				<< stream._context->getState()->getContextID()<<"\"." << " " << cudaGetErrorString( res ) <<"."
 				<< std::endl;
 
 			return;
@@ -256,7 +256,7 @@ namespace osgCuda
 		{
 			osg::notify(osg::FATAL)
 				<< "osgCuda::Texture1DBuffer::syncPBO(): error during glGetTexImage() for context \""
-				<< stream._context->getId()<<"\". Returned code is "
+				<< stream._context->getState()->getContextID()<<"\". Returned code is "
 				<< std::hex<<errorStatus<<"."
 				<< std::endl;
 		}
@@ -272,7 +272,7 @@ namespace osgCuda
 		{
 			osg::notify(osg::FATAL)
 				<< "osgCuda::Texture1DBuffer::syncPBO(): error during cudaGLRegisterBufferObject() for context \""
-				<< stream._context->getId()<<"\"." << " " << cudaGetErrorString( res ) << "."
+				<< stream._context->getState()->getContextID()<<"\"." << " " << cudaGetErrorString( res ) << "."
 				<< std::endl;
 		}
 
@@ -285,17 +285,17 @@ namespace osgCuda
 		/////////////////////
 		// COMPILE TEXTURE //
 		/////////////////////
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getId(), true );
+		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getState()->getContextID(), true );
 		if( !bufferExt  )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1DBuffer::allocPBO(): cannot find required extensions for context \""<<stream._context->getId()<<"\"."
+				<< "osgCuda::Texture1DBuffer::allocPBO(): cannot find required extensions for context \""<<stream._context->getState()->getContextID()<<"\"."
 				<< std::endl;
 
 			return false;
 		}
 
-		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getId() );
+		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getState()->getContextID() );
 		if( !tex )
 		{
 			asTexture()->apply( *stream._context->getState() );
@@ -312,7 +312,7 @@ namespace osgCuda
 
 
 			// second chance
-			tex = asTexture()->getTextureObject( stream._context->getId() );
+			tex = asTexture()->getTextureObject( stream._context->getState()->getContextID() );
 		}
 
 		if( !tex )
@@ -412,7 +412,7 @@ namespace osgCuda
 		{
 			osg::notify(osg::FATAL)
 				<< "osgCuda::Texture1DBuffer::allocPBO(): Could not generate buffer object (glGenBuffers()) for context \""
-				<< stream._context->getId()<<"\"."
+				<< stream._context->getState()->getContextID()<<"\"."
 				<< std::endl;
 
 			return false;

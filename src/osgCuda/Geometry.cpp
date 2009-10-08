@@ -228,16 +228,6 @@ namespace osgCuda
 			return;
 		}
 
-
-		//if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
-		//{
-		//	osg::notify(osg::FATAL)
-		//		<< "osgCuda::GeometryBuffer::map(): calling thread differs from the context's thread."
-		//		<< std::endl;
-
-		//	return;
-		//}
-
 		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
 		if( NULL == stream )
 		{
@@ -578,12 +568,12 @@ namespace osgCuda
 			// SETUP BO //
 			//////////////
 			// compile buffer object if necessary
-			if( vbo->isDirty(stream._context->getId()) )
+			if( vbo->isDirty(stream._context->getState()->getContextID()) )
 				vbo->compileBuffer( const_cast<osg::State&>(*stream._context->getState()) );
 
 			// using vertex buffers
 			if( stream._bo == UINT_MAX )
-				stream._bo = vbo->buffer(stream._context->getId());
+				stream._bo = vbo->buffer(stream._context->getState()->getContextID());
 
 			//////////////////
 			// REGISTER PBO //

@@ -103,7 +103,7 @@ namespace osgCompute
 
 
         _modules.push_back( &module );
-        resourcesChanged();
+        subgraphChanged();
     }
 
     //------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ namespace osgCompute
 					osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
 
                 _modules.erase( itr );
-                resourcesChanged();
+                subgraphChanged();
                 return;
             }
         }
@@ -145,7 +145,7 @@ namespace osgCompute
 
                 _modules.erase( itr );
                 itr = _modules.begin();
-                resourcesChanged();
+                subgraphChanged();
             }
             else
             {
@@ -175,7 +175,7 @@ namespace osgCompute
 			_modules.erase( itr );
         }
 
-        resourcesChanged();
+        subgraphChanged();
     }
 
     //------------------------------------------------------------------------------
@@ -259,7 +259,7 @@ namespace osgCompute
             (*itr)->acceptResource( resource );
 
         _resources.insert( std::make_pair< Resource*, osg::ref_ptr<Resource> > ( &resource, &resource ) );
-        resourcesChanged();
+        subgraphChanged();
     }
 
     //------------------------------------------------------------------------------
@@ -281,7 +281,7 @@ namespace osgCompute
 
                 _resources.erase( itr );
                 itr = _resources.begin();
-                resourcesChanged();
+                subgraphChanged();
             }
             else
             {
@@ -300,7 +300,7 @@ namespace osgCompute
                 (*moditr)->removeResource( resource );
 
              _resources.erase( itr );
-             resourcesChanged();
+             subgraphChanged();
         }
     }
 
@@ -320,7 +320,7 @@ namespace osgCompute
             _resources.erase( itr );
             itr = _resources.begin();
         }
-        resourcesChanged();
+        subgraphChanged();
     }
 
     //------------------------------------------------------------------------------
@@ -336,20 +336,20 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Computation::resourcesChanged()
+    void Computation::subgraphChanged()
     {
         // we have to check the dirty flag of all resources in the update traversal 
         // whenever a resource has been added and we need to collect
         // resources located in the sub-graph
-        if( _resourcesChanged == false )
+        if( _subgraphChanged == false )
         {
-            _resourcesChanged = true;
+            _subgraphChanged = true;
             osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() + 1 );
         }
 
         // notify parent graph
         if( getParentComputation() )
-            getParentComputation()->resourcesChanged();
+            getParentComputation()->subgraphChanged();
 
         _resourcesCollected = false;
     }
@@ -399,15 +399,15 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
-	void Computation::setAutoCollectResources( bool autoCollectResources )
+	void Computation::setAutoCheckSubgraph( bool autoCheckSubgraph )
 	{
-		_autoCollectResources = autoCollectResources;
+		_autoCheckSubgraph = autoCheckSubgraph;
 	}
 
 	//------------------------------------------------------------------------------
-	bool Computation::getAutoCollectResources()
+	bool Computation::getAutoCheckSubgraph()
 	{
-		return _autoCollectResources;
+		return _autoCheckSubgraph;
 	}
 
 	//------------------------------------------------------------------------------
@@ -435,14 +435,14 @@ namespace osgCompute
     //------------------------------------------------------------------------------   
     void Computation::clearLocal()
     {
-        _resourcesChanged = false;
+        _subgraphChanged = false;
         _resourcesCollected = false;
         removeResources();
         removeModules();
         _computeOrder = PRE_COMPUTE_PRE_TRAVERSAL;
         _launchCallback = NULL;
         _enabled = true;
-        _autoCollectResources = false;
+        _autoCheckSubgraph = false;
         _parentComputation = NULL;
         _resourceVisitor = NULL;
         _contextMap.clear();
@@ -535,7 +535,14 @@ namespace osgCompute
             return;
         }
 
-        Context* ctx = getOrCreateContext( *cv.getState() );
+		bool contextCreated = false;
+        Context* ctx = getContext( *cv.getState() );
+		if( !ctx )
+		{
+			ctx = getOrCreateContext( *cv.getState() );
+			contextCreated = true;
+		}
+			
         if( !ctx )
         {
             osg::notify(osg::FATAL)  
@@ -544,9 +551,9 @@ namespace osgCompute
 
             return;
         }
-
-        if( NULL == getParentComputation() )
-            distributeContext( *ctx );
+			
+		if( contextCreated || getAutoCheckSubgraph() )
+			distributeContext( *ctx );
 
         ///////////////////////
         // SETUP REDIRECTION //
@@ -639,7 +646,7 @@ namespace osgCompute
             setParentComputation( NULL );
         }
 
-        if( _resourcesChanged )
+        if( _subgraphChanged )
         {
             // topmost node starts 
             // resource collection
@@ -669,12 +676,12 @@ namespace osgCompute
                 osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
 
             // set resources changed to false
-            _resourcesChanged = false;
+            _subgraphChanged = false;
 
             // if auto update is selected then we have to traverse the
             // sub-graph each update cycle
-            if( getAutoCollectResources() )
-                resourcesChanged();
+            if( getAutoCheckSubgraph() )
+                subgraphChanged();
         }
 
         if( getUpdateCallback() )

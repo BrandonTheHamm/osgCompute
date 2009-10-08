@@ -88,7 +88,8 @@ namespace osgCompute
         virtual bool init();
         virtual void reset();
 
-        virtual void apply(Computation& computation);
+		virtual void apply( osg::Group& group );
+        virtual void apply( Computation& computation );
 
         virtual Context* getContext();
         virtual const Context* getContext() const;

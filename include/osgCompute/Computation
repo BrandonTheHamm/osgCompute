@@ -144,7 +144,7 @@ namespace osgCompute
 
         virtual void removeResources();
 
-        virtual void resourcesChanged();
+        virtual void subgraphChanged();
 
         virtual Computation* getParentComputation() const;
 
@@ -162,8 +162,8 @@ namespace osgCompute
         virtual ComputeOrder getComputeOrder();
 
 
-        virtual void setAutoCollectResources( bool autoCollectResources );
-        virtual bool getAutoCollectResources();
+        virtual void setAutoCheckSubgraph( bool autoCheckSubgraph );
+        virtual bool getAutoCheckSubgraph();
 
         /** Activates the computation (a computation is enabled by default) */
         virtual void enable();
@@ -203,11 +203,11 @@ namespace osgCompute
         ModuleList                          _modules;
         ResourceMap                         _resources;
         ComputeOrder                        _computeOrder;
-        bool                                _resourcesChanged;
+        bool                                _subgraphChanged;
         osg::ref_ptr<ResourceVisitor>       _resourceVisitor;
         Computation*                        _parentComputation; 
         bool                                _resourcesCollected;
-        bool                                _autoCollectResources;
+        bool                                _autoCheckSubgraph;
 
         ContextMap                          _contextMap;
 
