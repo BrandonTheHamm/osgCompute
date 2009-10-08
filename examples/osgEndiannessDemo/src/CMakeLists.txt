@@ -78,17 +78,17 @@ SOURCE_GROUP(
 # MY_ICE_FILES - MY_MODEL_FILES - MY_SHADER_FILES - MY_UI_FILES - MY_XML_FILES
 
 # collect shader files
-SET(MY_SHADER_FILES
-)
+#SET(MY_SHADER_FILES
+#)
 
 # finally, use module to build groups
 INCLUDE(GroupInstall)
 
 
 # now set up the ADDITIONAL_FILES variable to ensure that the files will be visible in the project
-SET(ADDITIONAL_FILES
-	${MY_SHADER_FILES}
-)
+#SET(ADDITIONAL_FILES
+#	${MY_SHADER_FILES}
+#)
 
 
 

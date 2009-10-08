@@ -178,9 +178,9 @@ namespace osgCompute
         virtual void clear();
 
 		virtual bool setContext( Context& context );
-		virtual Context* getOrCreateContext( unsigned int ctxId );
-		virtual Context* getContext( unsigned int ctxId );
-		virtual void removeContext( unsigned int ctxId );
+		virtual Context* getOrCreateContext( osg::State& state );
+		virtual Context* getContext( osg::State& state );
+		virtual void removeContext( osg::State& state );
 
     protected:
         friend class ContextVisitor;

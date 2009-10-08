@@ -16,7 +16,6 @@ namespace osgCuda
 		: osgCompute::BufferStream(),
 		_devPtr(NULL),
 		_hostPtr(NULL),
-		_syncDevice(false),
 		_syncHost(false),
 		_hostPtrAllocated(false),
 		_bo( UINT_MAX ),
@@ -183,12 +182,10 @@ namespace osgCuda
 			return NULL;
 		}
 
-		if( getIsRenderTarget() &&
-			( ((mapping & osgCompute::MAP_DEVICE)  == osgCompute::MAP_DEVICE_TARGET )  ||
-			((mapping & osgCompute::MAP_HOST)  == osgCompute::MAP_HOST_TARGET) ) )
+		if( context.getState() == NULL )
 		{
-			osg::notify(osg::WARN)
-				<< "TextureBuffer::map(): texture is target of a compute context and target of a render context. This is not allowed."
+			osg::notify(osg::FATAL)
+				<< "TextureBuffer::map(): no state connected to context."
 				<< std::endl;
 
 			return NULL;
@@ -356,7 +353,7 @@ namespace osgCuda
 		// UPDATE PBO //
 		////////////////
 		// if necessary sync dynamic texture with PBO
-		if( getIsRenderTarget() )
+		if( getIsRenderTarget() && !(mapping & osgCompute::MAP_DEVICE_TARGET) )
 		{
 			// synchronize PBO with texture
 			syncPBO( stream );
@@ -421,13 +418,8 @@ namespace osgCuda
 				if( !setupStream( mapping, stream ) )
 					return NULL;
 
-			/////////////////
-			// SYNC STREAM //
-			/////////////////
-			if( stream._syncDevice && NULL != stream._hostPtr )
-				if( !syncStream( mapping, stream ) )
-					return NULL;
-
+			// sync stream with device is already done at this point.
+			// See unmapStream().
 			ptr = stream._devPtr;
 		}
 		else
@@ -463,6 +455,13 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	void TextureBuffer::unmapStream( TextureStream& stream ) const
 	{
+		if( stream._mapping & osgCompute::MAP_HOST_TARGET )
+		{
+			// synchronize CPU memory with PBO. This cannot wait
+			// since the texture might be applied to a state.
+			syncStream( osgCompute::MAP_DEVICE, stream );
+		}
+
 		///////////
 		// UNMAP //
 		///////////
@@ -489,10 +488,6 @@ namespace osgCuda
 			// sync texture object as required
 			syncTexture( stream );
 			stream._syncHost = true;
-		}
-		else if( (stream._mapping & osgCompute::MAP_HOST_TARGET) )
-		{
-			stream._syncDevice = true;
 		}
 
 		stream._mapping = osgCompute::UNMAPPED;

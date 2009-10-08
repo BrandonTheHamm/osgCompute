@@ -44,9 +44,8 @@ namespace osgCompute
         virtual bool init();
         virtual void apply();
 
-        virtual void setId( unsigned int id );
         virtual unsigned int getId() const;
-        virtual void setState( osg::State& state );
+        virtual void connectToState( osg::State& state );
         virtual osg::State* getState();
         virtual const osg::State* getState() const;
         virtual void removeState();

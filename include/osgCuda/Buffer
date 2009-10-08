@@ -30,7 +30,6 @@ namespace osgCuda
 	*/
 	class LIBRARY_EXPORT Buffer : public osgCompute::Buffer
     {
-
     public:
         Buffer();
 		

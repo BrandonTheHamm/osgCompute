@@ -281,7 +281,7 @@ namespace osgCompute
             return;
 
         // setup shared context
-        if( computation.getContext( _context->getId() ) != _context.get()  )
+        if( computation.getContext( *_context->getState() ) != _context.get()  )
             computation.setContext( *_context );
 
         osg::NodeVisitor::apply( computation );

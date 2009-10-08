@@ -464,24 +464,27 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     bool osgCompute::Computation::setContext( Context& context )
     {
-        _contextMap[context.getId()] = &context;
+		if( context.getState() == NULL )
+			return false;
+
+        _contextMap[ context.getState()->getContextID() ] = &context;
         return true;
     }
 
     //------------------------------------------------------------------------------
-    void osgCompute::Computation::removeContext( unsigned int ctxId )
+	void osgCompute::Computation::removeContext( osg::State& state )
     {
-        ContextMapItr itr = _contextMap.find( ctxId );
+        ContextMapItr itr = _contextMap.find( state.getContextID() );
         if( itr != _contextMap.end() )
             _contextMap.erase(itr);
     }
 
     //------------------------------------------------------------------------------
-    Context* Computation::getContext( unsigned int ctxId )
+    Context* Computation::getContext( osg::State& state )
     {
         OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 
-        ContextMapItr itr = _contextMap.find( ctxId );
+        ContextMapItr itr = _contextMap.find( state.getContextID() );
         if( itr == _contextMap.end() )
             return NULL;
 
@@ -489,12 +492,12 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    Context* Computation::getOrCreateContext( unsigned int ctxId )
+	Context* Computation::getOrCreateContext( osg::State& state )
     {
         OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 
         Context* context = NULL;
-        ContextMapItr itr = _contextMap.find( ctxId );
+        ContextMapItr itr = _contextMap.find( state.getContextID() );
         if( itr == _contextMap.end() )
         {
             context = newContext();
@@ -507,9 +510,8 @@ namespace osgCompute
                 return NULL;
             }
 
-
-            context->setId( ctxId );
-            _contextMap.insert( std::make_pair< unsigned int, osg::ref_ptr<Context> >( ctxId, context) );
+			context->connectToState( state );
+            _contextMap.insert( std::make_pair< unsigned int, osg::ref_ptr<Context> >( state.getContextID(), context) );
         }
         else
         {
@@ -533,7 +535,7 @@ namespace osgCompute
             return;
         }
 
-        Context* ctx = getOrCreateContext( cv.getState()->getContextID() );
+        Context* ctx = getOrCreateContext( *cv.getState() );
         if( !ctx )
         {
             osg::notify(osg::FATAL)  
@@ -542,8 +544,6 @@ namespace osgCompute
 
             return;
         }
-        if( ctx->getState() != cv.getState() )
-            ctx->setState( *cv.getState() );
 
         if( NULL == getParentComputation() )
             distributeContext( *ctx );

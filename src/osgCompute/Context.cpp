@@ -15,6 +15,7 @@
 
 #include <sstream>
 #include <osg/Notify>
+#include <osg/GraphicsContext>
 #include <osgCompute/Context>
 #include <osgCompute/Resource>
 
@@ -25,6 +26,7 @@ namespace osgCompute
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	static OpenThreads::Mutex	s_sharedMutex;
 	static std::set< Context* >	s_Contexts;
+	static unsigned int			s_ContextIds = 0;
 
 	//------------------------------------------------------------------------------
 	static void addContext( Context& context )
@@ -69,6 +71,11 @@ namespace osgCompute
 		return NULL;
 	}
 
+	//------------------------------------------------------------------------------
+	static unsigned int getUniqueContextId()
+	{
+		return s_ContextIds++;
+	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
@@ -77,7 +84,8 @@ namespace osgCompute
     Context::Context()
         : osg::Referenced()
     {
-        clearLocal();
+		clearLocal();
+		_id = getUniqueContextId();
 		addContext( *this );
     }
 
@@ -101,16 +109,16 @@ namespace osgCompute
     {
         if(isClear())
             init();
+
+		if( getState() != NULL )
+		{
+			// if this context is connected to a graphics context 
+			// we have to ensure the context is active.
+			osg::GraphicsContext* gc = getState()->getGraphicsContext();
+			if( gc != NULL && !gc->isCurrent() )
+				gc->makeCurrent();
+		}
     }
-
-	//------------------------------------------------------------------------------
-	void Context::setId( unsigned int id )
-	{
-		if( !isClear() )
-			return;
-
-		_id = id;
-	}
 
 	//------------------------------------------------------------------------------
 	unsigned int Context::getId() const
@@ -119,7 +127,7 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
-	void Context::setState( osg::State& state )
+	void Context::connectToState( osg::State& state )
 	{
 		if( !isClear() )
 			return;

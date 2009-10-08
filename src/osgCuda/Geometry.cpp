@@ -187,20 +187,20 @@ namespace osgCuda
 			return NULL;
 		}
 
-		//if( static_cast<const Context*>(&context)->getAssignedThread() != OpenThreads::Thread::CurrentThread() )
-		//{
-		//	osg::notify(osg::FATAL)
-		//		<< "GeometryBuffer::map(): calling thread differs from the context's thread."
-		//		<< std::endl;
+		if( context.getState() == NULL )
+		{
+			osg::notify(osg::FATAL)
+				<< "GeometryBuffer::map(): no state connected to context."
+				<< std::endl;
 
-		//	return NULL;
-		//}
+			return NULL;
+		}
 
 		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
-				<< "GeometryBuffer::map() for geometry: cannot receive geometry stream."
+				<< "GeometryBuffer::map(): cannot receive geometry stream."
 				<< std::endl;
 
 			return NULL;

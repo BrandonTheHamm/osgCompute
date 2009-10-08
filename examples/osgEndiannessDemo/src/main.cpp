@@ -95,11 +95,12 @@ int main(int argc, char *argv[])
     osg::ref_ptr<osgCompute::Context> context = new osgCuda::Context;
     if( !context.valid() )
         return -1;
-	// The context must have an id and device.
-    context->setId( 0 );
-	context->setDevice( 0 );
+	// The context must have a device id.
+	// The default is set to device 0. Change
+	// it with the following command.
+	// context->setDevice( 0 );
 
-    // activate context
+    // activate context. Initializes it if not done so far
     context->apply();
 
     // create a buffer
