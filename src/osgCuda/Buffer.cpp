@@ -1,4 +1,5 @@
 #include <memory.h>
+#include <malloc.h>
 #include <osgCuda/Context>
 #include <cuda_runtime.h>
 #include <driver_types.h>
@@ -58,7 +59,7 @@ namespace osgCuda
 			}
 		}
 
-			
+
 		if( _hostPtrAllocated && NULL != _hostPtr)
 			free( _hostPtr );
 	}
@@ -505,7 +506,7 @@ namespace osgCuda
 			}
 			else if( getNumDimensions() == 2 )
 			{
-				unsigned int pitch = 0;
+				size_t pitch = 0;
 				cudaError_t res = cudaMallocPitch( &stream._devPtr, &pitch, getDimension(0) * getElementSize(), getDimension(1) );
 				if( cudaSuccess != res )
 				{

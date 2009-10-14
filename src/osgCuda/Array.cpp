@@ -1,4 +1,5 @@
 #include <memory.h>
+#include <malloc.h>
 #include <cuda_runtime.h>
 #include <osgCuda/Context>
 #include <osgCuda/Array>
@@ -535,7 +536,7 @@ namespace osgCuda
 				{
 					osg::notify(osg::FATAL)
 						<< "osgCuda::Array::setupStream(): cudaMemcpyToArray() failed for data within context \""
-						<< stream._context->getId() << "\"." 
+						<< stream._context->getId() << "\"."
 						<< " " << cudaGetErrorString( res ) << "."
 						<< std::endl;
 
@@ -561,7 +562,7 @@ namespace osgCuda
 				{
 					osg::notify(osg::FATAL)
 						<< "osgCuda::Array::setupStream(): cudaMemcpy3D() failed for data within context \""
-						<< stream._context->getId() << "\"." 
+						<< stream._context->getId() << "\"."
 						<< " " << cudaGetErrorString( res ) <<"."
 						<< std::endl;
 
@@ -602,7 +603,7 @@ namespace osgCuda
 			{
 				osg::notify(osg::FATAL)
 					<< "osgCuda::Array::setupStream(): error during cudaMemcpy() within context \""
-					<< stream._context->getId() << "\"." 
+					<< stream._context->getId() << "\"."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 
@@ -690,7 +691,7 @@ namespace osgCuda
 					return false;
 				}
 			}
-			else 
+			else
 			{
 				cudaError_t res = cudaMallocArray( &stream._devArray, &desc, getDimension(0), 1 );
 				if( cudaSuccess != res || NULL ==  stream._devArray )

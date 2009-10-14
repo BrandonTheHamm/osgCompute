@@ -1,4 +1,5 @@
 #include <memory.h>
+#include <malloc.h>
 #include <osg/GL>
 #include <cuda_runtime.h>
 #include <driver_types.h>
@@ -35,7 +36,7 @@ namespace osgCuda
 					<<"TextureStream::~TextureStream(): error during cudaGLUnregisterBufferObject()."
 					<< cudaGetErrorString(res) << std::endl;
 		}
-		
+
 		if( _bo != UINT_MAX )
 		{
 			osg::State* state = _context->getGraphicsContext()->getState();
@@ -156,17 +157,17 @@ namespace osgCuda
 		unsigned int elementBitSize;
 		if( asTexture()->getImage(0) )
 		{
-			elementBitSize = 
-				osg::Image::computePixelSizeInBits( 
-				asTexture()->getImage(0)->getPixelFormat(), 
+			elementBitSize =
+				osg::Image::computePixelSizeInBits(
+				asTexture()->getImage(0)->getPixelFormat(),
 				asTexture()->getImage(0)->getDataType() );
 
 		}
 		else
 		{
-			elementBitSize = 
+			elementBitSize =
 				osg::Image::computePixelSizeInBits(
-				asTexture()->getInternalFormat(), 
+				asTexture()->getInternalFormat(),
 				asTexture()->getSourceType() );
 		}
 
@@ -180,7 +181,7 @@ namespace osgCuda
 			return false;
 		}
 
-		setElementSize( elementSize ); 
+		setElementSize( elementSize );
 		return true;
 	}
 
@@ -320,7 +321,7 @@ namespace osgCuda
 		///////////////////
 		// PROOF MAPPING //
 		///////////////////
-		if( !getIsRenderTarget() && 
+		if( !getIsRenderTarget() &&
 			((stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE ) ||
 			(stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST )) )
 		{

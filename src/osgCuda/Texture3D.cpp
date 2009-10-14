@@ -1,3 +1,5 @@
+#include <malloc.h>
+#include <memory.h>
 #include <osg/GL>
 #include <cuda_runtime.h>
 #include <driver_types.h>
@@ -13,13 +15,13 @@ namespace osgCuda
 	{
 	public:
 		Texture3DBuffer();
-		
+
 		META_Object(osgCuda,Texture3DBuffer)
 
 		virtual bool init();
 
 		virtual osgCompute::InteropObject* getObject() { return _texref.get(); }
-		virtual osg::Texture* asTexture() { return _texref.get(); }            
+		virtual osg::Texture* asTexture() { return _texref.get(); }
 		virtual const osg::Texture* asTexture() const { return _texref.get(); }
 
 		virtual bool getIsRenderTarget() const;
@@ -121,7 +123,7 @@ namespace osgCuda
 	void Texture3DBuffer::syncModifiedCounter( const osgCompute::Context& context ) const
 	{
 		if( !_texref->getImage() || !context.isConnectedWithGraphicsContext() )
-			return; 
+			return;
 
 		const osg::State* state = context.getGraphicsContext()->getState();
 		if( state == NULL )
@@ -453,7 +455,7 @@ namespace osgCuda
 			//////////////
 			// SYNC PBO //
 			//////////////
-			// Sync PBO with texture-data 
+			// Sync PBO with texture-data
 			// if it is already allocated
 			syncPBO( stream );
 		}
@@ -552,7 +554,7 @@ namespace osgCuda
 
 	//------------------------------------------------------------------------------
 	void Texture3D::addHandle( const std::string& handle )
-	{ 
+	{
 		if( _proxy != NULL )
 		{
 			_proxy->addHandle( handle );
@@ -573,7 +575,7 @@ namespace osgCuda
 		}
 		else
 		{
-			osgCompute::HandleSetItr itr = _handles.find( handle ); 
+			osgCompute::HandleSetItr itr = _handles.find( handle );
 			if( itr != _handles.end() )
 				_handles.erase( itr );
 		}
@@ -588,7 +590,7 @@ namespace osgCuda
 		}
 		else
 		{
-			osgCompute::HandleSetCnstItr itr = _handles.find( handle ); 
+			osgCompute::HandleSetCnstItr itr = _handles.find( handle );
 			if( itr == _handles.end() )
 				return false;
 

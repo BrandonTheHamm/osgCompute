@@ -1,3 +1,5 @@
+#include <malloc.h>
+#include <memory.h>
 #include <osg/GL>
 #include <cuda_runtime.h>
 #include <driver_types.h>
@@ -19,7 +21,7 @@ namespace osgCuda
 		virtual bool init();
 
 		virtual osgCompute::InteropObject* getObject() { return _texref.get(); }
-		virtual osg::Texture* asTexture() { return _texref.get(); }            
+		virtual osg::Texture* asTexture() { return _texref.get(); }
 		virtual const osg::Texture* asTexture() const { return _texref.get(); }
 
 		virtual bool getIsRenderTarget() const;
@@ -60,7 +62,7 @@ namespace osgCuda
 	{
 		clearLocal();
 
-		// notify Texture2D that proxy is now 
+		// notify Texture2D that proxy is now
 		// deleted
 		_texref->_proxy = NULL;
 		// reattach handles
@@ -91,7 +93,7 @@ namespace osgCuda
 			return false;
 
 		_isRenderTarget = _texref->getIsRenderTarget();
-			
+
 		return osgCuda::TextureBuffer::init();
 	}
 
@@ -120,7 +122,7 @@ namespace osgCuda
 	void Texture2DBuffer::syncModifiedCounter( const osgCompute::Context& context ) const
 	{
 		if( !_texref->getImage() )
-			return; 
+			return;
 
 		const osg::State* state = context.getGraphicsContext()->getState();
 		if( state == NULL )
@@ -552,7 +554,7 @@ namespace osgCuda
 
 	//------------------------------------------------------------------------------
 	void Texture2D::addHandle( const std::string& handle )
-	{ 
+	{
 		if( _proxy != NULL )
 		{
 			_proxy->addHandle( handle );
@@ -573,7 +575,7 @@ namespace osgCuda
 		}
 		else
 		{
-			osgCompute::HandleSetItr itr = _handles.find( handle ); 
+			osgCompute::HandleSetItr itr = _handles.find( handle );
 			if( itr != _handles.end() )
 				_handles.erase( itr );
 		}
@@ -588,7 +590,7 @@ namespace osgCuda
 		}
 		else
 		{
-			osgCompute::HandleSetCnstItr itr = _handles.find( handle ); 
+			osgCompute::HandleSetCnstItr itr = _handles.find( handle );
 			if( itr == _handles.end() )
 				return false;
 

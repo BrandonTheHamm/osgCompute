@@ -1,4 +1,5 @@
 #include <memory.h>
+#include <malloc.h>
 #include <osg/GL>
 #include <osg/RenderInfo>
 #include <cuda_runtime.h>
@@ -70,7 +71,7 @@ namespace osgCuda
     {
     public:
         GeometryBuffer();
-		
+
 		META_Object(osgCuda,GeometryBuffer)
 
 		virtual osgCompute::InteropObject* getObject() { return _geomref.get(); }
@@ -118,7 +119,7 @@ namespace osgCuda
 	GeometryBuffer::~GeometryBuffer()
 	{
 		clearLocal();
-		
+
 		// proxy is now deleted
 		_geomref->_proxy = NULL;
 		// attach handles
@@ -666,7 +667,7 @@ namespace osgCuda
 	Geometry::Geometry()
 		: osg::Geometry(),
 		  _proxy(NULL)
-	{		
+	{
 		// geometry must use vertex buffer objects
 		setUseVertexBufferObjects( true );
 	}
@@ -712,7 +713,7 @@ namespace osgCuda
 
 		return _proxy;
 	}
-	
+
 	//------------------------------------------------------------------------------
 	void Geometry::addHandle( const std::string& handle )
 	{
@@ -723,7 +724,7 @@ namespace osgCuda
 		else
 		{
 			if( !isAddressedByHandle(handle) )
-				_handles.insert( handle ); 
+				_handles.insert( handle );
 		}
 	}
 
@@ -736,7 +737,7 @@ namespace osgCuda
 		}
 		else
 		{
-			osgCompute::HandleSetItr itr = _handles.find( handle ); 
+			osgCompute::HandleSetItr itr = _handles.find( handle );
 			if( itr != _handles.end() )
 				_handles.erase( itr );
 
@@ -752,7 +753,7 @@ namespace osgCuda
 		}
 		else
 		{
-			osgCompute::HandleSetCnstItr itr = _handles.find( handle ); 
+			osgCompute::HandleSetCnstItr itr = _handles.find( handle );
 			if( itr == _handles.end() )
 				return false;
 

@@ -1,17 +1,18 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
+ *
  * This library is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation; either version 3 of
  * the License, or (at your option) any later version.
- *                                                                     
+ *
  * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesse General Public License for more details.
  *
  * The full license is in LICENSE file included with this distribution.
 */
+#include <memory.h>
 #include <osg/Notify>
 #include <osgCuda/Buffer>
 #include <osgCuda/Context>
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
     osg::setNotifyLevel( osg::INFO );
 
 	// You can use modules and buffers in the update cycle or everywhere
-	// you want. But please make sure that the context is still active at 
+	// you want. But please make sure that the context is still active at
 	// computation time if you use osgCuda::Geometry or osgCuda::Texture objects!!!
 
 	///////////////////
@@ -124,7 +125,7 @@ int main(int argc, char *argv[])
 	// CPU memory and fill it directly. The TARGET specifier in MAP_HOST_TARGET
 	// tells osgCompute that the buffer is updated on the CPU. This has an effect
 	// on later mappings of the GPU memory (e.g. MAP_DEVICE): before a pointer
-	// is returned the CPU data is copied to the GPU memory. 
+	// is returned the CPU data is copied to the GPU memory.
     unsigned int* bufferPtr = (unsigned int*)buffer->map( *context, osgCompute::MAP_HOST_TARGET );
     memcpy( bufferPtr, bigEndians, sizeof(bigEndians) );
 
