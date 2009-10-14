@@ -66,7 +66,7 @@ namespace osgCompute
     public:
 		Buffer();
 
-        virtual bool init();
+		virtual bool init();
 
         virtual bool setMemory( const Context& context, int value, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 ) const = 0;
         virtual void* map( const Context& context, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) const = 0;
@@ -92,6 +92,7 @@ namespace osgCompute
 		virtual void swap( unsigned int incr = 1 );
 		virtual unsigned int getSwapCount() const;
 
+		virtual void init( const Context& context ) const;
 		virtual void clear( const Context& context ) const;
         virtual void clear();
 	protected:

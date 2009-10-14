@@ -40,7 +40,6 @@ namespace osgCompute
         Module() { clearLocal(); }
 
         virtual bool init();
-        virtual void clear();
         virtual void launch( const Context& context ) const = 0;
 
         virtual void acceptResource( Resource& resource );
@@ -59,7 +58,11 @@ namespace osgCompute
 
         virtual void enable();
         virtual void disable();
-        virtual bool isEnabled() const;
+		virtual bool isEnabled() const;
+
+		virtual void clear();
+		virtual void init( const Context& context ) const;
+		virtual void clear( const Context& context ) const;
 
     protected:
         virtual ~Module() { clearLocal(); }

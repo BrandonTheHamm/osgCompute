@@ -39,6 +39,12 @@ namespace osgCompute
     }
 
 	//------------------------------------------------------------------------------
+	void Resource::init( const Context& context ) const
+	{
+		context.registerResource( *this );
+	}
+
+	//------------------------------------------------------------------------------
 	void Resource::addHandle( const std::string& handle )
 	{
 		if( !isAddressedByHandle(handle) )
@@ -79,6 +85,12 @@ namespace osgCompute
 	bool Resource::isClear() const 
 	{ 
 		return _clear; 
+	}
+
+	//------------------------------------------------------------------------------
+	void Resource::clear( const Context& context ) const
+	{
+		context.unregisterResource( *this );
 	}
 
     //------------------------------------------------------------------------------

@@ -52,7 +52,13 @@ namespace osgCuda
 	GeometryStream::~GeometryStream()
 	{
 		if( _boRegistered && _bo != UINT_MAX )
-			cudaGLUnregisterBufferObject( _bo );
+		{
+			cudaError_t res = cudaGLUnregisterBufferObject( _bo );
+			if( res != cudaSuccess )
+				osg::notify(osg::FATAL)
+				<<"TextureStream::~TextureStream(): error during cudaGLUnregisterBufferObject()."
+				<< cudaGetErrorString(res) << std::endl;
+		}
 
 		if( _hostPtrAllocated && NULL != _hostPtr)
 			free( _hostPtr );
@@ -187,10 +193,10 @@ namespace osgCuda
 			return NULL;
 		}
 
-		if( context.getState() == NULL )
+		if( !context.isConnectedWithGraphicsContext() )
 		{
 			osg::notify(osg::FATAL)
-				<< "GeometryBuffer::map(): no state connected to context."
+				<< "GeometryBuffer::map(): context is not connected with a graphics context."
 				<< std::endl;
 
 			return NULL;
@@ -392,7 +398,7 @@ namespace osgCuda
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( vbo->isDirty( stream._context->getState()->getContextID() ) )
+			if( vbo->isDirty( stream._context->getGraphicsContext()->getState()->getContextID() ) )
 				setupStream( mapping, stream );
 
 			/////////////////
@@ -409,7 +415,7 @@ namespace osgCuda
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( vbo->isDirty( stream._context->getState()->getContextID() ) )
+			if( vbo->isDirty( stream._context->getGraphicsContext()->getState()->getContextID() ) )
 				setupStream( mapping, stream );
 
 			/////////////////
@@ -490,8 +496,12 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	bool GeometryBuffer::setupStream( unsigned int mapping, GeometryStream& stream ) const
 	{
+		osg::State* state = stream._context->getGraphicsContext()->getState();
+		if( state == NULL )
+			return false;
+
 		osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
-		if( !vbo->isDirty( stream._context->getState()->getContextID() ) )
+		if( !vbo->isDirty( state->getContextID() ) )
 			return true;
 
 		////////////////////
@@ -514,7 +524,7 @@ namespace osgCuda
 		////////////////
 		// UPDATE VBO //
 		////////////////
-		vbo->compileBuffer( const_cast<osg::State&>(*stream._context->getState()) );
+		vbo->compileBuffer( const_cast<osg::State&>(*state) );
 
 		//////////////////
 		// REGISTER VBO //
@@ -564,16 +574,20 @@ namespace osgCuda
 
 			osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
 
+			osg::State* state = stream._context->getGraphicsContext()->getState();
+			if( state == NULL )
+				return false;
+
 			//////////////
 			// SETUP BO //
 			//////////////
 			// compile buffer object if necessary
-			if( vbo->isDirty(stream._context->getState()->getContextID()) )
-				vbo->compileBuffer( const_cast<osg::State&>(*stream._context->getState()) );
+			if( vbo->isDirty(state->getContextID()) )
+				vbo->compileBuffer( const_cast<osg::State&>(*state) );
 
 			// using vertex buffers
 			if( stream._bo == UINT_MAX )
-				stream._bo = vbo->buffer(stream._context->getState()->getContextID());
+				stream._bo = vbo->buffer(state->getContextID());
 
 			//////////////////
 			// REGISTER PBO //

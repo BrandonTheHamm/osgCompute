@@ -110,46 +110,6 @@ osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     return bbox;
 }
 
-osgCuda::Computation* getComputation( osg::Vec3& bbmin, osg::Vec3& bbmax )
-{
-    ///////////
-    // SEEDS //
-    ///////////
-    unsigned int seedCount = 64000;
-    osg::FloatArray* seedValues = new osg::FloatArray();
-    for( unsigned int s=0; s<seedCount; ++s )
-        seedValues->push_back( float(rand()) / RAND_MAX );
-
-    osgCuda::Buffer* seedBuffer = new osgCuda::Buffer;
-	seedBuffer->setElementSize( sizeof(float) );
-    seedBuffer->setName( "ptclSeedBuffer" );
-    seedBuffer->setDimension(0,seedCount);
-    seedBuffer->setArray( seedValues );
-    seedBuffer->addHandle( "PTCL_SEEDS" );
-
-    /////////////
-    // MODULES //
-    /////////////
-    // create module
-    PtclDemo::PtclMover* ptclMover = new PtclDemo::PtclMover;
-    ptclMover->setName( "ptclMover" );
-
-    PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
-    ptclEmitter->setName( "ptclEmitter" );
-    ptclEmitter->setSeedBox( bbmin, bbmax );
-
-    /////////////////
-    // COMPUTATION //
-    /////////////////
-    osgCuda::Computation* computation = new osgCuda::Computation;
-    computation->setName("computation");
-    computation->addModule( *ptclEmitter );    
-    computation->addModule( *ptclMover );
-    computation->addResource( *seedBuffer );
-
-    return computation;
-}
-
 osg::Geode* getGeode( unsigned int numParticles )
 {
     osg::Geode* geode = new osg::Geode;

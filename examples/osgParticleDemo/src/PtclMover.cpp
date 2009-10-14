@@ -55,15 +55,17 @@ namespace PtclDemo
         if( isClear() )
             return;
 
-        if( ctx.getState() == NULL  )
+        if( !ctx.isConnectedWithGraphicsContext() )
             return;
+		const osg::State* state = ctx.getGraphicsContext()->getState();
+		const osg::FrameStamp* fs = state->getFrameStamp();
+		if( fs == NULL )
+			return;
 
         /////////////
         // ADVANCE //
         /////////////
-		const osg::FrameStamp* fs = ctx.getState()->getFrameStamp();
-        if( fs == NULL )
-			return;
+
 
 		if( _firstFrame )
 		{

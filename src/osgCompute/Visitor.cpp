@@ -282,7 +282,8 @@ namespace osgCompute
             return;
 
         // setup shared context
-        if( computation.getContext( *_context->getState() ) != _context.get()  )
+		osg::GraphicsContext* gc = _context->getGraphicsContext();
+        if( computation.getContext( *gc->getState() ) != _context.get()  )
             computation.setContext( *_context );
 
         osg::NodeVisitor::traverse( computation );

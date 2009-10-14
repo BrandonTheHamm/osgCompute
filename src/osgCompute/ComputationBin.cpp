@@ -124,7 +124,9 @@ namespace osgCompute
 
         // MODULES 
         if( _computation->hasModules())
+		{
             _modules = _computation->getModules();
+		}
 
         // OBJECT 
         setName( _computation->getName() );

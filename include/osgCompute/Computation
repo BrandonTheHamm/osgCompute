@@ -182,6 +182,8 @@ namespace osgCompute
 		virtual Context* getContext( osg::State& state );
 		virtual void removeContext( osg::State& state );
 
+		virtual void releaseGLObjects( osg::State* state ) const;
+
     protected:
         friend class ContextVisitor;
         friend class ResourceVisitor;

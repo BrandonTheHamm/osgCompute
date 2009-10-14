@@ -120,10 +120,14 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	void Texture3DBuffer::syncModifiedCounter( const osgCompute::Context& context ) const
 	{
-		if( !_texref->getImage() )
+		if( !_texref->getImage() || !context.isConnectedWithGraphicsContext() )
 			return; 
 
-		_texref->getModifiedCount(context.getState()->getContextID()) = _texref->getImage()->getModifiedCount();
+		const osg::State* state = context.getGraphicsContext()->getState();
+		if( state == NULL )
+			return;
+
+		_texref->getModifiedCount(state->getContextID()) = _texref->getImage()->getModifiedCount();
 	}
 
 	//------------------------------------------------------------------------------
@@ -132,8 +136,12 @@ namespace osgCuda
 		if( stream._bo == UINT_MAX )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getState()->getContextID(),true );
-		osg::Texture3D::Extensions* tex3DExt = osg::Texture3D::getExtensions( stream._context->getState()->getContextID(),true );
+		osg::State* state = stream._context->getGraphicsContext()->getState();
+		if( state == NULL )
+			return;
+
+		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::Texture3D::Extensions* tex3DExt = osg::Texture3D::getExtensions( state->getContextID(),true );
 		if( !bufferExt || !tex3DExt )
 		{
 			osg::notify(osg::FATAL)
@@ -143,7 +151,7 @@ namespace osgCuda
 			return;
 		}
 
-		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getState()->getContextID() );
+		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( state->getContextID() );
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
@@ -199,8 +207,13 @@ namespace osgCuda
 		if( stream._bo == UINT_MAX )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getState()->getContextID(),true );
-		osg::Texture3D::Extensions* tex3DExt = osg::Texture3D::getExtensions( stream._context->getState()->getContextID(),true );
+
+		osg::State* state = stream._context->getGraphicsContext()->getState();
+		if( state == NULL )
+			return;
+
+		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::Texture3D::Extensions* tex3DExt = osg::Texture3D::getExtensions( state->getContextID(),true );
 		if( !bufferExt || !tex3DExt )
 		{
 			osg::notify(osg::FATAL)
@@ -210,7 +223,7 @@ namespace osgCuda
 			return;
 		}
 
-		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getState()->getContextID() );
+		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( state->getContextID() );
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
@@ -291,11 +304,15 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	bool Texture3DBuffer::allocPBO( TextureStream& stream ) const
 	{
+		osg::State* state = stream._context->getGraphicsContext()->getState();
+		if( state == NULL )
+			return false;
+
 		/////////////////////
 		// COMPILE TEXTURE //
 		/////////////////////
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( stream._context->getState()->getContextID(),true );
-		osg::Texture3D::Extensions* tex3DExt = osg::Texture3D::getExtensions( stream._context->getState()->getContextID(),true );
+		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::Texture3D::Extensions* tex3DExt = osg::Texture3D::getExtensions( state->getContextID(),true );
 		if( !bufferExt || !tex3DExt )
 		{
 			osg::notify(osg::FATAL)
@@ -305,10 +322,10 @@ namespace osgCuda
 			return false;
 		}
 
-		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( stream._context->getState()->getContextID() );
+		osg::Texture::TextureObject* tex = asTexture()->getTextureObject( state->getContextID() );
 		if( !tex )
 		{
-			_texref->apply( *stream._context->getState() );
+			_texref->apply( *state );
 			glBindTexture( GL_TEXTURE_3D, 0 );
 			GLenum errorStatus = glGetError();
 			if( errorStatus != GL_NO_ERROR )
@@ -321,7 +338,7 @@ namespace osgCuda
 			}
 
 			// second chance
-			tex = asTexture()->getTextureObject( stream._context->getState()->getContextID() );
+			tex = asTexture()->getTextureObject( state->getContextID() );
 		}
 
 		if( !tex )

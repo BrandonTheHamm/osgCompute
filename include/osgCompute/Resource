@@ -57,12 +57,14 @@ namespace osgCompute
 		virtual HandleSet& getHandles();
 		virtual const HandleSet& getHandles() const;
 
-        virtual bool isClear() const;
+		virtual bool isClear() const;
+		virtual void init( const Context& context ) const;
+		virtual void clear( const Context& context ) const;
         virtual void clear();
 
 	protected:
 		virtual ~Resource();
-				
+
 		virtual void setHandles( HandleSet& handles );
 
         void clearLocal();

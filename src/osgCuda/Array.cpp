@@ -49,7 +49,15 @@ namespace osgCuda
 	ArrayStream::~ArrayStream()
 	{
 		if( _devArrayAllocated && NULL != _devArray )
-			cudaFreeArray( _devArray );
+		{
+			cudaError_t res = cudaFreeArray( _devArray );
+			if( res != cudaSuccess )
+			{
+				osg::notify(osg::FATAL)
+					<<"ArrayStream::~ArrayStream(): error during cudaFreeArray(). "
+					<<cudaGetErrorString(res)<<std::endl;
+			}
+		}
 
 		if( _hostPtrAllocated && NULL != _hostPtr)
 			free( _hostPtr );

@@ -20,7 +20,7 @@
 #include <vector>
 #include <set>
 #include <osg/Object>
-#include <osg/State>
+#include <osg/GraphicsContext>
 #include <osgCompute/Export>
 #include <osgCompute/Resource>
 
@@ -45,29 +45,36 @@ namespace osgCompute
         virtual void apply();
 
         virtual unsigned int getId() const;
-        virtual void connectToState( osg::State& state );
-        virtual osg::State* getState();
-        virtual const osg::State* getState() const;
-        virtual void removeState();
-        virtual bool isStateValid() const;
+        virtual void connectWithGraphicsContext( osg::GraphicsContext& gc );
+        virtual osg::GraphicsContext* getGraphicsContext();
+        virtual const osg::GraphicsContext* getGraphicsContext() const;
+        virtual void removeGraphicsContext();
+        virtual bool isConnectedWithGraphicsContext() const;
         virtual void setDevice( int device );
         virtual int getDevice() const;
 
 		virtual void clear();
 		virtual bool isClear() const;
 
+		virtual void clearResources() const;
 		static const Context* getContext( unsigned int id );
-    protected:
+		static const Context* getContextFromGraphicsContext( unsigned int graphicContextId );
 
+    protected:
+		friend class Resource;
         virtual ~Context();
         void clearLocal();
 
+		void registerResource( const Resource& resource ) const;
+		void unregisterResource( const Resource& resource ) const;
+
         unsigned int                        _id;
-        osg::ref_ptr<osg::State>            _state;
+        osg::ref_ptr<osg::GraphicsContext>  _gc;
         bool                                _clear;
         mutable OpenThreads::Mutex          _mutex;
         int                                 _device;
         bool                                _embedded;
+		mutable ResourceSet					_resources;
 
     private:
         // copy constructor and operator should not be called

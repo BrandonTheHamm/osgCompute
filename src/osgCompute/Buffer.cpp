@@ -205,6 +205,33 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
+	void Buffer::init( const Context& context ) const
+	{
+		if( _streams.size()<= context.getId() )
+			_streams.resize( context.getId()+1, NULL );
+
+		if( NULL == _streams[context.getId()] )
+		{
+			// create new buffer and attach it to the
+			// current context
+			_streams[context.getId()] = newStream( context );
+
+			if( NULL == _streams[context.getId()] )
+			{
+				osg::notify( osg::FATAL )  
+					<< "Buffer::lookupStream(): allocation of data stream failed for context \""<<context.getId()<<"\"."
+					<< std::endl;
+
+				return;
+			}
+			_streams[context.getId()]->_allocHint = getAllocHint();
+			_streams[context.getId()]->_mapping = UNMAPPED;
+			_streams[context.getId()]->_context = const_cast<osgCompute::Context*>( &context );
+			Resource::init( context );
+		}
+	}
+
+	//------------------------------------------------------------------------------
 	void Buffer::clear( const Context& context ) const
 	{
 		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
@@ -216,9 +243,13 @@ namespace osgCompute
 			while( (*itr) != curStream )
 				itr++;
 
+			// delete stream and detach 
+			// it this from context
 			delete curStream;
 			_streams.erase( itr );
 		}
+
+		Resource::clear( context );
 	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -253,27 +284,9 @@ namespace osgCompute
 		/////////////////////
 		// ALLOCATE STREAM //
 		/////////////////////
-		if( _streams.size()<= context.getId() )
-			_streams.resize( context.getId()+1, NULL );
-
-		// Allocate stream array for context
-		// if necessary
-		if( NULL == _streams[context.getId()] )
-		{
-			_streams[context.getId()] = newStream( context );
-
-			if( NULL == _streams[context.getId()] )
-			{
-				osg::notify( osg::FATAL )  
-					<< "Buffer::lookupStream(): allocation of data stream failed for context \""<<context.getId()<<"\"."
-					<< std::endl;
-
-				return false;
-			}
-			_streams[context.getId()]->_allocHint = getAllocHint();
-			_streams[context.getId()]->_mapping = UNMAPPED;
-			_streams[context.getId()]->_context = const_cast<osgCompute::Context*>( &context );
-		}
+		if( _streams.size() <= context.getId() || 
+			NULL == _streams[context.getId()] )
+			init(context);
 
 		return _streams[context.getId()];
 	}

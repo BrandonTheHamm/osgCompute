@@ -428,6 +428,21 @@ namespace osgCompute
 		return _enabled;
 	}
 
+	//------------------------------------------------------------------------------
+	void Computation::releaseGLObjects( osg::State* state ) const
+	{
+		for( ContextMapCnstItr itr = _contextMap.begin();
+			 itr != _contextMap.end();
+			 ++itr )
+		{
+			if( (*itr).second->isConnectedWithGraphicsContext() &&
+				(*itr).second->getGraphicsContext()->getState() == state )
+			{
+				(*itr).second->clearResources();
+				break;
+			}
+		}
+	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
@@ -464,10 +479,11 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     bool osgCompute::Computation::setContext( Context& context )
     {
-		if( context.getState() == NULL )
+		if( !context.isConnectedWithGraphicsContext() ||
+			context.getGraphicsContext()->getState() == NULL )
 			return false;
 
-        _contextMap[ context.getState()->getContextID() ] = &context;
+        _contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
         return true;
     }
 
@@ -510,7 +526,7 @@ namespace osgCompute
                 return NULL;
             }
 
-			context->connectToState( state );
+			context->connectWithGraphicsContext( *state.getGraphicsContext() );
             _contextMap.insert( std::make_pair< unsigned int, osg::ref_ptr<Context> >( state.getContextID(), context) );
         }
         else
@@ -737,5 +753,4 @@ namespace osgCompute
 			}
 		}
 	}  
-
 }

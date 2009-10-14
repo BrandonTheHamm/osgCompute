@@ -106,7 +106,7 @@ namespace osgCuda
         // In case the context is used in combination with a osg::State object
         // and within a multi threaded environment add a release operation to
         // the current graphics thread.
-        if( getState() != NULL )
+        if( isConnectedWithGraphicsContext() )
         {
             //////////////////
             // SHARE DEVICE //

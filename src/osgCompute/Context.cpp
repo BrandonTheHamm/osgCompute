@@ -72,6 +72,21 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
+	const Context* Context::getContextFromGraphicsContext( unsigned int graphicContextId )
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
+
+		for( std::set< Context* >::iterator itr = s_Contexts.begin();
+			itr != s_Contexts.end();
+			++itr )
+			if( (*itr)->isConnectedWithGraphicsContext() && 
+				(*itr)->getGraphicsContext()->getState()->getContextID() == graphicContextId )
+				return (*itr);
+
+		return NULL;
+	}
+
+	//------------------------------------------------------------------------------
 	static unsigned int getUniqueContextId()
 	{
 		return s_ContextIds++;
@@ -110,14 +125,10 @@ namespace osgCompute
         if(isClear())
             init();
 
-		if( getState() != NULL )
-		{
-			// if this context is connected to a graphics context 
-			// we have to ensure the context is active.
-			osg::GraphicsContext* gc = getState()->getGraphicsContext();
-			if( gc != NULL && !gc->isCurrent() )
-				gc->makeCurrent();
-		}
+		// if this context is connected to a graphics context 
+		// we have to ensure the context is active.
+		if( _gc.valid() && !_gc->isCurrent() )
+			_gc->makeCurrent();
     }
 
 	//------------------------------------------------------------------------------
@@ -127,41 +138,47 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
-	void Context::connectToState( osg::State& state )
+	void Context::connectWithGraphicsContext( osg::GraphicsContext& gc )
 	{
 		if( !isClear() )
 			return;
 
-		_state = &state;
+		_gc = &gc;
 	}
 
 	//------------------------------------------------------------------------------
-	osg::State* Context::getState()
+	osg::GraphicsContext* Context::getGraphicsContext()
 	{
-		return _state.get();
+		return _gc.get();
 	}
 
 	//------------------------------------------------------------------------------
-	const osg::State* Context::getState() const
+	const osg::GraphicsContext* Context::getGraphicsContext() const
 	{
-		return _state.get();
+		return _gc.get();
 	}
 
 	//------------------------------------------------------------------------------
-	void Context::removeState()
+	void Context::removeGraphicsContext()
 	{
-		_state = NULL;
+		if( !isClear() )
+			return;
+
+		_gc = NULL;
 	}
 
 	//------------------------------------------------------------------------------
-	bool Context::isStateValid() const
+	bool Context::isConnectedWithGraphicsContext() const
 	{
-		return _state.valid();
+		return _gc.valid();
 	}
 
 	//------------------------------------------------------------------------------
 	void Context::setDevice( int device )
 	{ 
+		if( !isClear() )
+			return;
+
 		_device = device;  
 	}
 
@@ -177,6 +194,16 @@ namespace osgCompute
 		return _clear;
 	}
 
+	//------------------------------------------------------------------------------
+	void Context::clearResources() const
+	{
+		while( !_resources.empty() )
+		{
+			ResourceSetItr itr = _resources.begin();
+			(*itr)->clear( *this );
+		}
+	}
+
     //------------------------------------------------------------------------------
     void Context::clear()
     {
@@ -188,12 +215,36 @@ namespace osgCompute
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
     void Context::clearLocal()
-    {
+	{
+		// clear resources first!!!
+		clearResources();
         // do not clear the id!!!
-        _state = NULL;
+        _gc = NULL;
         _clear = true;
         _embedded = false;
         // default use device 0
         _device = 0;
     }
+
+	//------------------------------------------------------------------------------
+	void Context::registerResource( const Resource& resource ) const
+	{
+		Resource* curResource = const_cast<Resource*>( &resource );
+		ResourceSetItr itr = _resources.find( curResource );
+		if( itr != _resources.end() )
+			return;
+
+		_resources.insert( curResource );
+	}
+
+	//------------------------------------------------------------------------------
+	void Context::unregisterResource( const Resource& resource ) const
+	{
+		Resource* curResource = const_cast<Resource*>( &resource );
+		ResourceSetItr itr = _resources.find( curResource );
+		if( itr == _resources.end() )
+			return;
+
+		_resources.erase( itr );
+	}
 }

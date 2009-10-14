@@ -48,7 +48,17 @@ namespace osgCuda
 	BufferStream::~BufferStream()
 	{
 		if( _devPtrAllocated && NULL != _devPtr)
-			cudaFree( _devPtr );
+		{
+			cudaError_t res = cudaFree( _devPtr );
+			if( res != cudaSuccess )
+			{
+				osg::notify(osg::FATAL)
+					<<"BufferStream::~BufferStream(): error during cudaFreeArray(). "
+					<<cudaGetErrorString(res)<<std::endl;
+			}
+		}
+
+			
 		if( _hostPtrAllocated && NULL != _hostPtr)
 			free( _hostPtr );
 	}
