@@ -270,9 +270,10 @@ namespace osgCompute
 		_allocHint = NO_ALLOC_HINT;
 		_subloadCallback = NULL;
 
-		for( unsigned int s=0; s<_streams.size(); ++s )
-			if( _streams[s] != NULL )
-				delete _streams[s];
+		// The following is called implicitly by Resource::clearLocal():
+		// for( unsigned int s=0; s<_streams.size(); ++s )
+		//	 if( _streams[s] != NULL )
+		//		 delete _streams[s];
 		_streams.clear();
 	}
 

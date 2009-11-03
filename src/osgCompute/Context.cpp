@@ -199,7 +199,7 @@ namespace osgCompute
 	{
 		while( !_resources.empty() )
 		{
-			ResourceSetItr itr = _resources.begin();
+			ResourcePtrSetItr itr = _resources.begin();
 			(*itr)->clear( *this );
 		}
 	}
@@ -229,19 +229,17 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	void Context::registerResource( const Resource& resource ) const
 	{
-		Resource* curResource = const_cast<Resource*>( &resource );
-		ResourceSetItr itr = _resources.find( curResource );
+		ResourcePtrSetItr itr = _resources.find( &resource );
 		if( itr != _resources.end() )
 			return;
 
-		_resources.insert( curResource );
+		_resources.insert( &resource );
 	}
 
 	//------------------------------------------------------------------------------
 	void Context::unregisterResource( const Resource& resource ) const
 	{
-		Resource* curResource = const_cast<Resource*>( &resource );
-		ResourceSetItr itr = _resources.find( curResource );
+		ResourcePtrSetItr itr = _resources.find( &resource );
 		if( itr == _resources.end() )
 			return;
 

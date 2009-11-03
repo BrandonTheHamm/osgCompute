@@ -26,6 +26,12 @@
 
 namespace osgCompute
 {
+	class Context;
+
+	typedef std::set< const Context* >                     						ContextSet;
+	typedef std::set< const Context* >::iterator           						ContextSetItr;
+	typedef std::set< const Context* >::const_iterator     						ContextSetCnstItr;
+
 	typedef std::set< std::string >                                           	HandleSet;
 	typedef std::set< std::string >::iterator                                 	HandleSetItr;
 	typedef std::set< std::string >::const_iterator                           	HandleSetCnstItr;
@@ -33,6 +39,10 @@ namespace osgCompute
 	typedef std::vector< osg::ref_ptr<Resource> >                              	ResourceList;
 	typedef std::vector< osg::ref_ptr<Resource> >::iterator                    	ResourceListItr;
 	typedef std::vector< osg::ref_ptr<Resource> >::const_iterator              	ResourceListCnstItr;
+
+	typedef std::set< const Resource* >											ResourcePtrSet;
+	typedef std::set< const Resource* >::iterator								ResourcePtrSetItr;
+	typedef std::set< const Resource* >::const_iterator							ResourcePtrSetCnstItr;
 
 	typedef std::set< osg::ref_ptr<Resource> >                                  ResourceSet;
 	typedef std::set< osg::ref_ptr<Resource> >::iterator                        ResourceSetItr;
@@ -69,6 +79,7 @@ namespace osgCompute
 
         void clearLocal();
 
+		mutable ContextSet					_contexts;
         HandleSet                           _handles;
         bool                                _clear;
 

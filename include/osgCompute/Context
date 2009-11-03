@@ -29,9 +29,9 @@ namespace osgCompute
     class Context;
     class Resource;
 
-    typedef std::map<unsigned int, osg::ref_ptr<Context> >                     ContextMap;
-    typedef std::map<unsigned int, osg::ref_ptr<Context> >::iterator           ContextMapItr;
-    typedef std::map<unsigned int, osg::ref_ptr<Context> >::const_iterator     ContextMapCnstItr;
+    typedef std::map<unsigned int, osg::ref_ptr<Context> >						ContextMap;
+    typedef std::map<unsigned int, osg::ref_ptr<Context> >::iterator			ContextMapItr;
+    typedef std::map<unsigned int, osg::ref_ptr<Context> >::const_iterator		ContextMapCnstItr;
 
 
     /**
@@ -74,7 +74,7 @@ namespace osgCompute
         mutable OpenThreads::Mutex          _mutex;
         int                                 _device;
         bool                                _embedded;
-		mutable ResourceSet					_resources;
+		mutable ResourcePtrSet				_resources;
 
     private:
         // copy constructor and operator should not be called
