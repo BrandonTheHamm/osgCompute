@@ -309,6 +309,17 @@ namespace osgCuda
 	cudaArray* Array::mapArrayStream( ArrayStream& stream, unsigned int mapping ) const
 	{
 		cudaArray* ptr = NULL;
+		
+		if( (mapping & osgCompute::MAP_DEVICE) == osgCompute::MAP_DEVICE_TARGET )
+		{
+
+			osg::notify(osg::WARN)
+				<< "osgCuda::Array::mapArrayStream(): you cannot map array as a device target. Use one of the following: "
+				<< "DEVICE_SOURCE, DEVICE."
+				<< std::endl;
+
+			return NULL;
+		}
 
 		bool needsSetup = false;
 		if( (_image.valid() && _image->getModifiedCount() != stream._modifyCount ) ||
@@ -318,6 +329,9 @@ namespace osgCuda
 		///////////////////
 		// PROOF MAPPING //
 		///////////////////
+
+
+
 		if( (stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE) &&
 			!needsSetup )
 		{
@@ -379,7 +393,7 @@ namespace osgCuda
 		{
 			osg::notify(osg::WARN)
 				<< "osgCuda::Array::mapArrayStream(): wrong mapping was specified. Use one of the following: "
-				<< "DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
+				<< "DEVICE_SOURCE, DEVICE."
 				<< std::endl;
 
 			return NULL;
