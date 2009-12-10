@@ -142,7 +142,7 @@ namespace osgCuda
 		if( state == NULL )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::GLBufferObject::Extensions* bufferExt = osg::GLBufferObject::getExtensions( state->getContextID(),true );
 		osg::Texture3D::Extensions* tex3DExt = osg::Texture3D::getExtensions( state->getContextID(),true );
 		if( !bufferExt || !tex3DExt )
 		{
@@ -185,7 +185,7 @@ namespace osgCuda
 			getDimension(0),
 			getDimension(1),
 			getDimension(2),
-			tex->_internalFormat,
+			tex->_profile._internalFormat,
 			texType,
 			NULL );
 
@@ -214,7 +214,7 @@ namespace osgCuda
 		if( state == NULL )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::GLBufferObject::Extensions* bufferExt = osg::GLBufferObject::getExtensions( state->getContextID(),true );
 		osg::Texture3D::Extensions* tex3DExt = osg::Texture3D::getExtensions( state->getContextID(),true );
 		if( !bufferExt || !tex3DExt )
 		{
@@ -275,7 +275,7 @@ namespace osgCuda
 		bufferExt->glBindBuffer( GL_PIXEL_PACK_BUFFER_ARB,  stream._bo );
 
 		// PACK the data for the PBO
-		glGetTexImage( GL_TEXTURE_3D, 0, tex->_internalFormat, texType, NULL );
+		glGetTexImage( GL_TEXTURE_3D, 0, tex->_profile._internalFormat, texType, NULL );
 
 		GLenum errorStatus = glGetError();
 		if( errorStatus != GL_NO_ERROR )
@@ -313,7 +313,7 @@ namespace osgCuda
 		/////////////////////
 		// COMPILE TEXTURE //
 		/////////////////////
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::GLBufferObject::Extensions* bufferExt = osg::GLBufferObject::getExtensions( state->getContextID(),true );
 		osg::Texture3D::Extensions* tex3DExt = osg::Texture3D::getExtensions( state->getContextID(),true );
 		if( !bufferExt || !tex3DExt )
 		{
@@ -468,10 +468,10 @@ namespace osgCuda
 
 			tex3DExt->glTexImage3D(
 				GL_TEXTURE_3D, 0,
-				tex->_internalFormat,
-				tex->_width, tex->_height, tex->_depth,
-				tex->_border,
-				tex->_internalFormat, texType, NULL );
+				tex->_profile._internalFormat,
+				tex->_profile._width, tex->_profile._height, tex->_profile._depth,
+				tex->_profile._border,
+				tex->_profile._internalFormat, texType, NULL );
 
 			GLenum errorNo = glGetError();
 			if( errorNo != GL_NO_ERROR )

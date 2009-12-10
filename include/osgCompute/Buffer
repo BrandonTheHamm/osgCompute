@@ -90,6 +90,7 @@ namespace osgCompute
         virtual const SubloadCallback* getSubloadCallback() const;
 
 		virtual void swap( unsigned int incr = 1 );
+		virtual unsigned int getSwapIdx() const;
 		virtual unsigned int getSwapCount() const;
 
 		virtual void init( const Context& context ) const;

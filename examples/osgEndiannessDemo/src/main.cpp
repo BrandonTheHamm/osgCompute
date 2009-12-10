@@ -101,7 +101,8 @@ int main(int argc, char *argv[])
 	// it with the following command.
 	// context->setDevice( 0 );
 
-    // activate context. Initializes it if not done so far
+    // activate context. Initialize it if not done so far
+	context->init();
     context->apply();
 
     // create a buffer

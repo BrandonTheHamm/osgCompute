@@ -197,20 +197,25 @@ int main(int argc, char *argv[])
 	ptclEmitter->setName( "ptclEmitter" );
 	ptclEmitter->setSeedBox( bbmin, bbmax );
 
-	osgCuda::Computation* computation = new osgCuda::Computation;
-	computation->setName("computation");
-	computation->addModule( *ptclEmitter );    
-	computation->addModule( *ptclMover );
-	computation->addResource( *seedBuffer );
+	osgCuda::Computation* computationEmit = new osgCuda::Computation;
+	computationEmit->setName("emit");
+	computationEmit->addModule( *ptclEmitter );  
+	computationEmit->addResource( *seedBuffer );
 	// Particles are located in the subgraph of
 	// the modules
-	computation->addChild( getGeode( numParticles ) );
+	computationEmit->addChild( getGeode( numParticles ) );
+
+	osgCuda::Computation* computationMove = new osgCuda::Computation;
+	//computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
+	computationMove->setName( "move" );
+	computationMove->addModule( *ptclMover );
+	computationMove->addChild( computationEmit );
 
     /////////////////
     // SETUP SCENE //
     /////////////////
     osg::Group* scene = new osg::Group;
-    scene->addChild( computation );
+    scene->addChild( computationMove );
     scene->addChild( getBoundingBox( bbmin, bbmax ) );
 
     //////////////////

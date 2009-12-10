@@ -123,7 +123,7 @@ namespace osgCompute
     void Context::apply()
     {
         if(isClear())
-            init();
+            return;
 
 		// if this context is connected to a graphics context 
 		// we have to ensure the context is active.

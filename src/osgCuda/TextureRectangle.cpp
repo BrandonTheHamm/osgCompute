@@ -141,7 +141,7 @@ namespace osgCuda
 		if( state == NULL )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::GLBufferObject::Extensions* bufferExt = osg::GLBufferObject::getExtensions( state->getContextID(),true );
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
@@ -182,7 +182,7 @@ namespace osgCuda
 			GL_TEXTURE_RECTANGLE, 0, 0, 0,
 			getDimension(0),
 			getDimension(1),
-			tex->_internalFormat,
+			tex->_profile._internalFormat,
 			texType,
 			NULL );
 
@@ -211,7 +211,7 @@ namespace osgCuda
 		if( state == NULL )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::GLBufferObject::Extensions* bufferExt = osg::GLBufferObject::getExtensions( state->getContextID(),true );
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
@@ -272,7 +272,7 @@ namespace osgCuda
 		bufferExt->glBindBuffer( GL_PIXEL_PACK_BUFFER_ARB,  stream._bo );
 
 		// PACK the data for the PBO
-		glGetTexImage( GL_TEXTURE_RECTANGLE, 0, tex->_internalFormat, texType, NULL );
+		glGetTexImage( GL_TEXTURE_RECTANGLE, 0, tex->_profile._internalFormat, texType, NULL );
 
 		GLenum errorStatus = glGetError();
 		if( errorStatus != GL_NO_ERROR )
@@ -312,7 +312,7 @@ namespace osgCuda
 		/////////////////////
 		// COMPILE TEXTURE //
 		/////////////////////
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(), true );
+		osg::GLBufferObject::Extensions* bufferExt = osg::GLBufferObject::getExtensions( state->getContextID(), true );
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
@@ -468,10 +468,10 @@ namespace osgCuda
 			// to call glTexSubImage() during runtime
 			glTexImage2D(
 				GL_TEXTURE_RECTANGLE, 0,
-				tex->_internalFormat,
-				tex->_width, tex->_height,
-				tex->_border,
-				tex->_internalFormat, texType, NULL );
+				tex->_profile._internalFormat,
+				tex->_profile._width, tex->_profile._height,
+				tex->_profile._border,
+				tex->_profile._internalFormat, texType, NULL );
 
 			GLenum errorNo = glGetError();
 			if( errorNo != GL_NO_ERROR )

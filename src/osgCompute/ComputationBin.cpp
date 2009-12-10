@@ -68,7 +68,7 @@ namespace osgCompute
         }
 
 
-        if( (_computeOrder & Computation::PRE_TRAVERSAL ) == Computation::PRE_TRAVERSAL )
+        if( (_computeOrder & PRE_TRAVERSAL ) == PRE_TRAVERSAL )
         {
             if( _launchCallback ) 
                 (*_launchCallback)( *this, *_context ); 
@@ -81,7 +81,7 @@ namespace osgCompute
         // render sub-graph leafs
         drawLeafs(renderInfo, previous );
 
-        if( (_computeOrder & Computation::PRE_TRAVERSAL ) != Computation::PRE_TRAVERSAL )
+        if( (_computeOrder & PRE_TRAVERSAL ) != PRE_TRAVERSAL )
         {
             if( _launchCallback ) 
                 (*_launchCallback)( *this, *_context ); 
@@ -264,7 +264,7 @@ namespace osgCompute
     void ComputationBin::clearLocal()
     {
         _computation = NULL;
-        _computeOrder = osgCompute::Computation::PRE_COMPUTE_POST_TRAVERSAL;
+        _computeOrder = osgCompute::Computation::RENDER_PRE_RENDER_PRE_TRAVERSAL;
         _context = NULL;
         _clear = true;
         _launchCallback = NULL;

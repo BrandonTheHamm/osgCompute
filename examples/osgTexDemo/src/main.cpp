@@ -104,6 +104,7 @@ int main(int argc, char *argv[])
 	texStreamer->setName( "my texture module" );
 
 	osgCuda::Computation* computation = new osgCuda::Computation;
+	computation->setComputeOrder(  osgCompute::Computation::RENDER_PRE_RENDER_PRE_TRAVERSAL );
 	computation->addModule( *texStreamer );
 	computation->addResource( *srcArray );
 	// trgTexture is located in the subgraph of the computation

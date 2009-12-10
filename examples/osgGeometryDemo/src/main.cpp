@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 	// Rotate the model automatically 
 	osg::NodeCallback* nc = new osg::AnimationPathCallback(
 		animTransform->getBound().center(),osg::Vec3(0.0f,0.0f,1.0f),osg::inDegrees(45.0f));
-	animTransform->setUpdateCallback(nc);
+	//animTransform->setUpdateCallback(nc);
 
     // Configure cuda geometry object
     osgCuda::Geometry* geometry = new osgCuda::Geometry;
@@ -99,6 +99,7 @@ int main(int argc, char *argv[])
 	GeometryDemo::Warp* warpModule = new GeometryDemo::Warp;
 	warpModule->setName( "my cow warping" );
 	osgCuda::Computation* computation = new osgCuda::Computation;
+	computation->setComputeOrder( osgCompute::Computation::UPDATE_PRE_TRAVERSAL );
 	computation->addModule( *warpModule );
     computation->addChild( animTransform );
     

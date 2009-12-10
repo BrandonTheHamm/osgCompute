@@ -51,7 +51,12 @@ namespace osgCompute
             if( (cv != NULL) && 
                 _enabled )
             {
-                setupBin( *cv );
+				getOrCreateContext( *cv->getState() );
+
+				if( (_computeOrder & RENDER) == RENDER )
+					addBin( *cv );
+				else
+					nv.apply(*this);
             }
             else
             {
@@ -62,6 +67,10 @@ namespace osgCompute
                 else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
                 {
                     update( nv );
+
+					if( (_computeOrder & UPDATE_PRE_TRAVERSAL) == UPDATE_PRE_TRAVERSAL )
+						launch();
+
                 }
 				else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
 				{
@@ -69,6 +78,10 @@ namespace osgCompute
 				}
 
                 nv.apply( *this );
+
+				if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR && 
+					(_computeOrder & UPDATE_POST_TRAVERSAL) == UPDATE_POST_TRAVERSAL )
+					launch();
             }
 
             nv.popFromNodePath(); 
@@ -383,7 +396,15 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	void Computation::setComputeOrder( Computation::ComputeOrder co )
 	{
+		// deactivate auto update
+		if( (_computeOrder & UPDATE ) == UPDATE )
+			setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() - 1 );
+		
 		_computeOrder = co;
+
+		// set auto update active in case we use the update traversal to compute things
+		if( (_computeOrder & UPDATE ) == UPDATE )
+			setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
 	}
 
 	//------------------------------------------------------------------------------
@@ -431,17 +452,19 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	void Computation::releaseGLObjects( osg::State* state ) const
 	{
-		for( ContextMapCnstItr itr = _contextMap.begin();
+		for( ContextMapItr itr = _contextMap.begin();
 			 itr != _contextMap.end();
 			 ++itr )
 		{
-			if( (*itr).second->isConnectedWithGraphicsContext() &&
-				(*itr).second->getGraphicsContext()->getState() == state )
+			if( (*itr).second->getGraphicsContext()->getState() == state )
 			{
 				(*itr).second->clearResources();
+				_contextMap.erase( itr );
 				break;
 			}
 		}
+
+		Group::releaseGLObjects( state );
 	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -454,7 +477,6 @@ namespace osgCompute
         _resourcesCollected = false;
         removeResources();
         removeModules();
-        _computeOrder = PRE_COMPUTE_PRE_TRAVERSAL;
         _launchCallback = NULL;
         _enabled = true;
         _autoCheckSubgraph = false;
@@ -462,8 +484,16 @@ namespace osgCompute
         _resourceVisitor = NULL;
         _contextMap.clear();
 
+		// clear node or group related members
         removeChildren(0,osg::Group::getNumChildren());
-        setDataVariance( osg::Object::DYNAMIC );
+		setDataVariance( osg::Object::DYNAMIC );
+		setUpdateCallback( NULL );
+		setEventCallback( NULL );
+
+		// setup computation order
+		_computeOrder = UPDATE_PRE_TRAVERSAL;//RENDER_PRE_RENDER_PRE_TRAVERSAL;//
+		if( (_computeOrder & UPDATE) == UPDATE )
+			setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
     }
 
     //------------------------------------------------------------------------------
@@ -483,16 +513,24 @@ namespace osgCompute
 			context.getGraphicsContext()->getState() == NULL )
 			return false;
 
-        _contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
-        return true;
-    }
+		if( _parentComputation == NULL )
+		{
+			_contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
+		
+			// Pass on context to subgraph
+			distributeContext( context );
+		}
+		else
+		{
+			// Search for topmost computation
+			Computation* topComp = this;
+			while( NULL != topComp->getParentComputation() )
+				topComp = topComp->getParentComputation();
 
-    //------------------------------------------------------------------------------
-	void osgCompute::Computation::removeContext( osg::State& state )
-    {
-        ContextMapItr itr = _contextMap.find( state.getContextID() );
-        if( itr != _contextMap.end() )
-            _contextMap.erase(itr);
+			topComp->setContext( context );
+		}
+
+        return true;
     }
 
     //------------------------------------------------------------------------------
@@ -512,6 +550,8 @@ namespace osgCompute
     {
         OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
 
+		// find or create context
+		bool contextCreated = false;
         Context* context = NULL;
         ContextMapItr itr = _contextMap.find( state.getContextID() );
         if( itr == _contextMap.end() )
@@ -528,48 +568,42 @@ namespace osgCompute
 
 			context->connectWithGraphicsContext( *state.getGraphicsContext() );
             _contextMap.insert( std::make_pair< unsigned int, osg::ref_ptr<Context> >( state.getContextID(), context) );
+			context->init();
+			contextCreated = true;
         }
         else
         {
             context = (*itr).second.get();
         }
 
-        // In case a object is not defined 
-        // NULL will be returned
+		// traverse subgraph and pass on context 
+		if( contextCreated || getAutoCheckSubgraph() )
+			distributeContext( *context );
+
         return context;
     }
 
     //------------------------------------------------------------------------------
-    void Computation::setupBin( osgUtil::CullVisitor& cv )
+    void Computation::addBin( osgUtil::CullVisitor& cv )
     {
-        if( !cv.getState() )
-        {
-            osg::notify(osg::FATAL)  << "Computation::addBin() for \""
-                << getName()<<"\": CullVisitor must provide a valid state."
-                << std::endl;
+		if( !cv.getState() )
+		{
+			osg::notify(osg::FATAL)  << "Computation::addBin() for \""
+				<< getName()<<"\": CullVisitor must provide a valid state."
+				<< std::endl;
 
-            return;
-        }
+			return;
+		}
 
-		bool contextCreated = false;
-        Context* ctx = getContext( *cv.getState() );
+		Context* ctx = getContext( *cv.getState() );
 		if( !ctx )
 		{
-			ctx = getOrCreateContext( *cv.getState() );
-			contextCreated = true;
-		}
-			
-        if( !ctx )
-        {
-            osg::notify(osg::FATAL)  
-                << "Computation::addBin() for \""<<getName()<<"\": cannot create Context."
-                << std::endl;
+			osg::notify(osg::FATAL)  
+				<< "Computation::addBin() for \""<<getName()<<"\": cannot find valid context."
+				<< std::endl;
 
-            return;
-        }
-			
-		if( contextCreated || getAutoCheckSubgraph() )
-			distributeContext( *ctx );
+			return;
+		}
 
         ///////////////////////
         // SETUP REDIRECTION //
@@ -585,10 +619,10 @@ namespace osgCompute
         }
         const osgUtil::RenderBin::RenderBinList& rbList = oldRB->getRenderBinList();
 
-        // we have to look for a better method to add more computation bins
-        // to the same hierachy level
+        // We have to look for a better method to add more computation bins
+        // to the same hierarchy level
         int rbNum = 0;
-        if( (_computeOrder & POST_COMPUTE) != POST_COMPUTE )
+		if( (_computeOrder & POST_RENDER) !=  POST_RENDER )
         {
             osgUtil::RenderBin::RenderBinList::const_iterator itr = rbList.begin();
             if( itr != rbList.end() && (*itr).first < 0 )
@@ -632,6 +666,46 @@ namespace osgCompute
         cv.apply( *this );
         cv.setCurrentRenderBin( oldRB );
     }
+
+	//------------------------------------------------------------------------------
+	void Computation::launch()
+	{
+		// For all contexts launch modules
+		for( ContextMapItr itr = _contextMap.begin(); itr != _contextMap.end(); ++itr )
+		{
+			Context* curCtx = itr->second.get();
+			if( curCtx->isClear() )
+				continue;
+
+			// Apply context 
+			curCtx->apply();
+
+			// Launch modules
+			for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+			{
+				if( (*itr)->isEnabled() )
+					(*itr)->launch( *curCtx );
+			}
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	void Computation::acceptContext( Context& context )
+	{
+		if( !context.isConnectedWithGraphicsContext() ||
+			context.getGraphicsContext()->getState() == NULL )
+			return;
+
+		_contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
+	}
+
+	//------------------------------------------------------------------------------
+	void osgCompute::Computation::removeContext( osg::State& state )
+	{
+		ContextMapItr itr = _contextMap.find( state.getContextID() );
+		if( itr != _contextMap.end() )
+			_contextMap.erase(itr);
+	}
 
     //------------------------------------------------------------------------------
     void osgCompute::Computation::distributeContext( Context& context )
@@ -700,15 +774,10 @@ namespace osgCompute
                 subgraphChanged();
         }
 
-        if( getUpdateCallback() )
-            (*getUpdateCallback())( this, &uv );
-		else
+		for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
 		{
-			for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-			{
-				if( (*itr)->getUpdateCallback() )
-					(*(*itr)->getUpdateCallback())( *(*itr), uv );
-			}
+			if( (*itr)->getUpdateCallback() )
+				(*(*itr)->getUpdateCallback())( *(*itr), uv );
 		}
     }
 

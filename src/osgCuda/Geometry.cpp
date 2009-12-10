@@ -302,8 +302,13 @@ namespace osgCuda
 	{
 		void* ptr = NULL;
 
-		osg::VertexBufferObject* vbo =  _geomref.get()->getOrCreateVertexBufferObject();
+		osg::VertexBufferObject* vbo = _geomref->getOrCreateVertexBufferObject();
 		if( !vbo )
+			return NULL;
+
+		unsigned int glCtxId = stream._context->getGraphicsContext()->getState()->getContextID();
+		osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( glCtxId );
+		if( !glBO )
 			return NULL;
 
 		///////////////////
@@ -399,7 +404,7 @@ namespace osgCuda
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( vbo->isDirty( stream._context->getGraphicsContext()->getState()->getContextID() ) )
+			if( glBO->isDirty() )
 				setupStream( mapping, stream );
 
 			/////////////////
@@ -416,7 +421,7 @@ namespace osgCuda
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( vbo->isDirty( stream._context->getGraphicsContext()->getState()->getContextID() ) )
+			if( glBO->isDirty() )
 				setupStream( mapping, stream );
 
 			/////////////////
@@ -502,7 +507,8 @@ namespace osgCuda
 			return false;
 
 		osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
-		if( !vbo->isDirty( state->getContextID() ) )
+		osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( state->getContextID() );
+		if( !glBO->isDirty() )
 			return true;
 
 		////////////////////
@@ -525,7 +531,7 @@ namespace osgCuda
 		////////////////
 		// UPDATE VBO //
 		////////////////
-		vbo->compileBuffer( const_cast<osg::State&>(*state) );
+		glBO->compileBuffer();
 
 		//////////////////
 		// REGISTER VBO //
@@ -573,22 +579,23 @@ namespace osgCuda
 			if( stream._bo != UINT_MAX )
 				return true;
 
-			osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
 
-			osg::State* state = stream._context->getGraphicsContext()->getState();
-			if( state == NULL )
+
+			osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
+			osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( stream._context->getGraphicsContext()->getState()->getContextID() );
+			if( !glBO )
 				return false;
 
 			//////////////
 			// SETUP BO //
 			//////////////
 			// compile buffer object if necessary
-			if( vbo->isDirty(state->getContextID()) )
-				vbo->compileBuffer( const_cast<osg::State&>(*state) );
+			if( glBO->isDirty() )
+				glBO->compileBuffer();
 
 			// using vertex buffers
 			if( stream._bo == UINT_MAX )
-				stream._bo = vbo->buffer(state->getContextID());
+				stream._bo = glBO->getGLObjectID();
 
 			//////////////////
 			// REGISTER PBO //

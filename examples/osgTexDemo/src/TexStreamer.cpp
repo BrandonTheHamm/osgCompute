@@ -20,6 +20,9 @@ extern "C"
 void gauss( const dim3& numBlocks, const dim3& numThreads, void* target, void* source, unsigned int byteSize );
 
 extern "C"
+void sobel( const dim3& numBlocks, const dim3& numThreads, void* trgBuffer, void* srcBuffer, unsigned int byteSize );
+
+extern "C"
 void swap( const dim3& numBlocks, const dim3& numThreads, void* trgBuffer, void* srcArray );
 
 namespace TexDemo
@@ -88,12 +91,19 @@ namespace TexDemo
 
 		// unsigned char* data = static_cast<unsigned char*>( _tmpBuffer->map( ctx, osgCompute::MAP_HOST_SOURCE ) );
 
-        // Run a 5x5 gauss filter 
-        gauss( _blocks, 
+        // Run a 3x3 sobel filter 
+        sobel( _blocks, 
 			   _threads, 
                _trgBuffer->map( ctx ), 
                _tmpBuffer->map( ctx ),
 			   _tmpBuffer->getByteSize() );
+
+		// ... or a 5x5 gauss filter
+		//gauss( _blocks, 
+		//	_threads, 
+		//	_trgBuffer->map( ctx ), 
+		//	_tmpBuffer->map( ctx ),
+		//	_tmpBuffer->getByteSize() );
     }
 
     //------------------------------------------------------------------------------

@@ -205,6 +205,13 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
+	unsigned int Buffer::getSwapIdx() const
+	{
+		// Function should be implemented by swap buffers.
+		return 0;
+	}
+
+	//------------------------------------------------------------------------------
 	void Buffer::init( const Context& context ) const
 	{
 		if( _streams.size()<= context.getId() )

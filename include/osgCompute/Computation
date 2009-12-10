@@ -22,6 +22,13 @@
 #include <osgCompute/Visitor>
 #include <osgCompute/ComputationBin>
 
+#define POST_TRAVERSAL		0x1
+#define PRE_TRAVERSAL		0x2
+#define POST_RENDER			0x4
+#define PRE_RENDER			0x8
+#define RENDER				0x100
+#define UPDATE				0x10000
+
 namespace osg
 {
     class NodeVisitor;
@@ -63,14 +70,12 @@ namespace osgCompute
 
         enum ComputeOrder
         {
-            POST_TRAVERSAL = 0x1,
-            PRE_TRAVERSAL = 0x2,
-            POST_COMPUTE = 0x4,
-            PRE_COMPUTE = 0x8,
-            PRE_COMPUTE_POST_TRAVERSAL = PRE_COMPUTE | POST_TRAVERSAL,
-            PRE_COMPUTE_PRE_TRAVERSAL = PRE_COMPUTE | PRE_TRAVERSAL,
-            POST_COMPUTE_POST_TRAVERSAL = POST_COMPUTE | POST_TRAVERSAL,
-            POST_COMPUTE_PRE_TRAVERSAL = POST_COMPUTE | PRE_TRAVERSAL,
+            RENDER_PRE_RENDER_POST_TRAVERSAL = RENDER | PRE_RENDER | POST_TRAVERSAL,
+            RENDER_PRE_RENDER_PRE_TRAVERSAL = RENDER | PRE_RENDER | PRE_TRAVERSAL,
+            RENDER_POST_RENDER_POST_TRAVERSAL = RENDER | POST_RENDER | POST_TRAVERSAL,
+            RENDER_POST_RENDER_PRE_TRAVERSAL = RENDER | POST_RENDER | PRE_TRAVERSAL,
+			UPDATE_POST_TRAVERSAL = UPDATE | POST_TRAVERSAL,
+			UPDATE_PRE_TRAVERSAL = UPDATE | PRE_TRAVERSAL,
         };
 
     public:
@@ -180,7 +185,6 @@ namespace osgCompute
 		virtual bool setContext( Context& context );
 		virtual Context* getOrCreateContext( osg::State& state );
 		virtual Context* getContext( osg::State& state );
-		virtual void removeContext( osg::State& state );
 
 		virtual void releaseGLObjects( osg::State* state ) const;
 
@@ -192,10 +196,14 @@ namespace osgCompute
 
         void clearLocal();
 
-        virtual void setupBin( osgUtil::CullVisitor& cv );
+		virtual void acceptContext(  Context& context );
+		virtual void removeContext( osg::State& state );
         virtual void distributeContext( Context& context );
         virtual void update( osg::NodeVisitor& uv );
 		virtual void collectResources();
+
+		virtual void launch();
+		virtual void addBin( osgUtil::CullVisitor& cv );
 		virtual void handleevent( osg::NodeVisitor& ev );
 
         virtual void setParentComputation( Computation* parentComputation );
@@ -211,7 +219,7 @@ namespace osgCompute
         bool                                _resourcesCollected;
         bool                                _autoCheckSubgraph;
 
-        ContextMap                          _contextMap;
+        mutable ContextMap                  _contextMap;
 
         mutable OpenThreads::Mutex          _mutex;
 

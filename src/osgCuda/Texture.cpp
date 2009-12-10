@@ -43,7 +43,9 @@ namespace osgCuda
 			if( state )
 			{
 				// ... delete buffer object
-				osg::BufferObject::Extensions* ext = osg::BufferObject::getExtensions( state->getContextID(),true);
+				osg::GLBufferObject::Extensions* ext = osg::GLBufferObject::getExtensions( state->getContextID(),true);
+				
+
 				ext->glBindBuffer( GL_ARRAY_BUFFER_ARB, _bo );
 				ext->glDeleteBuffers( 1, &_bo );
 				GLenum errorStatus = glGetError();

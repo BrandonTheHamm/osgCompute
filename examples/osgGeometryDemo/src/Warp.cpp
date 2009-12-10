@@ -109,6 +109,8 @@ namespace GeometryDemo
 			 _initPos->map( ctx ),
 			 _initNormals->map( ctx ),
              time );
+
+		return;
     }
 
     //------------------------------------------------------------------------------

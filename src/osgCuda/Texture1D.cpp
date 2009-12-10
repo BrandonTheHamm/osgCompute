@@ -134,7 +134,7 @@ namespace osgCuda
 		if( state == NULL )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::GLBufferObject::Extensions* bufferExt = osg::GLBufferObject::getExtensions( state->getContextID(),true );
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
@@ -148,7 +148,7 @@ namespace osgCuda
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture1DBuffer::syncTexture(): texture object not allocated for context \""<<state->getContextID()<<"\"."
+				<< "osgCuda::Texture1DBuffer::syncTexture(): texture object is not allocated for context \""<<state->getContextID()<<"\"."
 				<< std::endl;
 
 			return;
@@ -174,7 +174,7 @@ namespace osgCuda
 		glTexSubImage1D(
 			GL_TEXTURE_1D, 0, 0,
 			getDimension(0),
-			tex->_internalFormat,
+			tex->_profile._internalFormat,
 			texType,
 			NULL );
 
@@ -203,7 +203,7 @@ namespace osgCuda
 		if( state == NULL )
 			return;
 
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(),true );
+		osg::GLBufferObject::Extensions* bufferExt = osg::GLBufferObject::getExtensions( state->getContextID(),true );
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
@@ -264,7 +264,7 @@ namespace osgCuda
 		bufferExt->glBindBuffer( GL_PIXEL_PACK_BUFFER_ARB,  stream._bo );
 
 		// PACK the data for the PBO
-		glGetTexImage( GL_TEXTURE_1D, 0, tex->_internalFormat, texType, NULL );
+		glGetTexImage( GL_TEXTURE_1D, 0, tex->_profile._internalFormat, texType, NULL );
 
 		GLenum errorStatus = glGetError();
 		if( errorStatus != GL_NO_ERROR )
@@ -304,7 +304,7 @@ namespace osgCuda
 		/////////////////////
 		// COMPILE TEXTURE //
 		/////////////////////
-		osg::BufferObject::Extensions* bufferExt = osg::BufferObject::getExtensions( state->getContextID(), true );
+		osg::GLBufferObject::Extensions* bufferExt = osg::GLBufferObject::getExtensions( state->getContextID(), true );
 		if( !bufferExt  )
 		{
 			osg::notify(osg::FATAL)
