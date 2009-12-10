@@ -95,7 +95,7 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	void Resource::clear( const Context& context ) const
 	{
-		ContextSetCnstItr itr = _contexts.find( &context );
+		ContextSetItr itr = _contexts.find( &context );
 		if( itr == _contexts.end() )
 			return;
 
