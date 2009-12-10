@@ -503,6 +503,8 @@ namespace osgCuda
 
 					return false;
 				}
+
+				stream._devPtr = pitchPtr.ptr;
 			}
 			else if( getNumDimensions() == 2 )
 			{
