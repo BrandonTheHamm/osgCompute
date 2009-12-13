@@ -18,10 +18,12 @@ namespace osgCuda
 		_devPtr(NULL),
 		_hostPtr(NULL),
 		_syncHost(false),
+		_syncDevice(false),
 		_hostPtrAllocated(false),
 		_bo( UINT_MAX ),
 		_boRegistered(false),
-		_modifyCount(UINT_MAX)
+		_modifyCount(UINT_MAX),
+		_syncTex(false)
 	{
 	}
 
@@ -188,7 +190,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void* TextureBuffer::map( const osgCompute::Context& context, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int ) const
+	void* TextureBuffer::map( const osgCompute::Context& context, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ ) const
 	{
 		if( osgCompute::Resource::isClear() )
 		{
@@ -220,11 +222,22 @@ namespace osgCuda
 		}
 
 
-		void* ptr = NULL;
-		if( mapping != osgCompute::UNMAPPED )
-			ptr = mapStream( *stream, mapping, offset );
-		else
-			unmapStream( *stream );
+		void* ptr = mapStream( *stream, mapping, offset );
+		if(NULL != ptr )
+		{
+			if( (mapping & osgCompute::MAP_DEVICE_TARGET) == osgCompute::MAP_DEVICE_TARGET )
+			{
+				stream->_syncTex = true;
+				stream->_syncHost = true;
+			}
+
+			if( (mapping & osgCompute::MAP_HOST_TARGET) == osgCompute::MAP_HOST_TARGET )
+			{
+				stream->_syncTex = true;
+				stream->_syncDevice = true;
+			}
+		}
+		else unmap( context, hint );
 
 		return ptr;
 	}
@@ -271,7 +284,6 @@ namespace osgCuda
 					<< context.getId() << "\"."
 					<< std::endl;
 
-				unmap( context );
 				return false;
 			}
 
@@ -286,16 +298,92 @@ namespace osgCuda
 					<< "osgCuda::TextureBuffer::setMemory(): error during cudaMemset() for device data within context \""
 					<< context.getId() << "\"."
 					<< std::endl;
-
-				unmap( context );
 				return false;
 			}
 
 			return true;
 		}
 
-		unmap( context );
 		return false;
+	}
+
+	//------------------------------------------------------------------------------
+	bool TextureBuffer::resetMemory( const osgCompute::Context& context, unsigned int   ) const
+	{
+		if( osgCompute::Resource::isClear() )
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::TextureBuffer::resetMemory(): buffer is dirty."
+				<< std::endl;
+
+			return false;
+		}
+
+		TextureStream* stream = static_cast<TextureStream*>( lookupStream(context) );
+		if( NULL == stream )
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::TextureBuffer::resetMemory(): could not receive BufferStream for context \""
+				<< context.getId() << "\"."
+				<< std::endl;
+
+			return false;
+		}
+
+		// reset array data
+		stream->_modifyCount = UINT_MAX;
+
+		// reset host memory
+		if( stream->_hostPtr != NULL )
+		{
+			if( NULL == memset( stream->_hostPtr, 0x0, getByteSize() ) )
+			{
+				osg::notify(osg::FATAL)
+					<< "osgCuda::TextureBuffer::resetMemory(): error during memset() for host within context \""
+					<< context.getId() << "\"."
+					<< std::endl;
+
+				return false;
+			}
+
+			stream->_mapping = osgCompute::MAP_HOST;
+			stream->_syncHost = false;
+			return true;
+		}
+		
+		// reset device memory
+		if( stream->_bo != UINT_MAX )
+		{
+			if( stream->_devPtr == NULL )
+			{
+				cudaError res = cudaGLMapBufferObject( &stream->_devPtr, stream->_bo );
+				if( cudaSuccess != res )
+				{
+					osg::notify(osg::WARN)
+						<< "osgCuda::TextureBuffer::resetMemory(): error during cudaGLMapBufferObject()."
+						<< " " << cudaGetErrorString( res ) << "."
+						<< std::endl;
+
+					return NULL;
+				}
+			}
+
+			cudaError res = cudaMemset( stream->_devPtr, 0x0, getByteSize() );
+			if( res != cudaSuccess )
+			{
+				osg::notify(osg::FATAL)
+					<< "osgCuda::TextureBuffer::resetMemory(): error during cudaMemset() for device data within context \""
+					<< context.getId() << "\"."
+					<< std::endl;
+				return false;
+			}
+
+			stream->_mapping = osgCompute::MAP_DEVICE;
+			stream->_syncTex = true;
+			stream->_syncDevice = false;
+		}
+
+		return true;
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -319,107 +407,65 @@ namespace osgCuda
 	void* TextureBuffer::mapStream( TextureStream& stream, unsigned int mapping, unsigned int offset ) const
 	{
 		void* ptr = NULL;
-
-		///////////////////
-		// PROOF MAPPING //
-		///////////////////
-		if( !getIsRenderTarget() &&
-			((stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE ) ||
-			(stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST )) )
-		{
-			if( (stream._mapping & osgCompute::MAP_DEVICE) )
-				ptr = stream._devPtr;
-			else
-				ptr = stream._hostPtr;
-
-
-			if( getSubloadCallback() && NULL != ptr )
-			{
-				const osgCompute::SubloadCallback* callback = getSubloadCallback();
-				if( callback )
-				{
-					// subload data before returning the pointer
-					callback->subload( ptr, mapping, offset, *this, *stream._context );
-				}
-			}
-
-			stream._mapping = mapping;
-			return &static_cast<char*>(ptr)[offset];
-		}
-		else if( stream._mapping != osgCompute::UNMAPPED )
-		{
-			unmapStream( stream );
-		}
-
-
 		bool firstLoad = false;
+		bool needsSetup = false;
 
-		////////////////////////////
-		// ALLOCATE DEVICE-MEMORY //
-		////////////////////////////
-		// create dynamic texture device memory
-		// for each type of mapping
-		if( UINT_MAX == stream._bo )
-		{
-			if( !allocStream( osgCompute::MAP_DEVICE, stream ) )
-				return NULL;
-
-			firstLoad = true;
-		}
+		if( asTexture()->getImage(0) && 
+			asTexture()->getImage(0)->getModifiedCount() != stream._modifyCount )
+			needsSetup = true;
 
 		////////////////
 		// UPDATE PBO //
 		////////////////
 		// if necessary sync dynamic texture with PBO
-		if( getIsRenderTarget() && !(mapping & osgCompute::MAP_DEVICE_TARGET) )
+		// create dynamic texture device memory
+		// for each type of mapping
+		if( getIsRenderTarget() && stream._mapping == osgCompute::UNMAPPED )
 		{
-			// synchronize PBO with texture
+			if( UINT_MAX == stream._bo )
+			{
+				// allocate buffer object first
+				if( !allocStream( osgCompute::MAP_DEVICE, stream ) )
+					return NULL;
+
+				firstLoad = true;
+			}
+			
+			// synchronize PBO with texture memory
 			syncPBO( stream );
 			stream._syncHost = true;
 		}
 
-		/////////////
-		// MAP PBO //
-		/////////////
-		if( NULL == stream._devPtr )
-		{
-			cudaError res = cudaGLMapBufferObject( &stream._devPtr, stream._bo );
-			if( cudaSuccess != res )
-			{
-				osg::notify(osg::WARN)
-					<< "osgCuda::TextureBuffer::mapStream(): error during cudaGLMapBufferObject()."
-					<< " " << cudaGetErrorString( res ) << "."
-					<< std::endl;
-
-				return NULL;
-			}
-		}
+	
+		stream._mapping = mapping;
 
 		//////////////
 		// MAP DATA //
 		//////////////
 		if( mapping & osgCompute::MAP_HOST )
 		{
+			//////////////////////////
+			// ALLOCATE HOST-MEMORY //
+			//////////////////////////
 			if( NULL == stream._hostPtr )
 			{
-				////////////////////////////
-				// ALLOCATE DEVICE-MEMORY //
-				////////////////////////////
 				if( !allocStream( mapping, stream ) )
 					return NULL;
+
+				firstLoad = true;
 			}
 
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( asTexture()->getImage(0) && asTexture()->getImage(0)->getModifiedCount() != stream._modifyCount )
+			if( needsSetup && !stream._syncHost )
 				if( !setupStream( mapping, stream ) )
 					return NULL;
 
 			/////////////////
 			// SYNC STREAM //
 			/////////////////
-			if( stream._syncHost && NULL != stream._devPtr )
+			if( stream._syncHost )
 				if( !syncStream( mapping, stream ) )
 					return NULL;
 
@@ -427,14 +473,46 @@ namespace osgCuda
 		}
 		else if( (mapping & osgCompute::MAP_DEVICE) )
 		{
+			////////////////////////////
+			// ALLOCATE DEVICE-MEMORY //
+			////////////////////////////
+			if( UINT_MAX == stream._bo )
+			{
+				// allocate buffer object first
+				if( !allocStream( osgCompute::MAP_DEVICE, stream ) )
+					return NULL;
+
+				firstLoad = true;
+			}
+
+			/////////////
+			// MAP PBO //
+			/////////////
+			if( NULL == stream._devPtr )
+			{
+				cudaError res = cudaGLMapBufferObject( &stream._devPtr, stream._bo );
+				if( cudaSuccess != res )
+				{
+					osg::notify(osg::WARN)
+						<< "osgCuda::TextureBuffer::mapStream(): error during cudaGLMapBufferObject()."
+						<< " " << cudaGetErrorString( res ) << "."
+						<< std::endl;
+
+					return NULL;
+				}
+			}
+
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( asTexture()->getImage(0) && asTexture()->getImage(0)->getModifiedCount() != stream._modifyCount )
+			if( needsSetup && !stream._syncDevice )
 				if( !setupStream( mapping, stream ) )
 					return NULL;
 
-			// sync stream with device is already done at this point.
+			if( stream._syncDevice && stream._hostPtr != NULL )
+				if( !syncStream(mapping,stream) )
+					return NULL;
+			
 			// See unmapStream().
 			ptr = stream._devPtr;
 		}
@@ -471,16 +549,19 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	void TextureBuffer::unmapStream( TextureStream& stream ) const
 	{
-		if( stream._mapping & osgCompute::MAP_HOST_TARGET )
+		if( stream._syncTex || stream._syncDevice )
 		{
-			// synchronize CPU memory with PBO. This cannot wait
-			// since the texture might be applied to a state.
-			syncStream( osgCompute::MAP_DEVICE, stream );
+			// Update device memory first
+			if( NULL == mapStream( stream, osgCompute::MAP_DEVICE_SOURCE, 0 ) )
+			{
+				osg::notify(osg::FATAL)
+					<< "osgCuda::TextureBuffer::unmapStream(): error during device memory synchronization (mapStream())."
+					<< std::endl;
+				return;
+			}
 		}
 
-		///////////
-		// UNMAP //
-		///////////
+		// Change current context to render context
 		if( stream._devPtr != NULL )
 		{
 			cudaError res = cudaGLUnmapBufferObject( stream._bo );
@@ -493,19 +574,38 @@ namespace osgCuda
 				return;
 			}
 			stream._devPtr = NULL;
+			stream._mapping = osgCompute::UNMAPPED;
 		}
 
-		////////////////////
-		// UPDATE TEXTURE //
-		////////////////////
-		if( stream._mapping & osgCompute::MAP_DEVICE_TARGET )
+		// Sync texture memory with pixel buffer memory
+		if( stream._syncTex )
 		{
-			// sync texture object as required
 			syncTexture( stream );
-			stream._syncHost = true;
+			stream._syncTex = false;
 		}
 
-		stream._mapping = osgCompute::UNMAPPED;
+	}
+
+	//------------------------------------------------------------------------------
+	void osgCuda::TextureBuffer::checkMappingWithinApply( const osgCompute::Context& context ) const
+	{
+		if( !context.isConnectedWithGraphicsContext() )
+			return;
+
+		TextureStream* stream = static_cast<TextureStream*>( lookupStream(context) );
+		if( NULL == stream )
+			return;
+
+		if( stream->_bo == UINT_MAX )
+		{
+			// Texture object will be created during rendering
+			// so update the host memory during next mapping
+			stream->_syncHost = true;
+		}
+
+		// Unmap device memory
+		if( stream->_mapping != osgCompute::UNMAPPED )
+			unmapStream( *stream );
 	}
 
 	//------------------------------------------------------------------------------
@@ -518,7 +618,6 @@ namespace osgCuda
 		if( mapping & osgCompute::MAP_DEVICE )
 		{
 			const void* data = asTexture()->getImage(0)->data();
-
 			if( data == NULL )
 			{
 				osg::notify(osg::FATAL)
@@ -541,6 +640,7 @@ namespace osgCuda
 
 			// host must be synchronized
 			stream._syncHost = true;
+			stream._syncTex = true;
 			stream._modifyCount = asTexture()->getImage(0)->getModifiedCount();
 
 			return true;
@@ -558,7 +658,7 @@ namespace osgCuda
 				return false;
 			}
 
-			res = cudaMemcpy( stream._hostPtr,  data, getByteSize(), cudaMemcpyHostToHost );
+			res = cudaMemcpy( stream._hostPtr, data, getByteSize(), cudaMemcpyHostToHost );
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::FATAL)
@@ -571,6 +671,7 @@ namespace osgCuda
 
 			// device must be synchronized
 			stream._syncDevice = true;
+			stream._syncTex = true;
 			stream._modifyCount = asTexture()->getImage(0)->getModifiedCount();
 
 			return true;
@@ -587,7 +688,6 @@ namespace osgCuda
 			if( stream._hostPtr != NULL )
 				return true;
 
-
 			stream._hostPtr = malloc( getByteSize() );
 			if( NULL == stream._hostPtr )
 			{
@@ -598,8 +698,11 @@ namespace osgCuda
 				return false;
 			}
 
+			// clear memory
+			memset( stream._hostPtr, 0x0, getByteSize() );
+
 			stream._hostPtrAllocated = true;
-			if( stream._devPtr != NULL )
+			if( stream._bo != UINT_MAX )
 				stream._syncHost = true;
 			return true;
 		}
@@ -609,11 +712,6 @@ namespace osgCuda
 				return true;
 
 			allocPBO( stream );
-
-			//////////////
-			// INIT PBO //
-			//////////////
-			syncPBO( stream );
 
 			if( stream._hostPtr != NULL )
 				stream._syncDevice = true;
@@ -645,6 +743,30 @@ namespace osgCuda
 		}
 		else if( mapping & osgCompute::MAP_HOST )
 		{
+			if( stream._bo == UINT_MAX )
+			{
+				// create and allocate Pixel Buffer Object
+				allocPBO( stream );
+				syncPBO( stream );
+
+				if( stream._bo == UINT_MAX )
+					return false;
+			}
+
+			if( stream._devPtr == NULL )
+			{
+				cudaError res = cudaGLMapBufferObject( &stream._devPtr, stream._bo );
+				if( cudaSuccess != res )
+				{
+					osg::notify(osg::WARN)
+						<< "osgCuda::TextureBuffer::syncStream(): error during cudaGLMapBufferObject()."
+						<< " " << cudaGetErrorString( res ) << "."
+						<< std::endl;
+
+					return false;
+				}
+			}
+
 			res = cudaMemcpy( stream._hostPtr, stream._devPtr, getByteSize(), cudaMemcpyDeviceToHost );
 			if( cudaSuccess != res )
 			{

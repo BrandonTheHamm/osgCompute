@@ -198,6 +198,8 @@ int main(int argc, char *argv[])
 	ptclEmitter->setSeedBox( bbmin, bbmax );
 
 	osgCuda::Computation* computationEmit = new osgCuda::Computation;
+	//computationEmit->setComputeOrder( osgCompute::Computation::UPDATE_POST_TRAVERSAL );
+	//computationEmit->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
 	computationEmit->setName("emit");
 	computationEmit->addModule( *ptclEmitter );  
 	computationEmit->addResource( *seedBuffer );
@@ -206,6 +208,7 @@ int main(int argc, char *argv[])
 	computationEmit->addChild( getGeode( numParticles ) );
 
 	osgCuda::Computation* computationMove = new osgCuda::Computation;
+	//computationMove->setComputeOrder( osgCompute::Computation::UPDATE_POST_TRAVERSAL );
 	//computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
 	computationMove->setName( "move" );
 	computationMove->addModule( *ptclMover );

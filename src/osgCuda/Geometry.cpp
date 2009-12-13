@@ -10,29 +10,6 @@
 
 namespace osgCuda
 {
-    /**
-    */
-    class LIBRARY_EXPORT GeometryStream : public osgCompute::BufferStream
-    {
-    public:
-        void*					 _hostPtr;
-        bool                     _hostPtrAllocated;
-        bool                     _syncHost;
-        void*					 _devPtr;
-        bool                     _syncDevice;
-        GLuint                   _bo;
-        bool                     _boRegistered;
-
-        GeometryStream();
-        virtual ~GeometryStream();
-
-
-    private:
-        // not allowed to call copy-constructor or copy-operator
-        GeometryStream( const GeometryStream& ) {}
-        GeometryStream& operator=( const GeometryStream& ) { return *this; }
-    };
-
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -47,6 +24,7 @@ namespace osgCuda
 			_bo( UINT_MAX ),
 			_boRegistered(false)
 	{
+		_lastModifiedCount.clear();
 	}
 
 	//------------------------------------------------------------------------------
@@ -64,46 +42,6 @@ namespace osgCuda
 		if( _hostPtrAllocated && NULL != _hostPtr)
 			free( _hostPtr );
 	}
-
-	/**
-    */
-    class LIBRARY_EXPORT GeometryBuffer : public osgCompute::InteropBuffer
-    {
-    public:
-        GeometryBuffer();
-
-		META_Object(osgCuda,GeometryBuffer)
-
-		virtual osgCompute::InteropObject* getObject() { return _geomref.get(); }
-
-        virtual bool init();
-
-        virtual bool setMemory( const osgCompute::Context& context, int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 ) const;
-        virtual void* map( const osgCompute::Context& context, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) const;
-        virtual void unmap( const osgCompute::Context& context, unsigned int hint = 0 ) const;
-
-		virtual void clear( const osgCompute::Context& context ) const;
-        virtual void clear();
-    protected:
-		friend class Geometry;
-        virtual ~GeometryBuffer();
-        void clearLocal();
-
-        virtual void* mapStream( GeometryStream& stream, unsigned int mapping, unsigned int offset ) const;
-        virtual void unmapStream( GeometryStream& stream ) const;
-
-        bool setupStream( unsigned int mapping, GeometryStream& stream ) const;
-        bool allocStream( unsigned int mapping, GeometryStream& stream ) const;
-        bool syncStream( unsigned int mapping, GeometryStream& stream ) const;
-
-        virtual osgCompute::BufferStream* newStream( const osgCompute::Context& context ) const;
-
-		osg::ref_ptr<osgCuda::Geometry> _geomref;
-    private:
-        // copy constructor and operator should not be called
-        GeometryBuffer( const GeometryBuffer& , const osg::CopyOp& ) {}
-        GeometryBuffer& operator=(const GeometryBuffer&) { return (*this); }
-    };
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
@@ -126,6 +64,12 @@ namespace osgCuda
 		_geomref->_handles = getHandles();
 		// decrease reference count of geometry reference
 		_geomref = NULL;
+	}
+
+	//------------------------------------------------------------------------------
+	osgCompute::InteropObject* GeometryBuffer::getObject()
+	{ 
+		return _geomref.get(); 
 	}
 
 	//------------------------------------------------------------------------------
@@ -183,20 +127,26 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void* GeometryBuffer::map( const osgCompute::Context& context, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int ) const
+	void* GeometryBuffer::map( const osgCompute::Context& context, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ ) const
 	{
 		if( osgCompute::Resource::isClear() )
 		{
-			osg::notify(osg::FATAL)
+			osg::notify(osg::WARN)
 				<< "GeometryBuffer::map(): geometry is dirty."
 				<< std::endl;
 
 			return NULL;
 		}
 
+		if( mapping == osgCompute::UNMAPPED )
+		{
+			unmap( context, hint );
+			return NULL;
+		}
+
 		if( !context.isConnectedWithGraphicsContext() )
 		{
-			osg::notify(osg::FATAL)
+			osg::notify(osg::WARN)
 				<< "GeometryBuffer::map(): context is not connected with a graphics context."
 				<< std::endl;
 
@@ -214,11 +164,15 @@ namespace osgCuda
 		}
 
 
-		void* ptr = NULL;
-		if( mapping != osgCompute::UNMAPPED )
-			ptr = mapStream( *stream, mapping, offset );
-		else
-			unmapStream( *stream );
+		void* ptr = mapStream( *stream, mapping, offset );
+		if(NULL !=  ptr )
+		{
+			if( (mapping & osgCompute::MAP_DEVICE_TARGET) == osgCompute::MAP_DEVICE_TARGET )
+				stream->_syncHost = true;
+
+			if( (mapping & osgCompute::MAP_HOST_TARGET) == osgCompute::MAP_HOST_TARGET )
+				stream->_syncDevice = true;
+		}
 
 		return ptr;
 	}
@@ -266,8 +220,6 @@ namespace osgCuda
 				unmap( context );
 				return false;
 			}
-
-			return true;
 		}
 		else if( mapping & osgCompute::MAP_DEVICE_TARGET )
 		{
@@ -281,12 +233,86 @@ namespace osgCuda
 				unmap( context );
 				return false;
 			}
-
-			return true;
 		}
 
-		unmap( context );
-		return false;
+		return true;
+	}
+
+	//------------------------------------------------------------------------------
+	bool GeometryBuffer::resetMemory( const osgCompute::Context& context, unsigned int  ) const
+	{
+		if( osgCompute::Resource::isClear() )
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::GeometryBuffer::resetMemory(): buffer is dirty."
+				<< std::endl;
+
+			return false;
+		}
+
+		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
+		if( NULL == stream )
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::GeometryBuffer::resetMemory(): could not receive BufferStream for context \""
+				<< context.getId() << "\"."
+				<< std::endl;
+
+			return false;
+		}
+
+		// reset array data
+		stream->_lastModifiedCount.clear();
+
+		// reset host memory
+		if( stream->_hostPtr != NULL )
+		{
+			if( !memset( stream->_hostPtr, 0x0, getByteSize() ) )
+			{
+				osg::notify(osg::FATAL)
+					<< "osgCuda::GeometryBuffer::resetMemory(): error during memset() for host data within context \""
+					<< context.getId() << "\"."
+					<< std::endl;
+
+				return false;
+			}
+
+			stream->_mapping = osgCompute::MAP_HOST;
+			stream->_syncHost = false;
+		}
+
+		// reset device memory
+		if( stream->_bo != UINT_MAX )
+		{
+			if( stream->_devPtr == NULL )
+			{
+				cudaError res = cudaGLMapBufferObject( &stream->_devPtr, stream->_bo );
+				if( cudaSuccess != res )
+				{
+					osg::notify(osg::WARN)
+						<< "osgCuda::GeometryBuffer::resetMemory(): error during cudaGLMapBufferObject()."
+						<< " " << cudaGetErrorString( res ) << "."
+						<< std::endl;
+
+					return NULL;
+				}
+			}
+
+			cudaError res = cudaMemset( stream->_devPtr, 0x0, getByteSize() );
+			if( res != cudaSuccess )
+			{
+				osg::notify(osg::FATAL)
+					<< "osgCuda::GeometryBuffer::resetMemory(): error during cudaMemset() for device data."
+					<< std::endl;
+
+				return false;
+			}
+
+			stream->_mapping = osgCompute::MAP_DEVICE;
+			stream->_syncDevice = false;
+		}
+
+		return true;
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -306,123 +332,99 @@ namespace osgCuda
 		if( !vbo )
 			return NULL;
 
-		unsigned int glCtxId = stream._context->getGraphicsContext()->getState()->getContextID();
-		osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( glCtxId );
-		if( !glBO )
-			return NULL;
 
-		///////////////////
-		// PROOF MAPPING //
-		///////////////////
-		if( ((stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE) ||
-			(stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST)) )
-		{
-			if( (stream._mapping & osgCompute::MAP_DEVICE) )
-				ptr = stream._devPtr;
-			else
-				ptr = stream._hostPtr;
-
-			if( getSubloadCallback() && NULL != ptr )
-			{
-				const osgCompute::SubloadCallback* callback = getSubloadCallback();
-				if( callback )
-				{
-					// subload data before returning the pointer
-					callback->subload( ptr, mapping, offset, *this, *stream._context );
-				}
-			}
-
-			stream._mapping = mapping;
-			return &static_cast<char*>(ptr)[offset];
-		}
-		else if( stream._mapping != osgCompute::UNMAPPED )
-		{
-			unmapStream( stream );
-		}
-
+		stream._mapping = mapping;
 		bool firstLoad = false;
-
-		////////////////////////////
-		// ALLOCATE DEVICE-MEMORY //
-		////////////////////////////
-		// create dynamic texture device memory
-		// for each type of mapping
-		if( UINT_MAX == stream._bo )
-		{
-			if( !allocStream( osgCompute::MAP_DEVICE, stream ) )
-				return NULL;
-
-			if( NULL == stream._devPtr )
-			{
-				cudaError res = cudaGLMapBufferObject( reinterpret_cast<void**>(&stream._devPtr), stream._bo );
-				if( cudaSuccess != res )
-				{
-					osg::notify(osg::WARN)
-						<< "osgCuda::GeometryBuffer::mapStream() : error during cudaGLMapBufferObject(). "
-						<< cudaGetErrorString( res ) <<"."
-						<< std::endl;
-
-					return NULL;
-				}
-			}
-
-
-			firstLoad = true;
-		}
-
-		/////////////
-		// MAP VBO //
-		/////////////
-		if( NULL == stream._devPtr )
-		{
-			cudaError res = cudaGLMapBufferObject( reinterpret_cast<void**>(&stream._devPtr), stream._bo );
-			if( cudaSuccess != res )
-			{
-				osg::notify(osg::WARN)
-					<< "osgCuda::GeometryBuffer::mapStream(): error during cudaGLMapBufferObject(). "
-					<< cudaGetErrorString( res )  <<"."
-					<< std::endl;
-
-				return NULL;
-			}
-		}
+		bool needsSetup = false;
 
 		//////////////
 		// MAP DATA //
 		//////////////
 		if( mapping & osgCompute::MAP_HOST )
 		{
+			//////////////////////////
+			// ALLOCATE HOST-MEMORY //
+			//////////////////////////
 			if( NULL == stream._hostPtr )
 			{
-				////////////////////////////
-				// ALLOCATE DEVICE-MEMORY //
-				////////////////////////////
 				if( !allocStream( mapping, stream ) )
 					return NULL;
+
+				firstLoad = true;
 			}
+
+
+			// check if buffers have changed
+			if( stream._lastModifiedCount.size() != vbo->getNumBufferData() )
+				needsSetup = true;
+			else
+				for( unsigned int d=0; d<stream._lastModifiedCount.size(); ++d )
+					if( stream._lastModifiedCount[d] != vbo->getBufferData(d)->getModifiedCount() )
+						needsSetup = true;
 
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( glBO->isDirty() )
-				setupStream( mapping, stream );
+			if( needsSetup && !stream._syncHost )
+				if( !setupStream( mapping, stream ) )
+					return NULL;
 
 			/////////////////
 			// SYNC STREAM //
 			/////////////////
-			if( stream._syncHost && NULL != stream._devPtr )
+			if( stream._syncHost )
+			{
 				if( !syncStream( mapping, stream ) )
 					return NULL;
+			}
 
 			ptr = stream._hostPtr;
 		}
 		else if( (mapping & osgCompute::MAP_DEVICE) )
 		{
+			unsigned int glCtxId = stream._context->getGraphicsContext()->getState()->getContextID();
+			osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( glCtxId );
+			if( !glBO )
+				return NULL;
+
+			needsSetup = glBO->isDirty();
+
+			////////////////////////////
+			// ALLOCATE DEVICE-MEMORY //
+			////////////////////////////
+			// create dynamic texture device memory
+			// for each type of mapping
+			if( UINT_MAX == stream._bo )
+			{
+				if( !allocStream( osgCompute::MAP_DEVICE, stream ) )
+					return NULL;
+
+				firstLoad = true;
+			}
+
+			/////////////
+			// MAP VBO //
+			/////////////
+			if( NULL == stream._devPtr )
+			{
+				cudaError res = cudaGLMapBufferObject( reinterpret_cast<void**>(&stream._devPtr), stream._bo );
+				if( cudaSuccess != res )
+				{
+					osg::notify(osg::WARN)
+						<< "osgCuda::GeometryBuffer::mapStream(): error during cudaGLMapBufferObject(). "
+						<< cudaGetErrorString( res )  <<"."
+						<< std::endl;
+
+					return NULL;
+				}
+			}
+
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( glBO->isDirty() )
-				setupStream( mapping, stream );
+			if( needsSetup && !stream._syncDevice )
+				if( !setupStream( mapping, stream ) )
+					return NULL;
 
 			/////////////////
 			// SYNC STREAM //
@@ -466,10 +468,21 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	void GeometryBuffer::unmapStream( GeometryStream& stream ) const
 	{
-		///////////
-		// UNMAP //
-		///////////
-		if( stream._devPtr != NULL )
+		// Copy host memory to VBO
+		if( stream._syncDevice )
+		{
+			if( NULL == mapStream( stream, osgCompute::MAP_DEVICE_SOURCE, 0 ) )
+			{
+				osg::notify(osg::FATAL)
+					<< "osgCuda::GeometryBuffer::unmapStream(): error during device memory synchronization (mapStream())."
+					<< std::endl;
+
+				return;
+			}
+		}
+
+		// Change current context to render context
+		if( stream._devPtr != NULL && stream._bo != UINT_MAX)
 		{
 			cudaError res = cudaGLUnmapBufferObject( stream._bo );
 			if( cudaSuccess != res )
@@ -481,22 +494,30 @@ namespace osgCuda
 				return;
 			}
 			stream._devPtr = NULL;
+			stream._mapping = osgCompute::UNMAPPED;
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	void GeometryBuffer::checkMappingWithinDraw( const osgCompute::Context& context ) const
+	{
+		if( !context.isConnectedWithGraphicsContext() )
+			return;
+
+		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
+		if( NULL == stream )
+			return;
+
+		if( stream->_bo == UINT_MAX )
+		{
+			// Geometry object will be created during rendering
+			// so update the host memory during next mapping
+			stream->_syncHost = true;
 		}
 
-		////////////////////
-		// UPDATE TEXTURE //
-		////////////////////
-		if( stream._mapping == osgCompute::MAP_DEVICE_TARGET )
-		{
-			// sync texture object as required
-			stream._syncHost = true;
-		}
-		else if( (stream._mapping & osgCompute::MAP_HOST_TARGET) )
-		{
-			stream._syncDevice = true;
-		}
-
-		stream._mapping = osgCompute::UNMAPPED;
+		// unmap stream
+		if( stream->_mapping != osgCompute::UNMAPPED )
+			unmapStream( *stream );
 	}
 
 	//------------------------------------------------------------------------------
@@ -507,46 +528,84 @@ namespace osgCuda
 			return false;
 
 		osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
-		osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( state->getContextID() );
-		if( !glBO->isDirty() )
-			return true;
-
-		////////////////////
-		// UNREGISTER VBO //
-		////////////////////
-		if( !stream._boRegistered )
+		if( mapping & osgCompute::MAP_DEVICE )
 		{
-			cudaError_t res = cudaGLUnregisterBufferObject ( stream._bo );
+			osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( state->getContextID() );
+			if( !glBO->isDirty() )
+				return true;
+
+			////////////////////
+			// UNREGISTER VBO //
+			////////////////////
+			if( !stream._boRegistered )
+			{
+				cudaError_t res = cudaGLUnregisterBufferObject ( stream._bo );
+				if( res != cudaSuccess )
+				{
+					osg::notify(osg::FATAL)
+						<< "osgCuda::GeometryBuffer::setupStream(): unable to unregister buffer object. "
+						<< std::endl;
+
+					return false;
+				}
+			}
+			stream._boRegistered = false;
+
+			////////////////
+			// UPDATE VBO //
+			////////////////
+			glBO->compileBuffer();
+
+			//////////////////
+			// REGISTER VBO //
+			//////////////////
+			cudaError_t res = cudaGLRegisterBufferObject( stream._bo );
 			if( res != cudaSuccess )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::setupStream(): unable to unregister buffer object. "
+					<< "osgCuda::GeometryBuffer::setupStream(): unable to register buffer object again."
 					<< std::endl;
 
 				return false;
 			}
+
+			stream._boRegistered = true;
+			stream._syncHost = true;
 		}
-		stream._boRegistered = false;
-
-		////////////////
-		// UPDATE VBO //
-		////////////////
-		glBO->compileBuffer();
-
-		//////////////////
-		// REGISTER VBO //
-		//////////////////
-		cudaError_t res = cudaGLRegisterBufferObject( stream._bo );
-		if( res != cudaSuccess )
+		else //  mapping & osgCompute::MAP_HOST
 		{
-			osg::notify(osg::FATAL)
-				<< "osgCuda::GeometryBuffer::setupStream(): unable to register buffer object again."
-				<< std::endl;
+			unsigned char* hostPtr = static_cast<unsigned char*>( stream._hostPtr );
 
-			return false;
+			// copy buffers into host memory
+			if( stream._lastModifiedCount.size() != vbo->getNumBufferData() )
+				stream._lastModifiedCount.resize( vbo->getNumBufferData(), UINT_MAX );
+
+			unsigned int curOffset = 0;
+			for( unsigned int d=0; d< vbo->getNumBufferData(); ++d )
+			{
+				osg::BufferData* curData = vbo->getBufferData(d);
+				if( !curData )
+				{
+					osg::notify(osg::FATAL)
+						<< "osgCuda::GeometryBuffer::setupStream(): invalid buffer data found."
+						<< std::endl;
+
+					return false;
+				}
+
+				if( curData->getModifiedCount() != stream._lastModifiedCount[d] )
+				{
+					// copy memory
+					memcpy( &hostPtr[curOffset], curData->getDataPointer(), curData->getTotalDataSize() );
+
+					// store last modified count
+					stream._lastModifiedCount[d] = curData->getModifiedCount();
+				}
+				curOffset += curData->getTotalDataSize();
+			}
+
+			stream._syncDevice = true;
 		}
-		stream._boRegistered = true;
-		stream._syncHost = true;
 
 		return true;
 	}
@@ -570,16 +629,33 @@ namespace osgCuda
 			}
 
 			stream._hostPtrAllocated = true;
-			if( stream._devPtr != NULL )
+			if( stream._devPtr != NULL || stream._syncHost )
+			{
 				stream._syncHost = true;
+
+				// sync host memory with device memory therefore avoid copying data
+				// from buffers first
+				unsigned int curOffset = 0;
+				osg::VertexBufferObject* vbo = _geomref->getOrCreateVertexBufferObject();
+				for( unsigned int d=0; d< vbo->getNumBufferData(); ++d )
+					stream._lastModifiedCount.push_back( vbo->getBufferData(d)->getModifiedCount() );
+			}
+			else
+			{
+				// mark buffers to be copied into the host memory
+				unsigned int curOffset = 0;
+				osg::VertexBufferObject* vbo = _geomref->getOrCreateVertexBufferObject();
+				for( unsigned int d=0; d< vbo->getNumBufferData(); ++d )
+					stream._lastModifiedCount.push_back( UINT_MAX );
+				
+				stream._syncDevice = true;
+			}
 			return true;
 		}
 		else if( mapping & osgCompute::MAP_DEVICE )
 		{
 			if( stream._bo != UINT_MAX )
 				return true;
-
-
 
 			osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
 			osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( stream._context->getGraphicsContext()->getState()->getContextID() );
@@ -616,6 +692,8 @@ namespace osgCuda
 
 			if( stream._hostPtr != NULL )
 				stream._syncDevice = true;
+			else
+				stream._syncHost = true;
 			return true;
 		}
 
@@ -643,6 +721,56 @@ namespace osgCuda
 		}
 		else if( mapping & osgCompute::MAP_HOST )
 		{
+			if( stream._bo == UINT_MAX )
+			{
+				osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
+				osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( stream._context->getGraphicsContext()->getState()->getContextID() );
+				if( !glBO )
+					return false;
+
+				//////////////
+				// SETUP BO //
+				//////////////
+				// compile buffer object if necessary
+				if( glBO->isDirty() )
+					glBO->compileBuffer();
+
+				// using vertex buffers
+				if( stream._bo == UINT_MAX )
+					stream._bo = glBO->getGLObjectID();
+
+				//////////////////
+				// REGISTER PBO //
+				//////////////////
+				if( !stream._boRegistered )
+				{
+					cudaError_t res = cudaGLRegisterBufferObject( stream._bo );
+					if( res != cudaSuccess )
+					{
+						osg::notify(osg::FATAL)
+							<< "osgCuda::GeometryBuffer::syncStream(): unable to register buffer object."
+							<< std::endl;
+
+						return false;
+					}
+				}
+				stream._boRegistered = true;
+			}
+
+			if( NULL == stream._devPtr )
+			{
+				cudaError res = cudaGLMapBufferObject( reinterpret_cast<void**>(&stream._devPtr), stream._bo );
+				if( cudaSuccess != res )
+				{
+					osg::notify(osg::WARN)
+						<< "osgCuda::GeometryBuffer::mapStream(): error during cudaGLMapBufferObject(). "
+						<< cudaGetErrorString( res )  <<"."
+						<< std::endl;
+
+					return NULL;
+				}
+			}
+
 			res = cudaMemcpy( stream._hostPtr, stream._devPtr, getByteSize(), cudaMemcpyDeviceToHost );
 			if( cudaSuccess != res )
 			{
@@ -791,10 +919,7 @@ namespace osgCuda
 	{
 		const osgCompute::Context* curCtx = osgCompute::Context::getContext( renderInfo.getState()->getContextID() );
 		if( NULL != curCtx && NULL != _proxy )
-		{
-			if( _proxy->getMapping( *curCtx ) != osgCompute::UNMAPPED )
-				_proxy->unmap( *curCtx );
-		}
+			_proxy->checkMappingWithinDraw( *curCtx );
 
 		osg::Geometry::drawImplementation( renderInfo );
 	}

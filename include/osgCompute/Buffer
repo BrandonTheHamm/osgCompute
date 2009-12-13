@@ -34,43 +34,68 @@ namespace osgCompute
         MAP_DEVICE_TARGET              = 0x00100000,
     }; 
 
-
-    enum ALLOC_HINT
-    {
-        NO_ALLOC_HINT = 0x0,
-        ALLOC_DYNAMIC = 0x1
-    };
-
-    /**
+	//! A BufferStream provides information about the memory resources of a buffer addressed within a single computation context.
+    /** 
+		Every time a buffer is mapped into a computation context an object of this type is created. All allocations are done lazily
+		at the time Buffer::map is called. You can remove the stream by calling Buffer::clear(const Context). However, as a 
+		normal user you should never get into contact with BufferStreams. Such objects are hidden from application developers. 
+		BufferStreams are created on the heap.
     */
     class LIBRARY_EXPORT BufferStream
     {
     public:
-        unsigned int                    _mapping;
-		osg::ref_ptr<Context>			_context;
-        unsigned int                    _allocHint;
+		//! The current mapping. Value is set before leaving the mapping function (See Buffer::map).
+        unsigned int                    _mapping;	
+		//! The current computation context used to allocate the stream. This context information is necessary
+		//! to relate streams to a single context.
+		osg::ref_ptr<Context>			_context;	
+		//! The allocation hint used during allocation of the stream.
+        unsigned int                    _allocHint; 
 
+		//! The constructor sets up the initial default values.
         BufferStream();
+		//! The destructor frees the related memory
         virtual ~BufferStream();
 
     private:
-        // not allowed to call copy-constructor or copy-operator
-        BufferStream( const BufferStream& ) {}
+        //! Its not allowed to call copy-operator
+		BufferStream( const BufferStream& ) {}
+		//! Its not allowed to call copy-constructor
         BufferStream& operator=( const BufferStream& ) { return *this; }
     };
 
+	//! Buffers allow developers to deal with memory resources on an abstract level.
     /**
+		A buffer handles device memory as well as host memory. At least you have to specify the dimensions of a buffer and
+		the size of a single element. The following example shows how to setup a 1D buffer with 125000 floats: 
+		\code
+			someBuffer->setDimension( 0, 125000 );
+			someBuffer->setElementSize( sizeof(float) );
+		\endcode
+		At any time when you call the mapping function (Buffer::map) the respective memory block then is allocated lazily 
+		within the desired memory space. So in order to allocate the buffer on the device memory just use one of the following
+		function calls:
+		\code
+			void* devPtr = someBuffer->map( context, osgCompute::MAP_DEVICE );
+			// or as osgCompute::MAP_DEVICE is the default paramter...
+			void* devPtr = someBuffer->map( context );
+			// or access the buffer with an offset of 120000 bytes
+			void* devPtr = someBuffer->map( context, osgCompute::MAP_DEVICE, 120000 );
+		\endcode
     */
     class LIBRARY_EXPORT Buffer : public Resource
     {  
     public:
+		//! calls clearLocal() which initializes the default values
 		Buffer();
 
 		virtual bool init();
 
-        virtual bool setMemory( const Context& context, int value, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 ) const = 0;
+		/***/
         virtual void* map( const Context& context, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) const = 0;
 		virtual void unmap( const Context& context, unsigned int hint = 0 ) const = 0;
+		virtual bool setMemory( const Context& context, int value, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 ) const = 0;
+		virtual bool resetMemory( const Context& context, unsigned int hint = 0  ) const = 0;
 		virtual unsigned int getMapping( const Context& context, unsigned int hint = 0 ) const;
 
 		virtual void setElementSize( unsigned int elementSize );

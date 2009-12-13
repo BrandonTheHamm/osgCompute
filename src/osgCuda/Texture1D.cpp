@@ -462,6 +462,7 @@ namespace osgCuda
 		: osg::Texture1D(),
 		  _proxy(NULL)
 	{
+		clearLocal();
 		// some flags for textures are not available right now
 		// like resize to a power of two and mip-maps
 		asTexture()->setResizeNonPowerOfTwoHint( false );
@@ -477,6 +478,8 @@ namespace osgCuda
 				<< "osgCuda::Texture1D::destructor(): proxy is still valid!!!."
 				<< std::endl;
 		}
+
+		clearLocal();
 	}
 
 	//------------------------------------------------------------------------------
@@ -577,11 +580,8 @@ namespace osgCuda
 	void Texture1D::apply( osg::State& state ) const
 	{
 		const osgCompute::Context* curCtx = osgCompute::Context::getContextFromGraphicsContext( state.getContextID() );
-		if( curCtx )
-		{
-			if( NULL != _proxy && _proxy->getMapping( *curCtx ) != osgCompute::UNMAPPED )
-				_proxy->unmap( *curCtx );
-		}
+		if( curCtx && _proxy != NULL )
+			_proxy->checkMappingWithinApply( *curCtx );
 
 		osg::Texture1D::apply( state );
 	}

@@ -7,28 +7,6 @@
 
 namespace osgCuda
 {
-    /**
-    */
-	class BufferStream : public osgCompute::BufferStream
-    {
-    public:
-        void*							_devPtr;
-        bool                            _devPtrAllocated;
-        bool                            _syncDevice;
-        void*							_hostPtr;
-        bool                            _hostPtrAllocated;
-        bool                            _syncHost;
-        unsigned int                    _modifyCount;
-
-        BufferStream();
-        virtual ~BufferStream();
-
-    private:
-        // not allowed to call copy-constructor or copy-operator
-        BufferStream( const BufferStream& ) {}
-        BufferStream& operator=( const BufferStream& ) { return *this; }
-    };
-
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -137,7 +115,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void* Buffer::map( const osgCompute::Context& context, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int ) const
+	void* Buffer::map( const osgCompute::Context& context, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint ) const
 	{
 		if( osgCompute::Resource::isClear() )
 		{
@@ -145,6 +123,12 @@ namespace osgCuda
 				<< "osgCuda::Buffer::map(): buffer is dirty."
 				<< std::endl;
 
+			return NULL;
+		}
+
+		if( mapping == osgCompute::UNMAPPED )
+		{
+			unmap( context, hint );
 			return NULL;
 		}
 
@@ -159,11 +143,16 @@ namespace osgCuda
 			return NULL;
 		}
 
-		void* ptr = NULL;
-		if( mapping != osgCompute::UNMAPPED )
-			ptr = mapStream( *stream, mapping, offset );
-		else
-			unmapStream( *stream );
+		void* ptr = mapStream( *stream, mapping, offset );
+		if(NULL !=  ptr )
+		{
+			if( (mapping & osgCompute::MAP_DEVICE_TARGET) == osgCompute::MAP_DEVICE_TARGET )
+				stream->_syncHost = true;
+
+			if( (mapping & osgCompute::MAP_HOST_TARGET) == osgCompute::MAP_HOST_TARGET )
+				stream->_syncDevice = true;
+		}
+		else unmapStream( *stream );
 
 		return ptr;
 	}
@@ -224,10 +213,76 @@ namespace osgCuda
 					<< context.getId() << "\"."
 					<< std::endl;
 
+				unmap( context );
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	//------------------------------------------------------------------------------
+	bool Buffer::resetMemory( const osgCompute::Context& context, unsigned int ) const
+	{
+		if( osgCompute::Resource::isClear() )
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::Buffer::resetMemory(): buffer is dirty."
+				<< std::endl;
+
+			return false;
+		}
+
+		BufferStream* stream = static_cast<BufferStream*>( lookupStream(context) );
+		if( NULL == stream )
+		{
+			osg::notify(osg::FATAL)
+				<< "osgCuda::Buffer::resetMemory(): could not receive BufferStream for context \""
+				<< context.getId() << "\"."
+				<< std::endl;
+
+			return false;
+		}
+
+		// reset array or image data
+		stream->_modifyCount = UINT_MAX;
+
+		// clear host memory
+		if( stream->_hostPtr != NULL )
+		{
+			if( !memset( stream->_hostPtr, 0x0, getByteSize() ) )
+			{
+				osg::notify(osg::FATAL)
+					<< "osgCuda::Buffer::resetMemory(): error during memset() for host data within context \""
+					<< context.getId() << "\"."
+					<< std::endl;
 
 				unmap( context );
 				return false;
 			}
+
+
+			stream->_mapping = osgCompute::MAP_HOST;
+			stream->_syncHost = false;
+		}
+
+		// clear device memory
+		if( stream->_devPtr != NULL )
+		{
+			cudaError res = cudaMemset( stream->_devPtr, 0x0, getByteSize() );
+			if( res != cudaSuccess )
+			{
+				osg::notify(osg::FATAL)
+					<< "osgCuda::Buffer::resetMemory(): error during cudaMemset() for device data within context \""
+					<< context.getId() << "\"."
+					<< std::endl;
+
+				unmap( context );
+				return false;
+			}
+
+			stream->_mapping = osgCompute::MAP_DEVICE;
+			stream->_syncDevice = false;
 		}
 
 		return true;
@@ -238,47 +293,19 @@ namespace osgCuda
 	{
 		void* ptr = NULL;
 
+		bool firstLoad = false;
+		// check for modifications
 		bool needsSetup = false;
 		if( (_image.valid() && _image->getModifiedCount() != stream._modifyCount ) ||
 			(_array.valid() && _array->getModifiedCount() != stream._modifyCount ) )
 			needsSetup = true;
 
-		///////////////////
-		// PROOF MAPPING //
-		///////////////////
-		if( ((stream._mapping & osgCompute::MAP_DEVICE && mapping & osgCompute::MAP_DEVICE) ||
-			(stream._mapping & osgCompute::MAP_HOST && mapping & osgCompute::MAP_HOST))  &&
-			!needsSetup )
-		{
-			if( (stream._mapping & osgCompute::MAP_DEVICE) )
-				ptr = stream._devPtr;
-			else
-				ptr = stream._hostPtr;
-
-			if( getSubloadCallback() && NULL != ptr )
-			{
-				const osgCompute::SubloadCallback* callback = getSubloadCallback();
-				if( callback )
-				{
-					// subload data before returning the pointer
-					callback->subload( ptr, mapping, offset, *this, *stream._context );
-				}
-			}
-
-			stream._mapping = mapping;
-			return &static_cast<char*>(ptr)[offset];
-		}
-		else if( stream._mapping != osgCompute::UNMAPPED )
-		{
-			unmapStream( stream );
-		}
-
+		// current mapping
 		stream._mapping = mapping;
 
 		//////////////
 		// MAP DATA //
 		//////////////
-		bool firstLoad = false;
 		if( (stream._mapping & osgCompute::MAP_HOST) )
 		{
 			if( NULL == stream._hostPtr )
@@ -295,7 +322,7 @@ namespace osgCuda
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( needsSetup )
+			if( needsSetup && !stream._syncHost )
 				if( !setupStream( mapping, stream ) )
 					return NULL;
 
@@ -324,7 +351,7 @@ namespace osgCuda
 			//////////////////
 			// SETUP STREAM //
 			//////////////////
-			if( needsSetup )
+			if( needsSetup && !stream._syncDevice )
 				if( !setupStream( mapping, stream ) )
 					return NULL;
 
@@ -406,8 +433,10 @@ namespace osgCuda
 			}
 
 			// host must be synchronized
+			// because device memory has been modified
 			stream._syncHost = true;
-			stream._modifyCount = _image.valid()? _image->getModifiedCount() : _array->getModifiedCount();
+			stream._modifyCount = _image.valid()? _image->getModifiedCount() : UINT_MAX;
+			stream._modifyCount = _array.valid()? _array->getModifiedCount() : UINT_MAX;
 
 			return true;
 		}
@@ -446,8 +475,10 @@ namespace osgCuda
 			}
 
 			// device must be synchronized
+			// because host memory has been modified
 			stream._syncDevice = true;
-			stream._modifyCount = _image.valid()? _image->getModifiedCount() : _array->getModifiedCount();
+			stream._modifyCount = _image.valid()? _image->getModifiedCount() : UINT_MAX;
+			stream._modifyCount = _array.valid()? _array->getModifiedCount() : UINT_MAX;
 
 			return true;
 		}
@@ -473,6 +504,9 @@ namespace osgCuda
 
 				return false;
 			}
+
+			// clear memory
+			memset( stream._hostPtr, 0x0, getByteSize() );
 
 			stream._hostPtrAllocated = true;
 			if( stream._devPtr != NULL )
@@ -505,6 +539,9 @@ namespace osgCuda
 				}
 
 				stream._devPtr = pitchPtr.ptr;
+
+				// clear memory
+				cudaMemset3D( pitchPtr, 0x0, extent );
 			}
 			else if( getNumDimensions() == 2 )
 			{
@@ -519,6 +556,10 @@ namespace osgCuda
 
 					return false;
 				}
+
+
+				// clear memory
+				cudaMemset2D( stream._devPtr, pitch, 0x0, getDimension(0) * getElementSize(), getDimension(1) );
 			}
 			else
 			{
@@ -532,7 +573,11 @@ namespace osgCuda
 
 					return false;
 				}
+
+				// clear memory
+				cudaMemset( stream._devPtr, 0x0, getByteSize() );
 			}
+
 
 			stream._devPtrAllocated = true;
 
@@ -588,15 +633,6 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	void Buffer::unmapStream( BufferStream& stream ) const
 	{
-		if( (stream._mapping & osgCompute::MAP_HOST_TARGET) )
-		{
-			stream._syncDevice = true;
-		}
-		else if( (stream._mapping & osgCompute::MAP_DEVICE_TARGET) )
-		{
-			stream._syncHost = true;
-		}
-
 		stream._mapping = osgCompute::UNMAPPED;
 	}
 
@@ -629,6 +665,7 @@ namespace osgCuda
 
 		_image = image;
 		_array = NULL;
+		resetModifiedCounts();
 	}
 
 	//------------------------------------------------------------------------------
@@ -661,6 +698,7 @@ namespace osgCuda
 
 		_array = array;
 		_image = NULL;
+		resetModifiedCounts();
 	}
 
 	//------------------------------------------------------------------------------
@@ -689,5 +727,19 @@ namespace osgCuda
 	osgCompute::BufferStream* Buffer::newStream( const osgCompute::Context& context ) const
 	{
 		return new BufferStream;
+	}
+
+	//------------------------------------------------------------------------------
+	void Buffer::resetModifiedCounts() const
+	{
+		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
+
+		for( std::vector<osgCompute::BufferStream*>::iterator itr = osgCompute::Buffer::_streams.begin(); 
+			 itr != osgCompute::Buffer::_streams.end();
+			 ++itr )
+		{
+			osgCuda::BufferStream* curStream = dynamic_cast< osgCuda::BufferStream* >( (*itr) );
+			curStream->_modifyCount = UINT_MAX;
+		}
 	}
 }

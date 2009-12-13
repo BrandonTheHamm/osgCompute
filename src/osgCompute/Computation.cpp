@@ -53,7 +53,7 @@ namespace osgCompute
             {
 				getOrCreateContext( *cv->getState() );
 
-				if( (_computeOrder & RENDER) == RENDER )
+				if( (_computeOrder & OSGCOMPUTE_RENDER) == OSGCOMPUTE_RENDER )
 					addBin( *cv );
 				else
 					nv.apply(*this);
@@ -397,13 +397,13 @@ namespace osgCompute
 	void Computation::setComputeOrder( Computation::ComputeOrder co )
 	{
 		// deactivate auto update
-		if( (_computeOrder & UPDATE ) == UPDATE )
+		if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
 			setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() - 1 );
 		
 		_computeOrder = co;
 
 		// set auto update active in case we use the update traversal to compute things
-		if( (_computeOrder & UPDATE ) == UPDATE )
+		if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
 			setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
 	}
 
@@ -492,7 +492,7 @@ namespace osgCompute
 
 		// setup computation order
 		_computeOrder = UPDATE_PRE_TRAVERSAL;//RENDER_PRE_RENDER_PRE_TRAVERSAL;//
-		if( (_computeOrder & UPDATE) == UPDATE )
+		if( (_computeOrder & OSGCOMPUTE_UPDATE) == OSGCOMPUTE_UPDATE )
 			setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
     }
 
@@ -622,7 +622,7 @@ namespace osgCompute
         // We have to look for a better method to add more computation bins
         // to the same hierarchy level
         int rbNum = 0;
-		if( (_computeOrder & POST_RENDER) !=  POST_RENDER )
+		if( (_computeOrder & OSGCOMPUTE_POST_RENDER) !=  OSGCOMPUTE_POST_RENDER )
         {
             osgUtil::RenderBin::RenderBinList::const_iterator itr = rbList.begin();
             if( itr != rbList.end() && (*itr).first < 0 )

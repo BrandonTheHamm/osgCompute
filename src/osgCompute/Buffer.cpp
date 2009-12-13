@@ -274,7 +274,7 @@ namespace osgCompute
 		_dimensions.clear();
 		_numElements = 0;
 		_elementSize = 0;
-		_allocHint = NO_ALLOC_HINT;
+		_allocHint = 0;
 		_subloadCallback = NULL;
 
 		// The following is called implicitly by Resource::clearLocal():

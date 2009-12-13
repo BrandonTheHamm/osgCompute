@@ -79,7 +79,7 @@ namespace TexDemo
         swap(  _blocks, 
                _threads,
                _tmpBuffer->map( ctx ),
-               _srcArray->map( ctx ) );
+			   _srcArray->map( ctx, osgCompute::MAP_DEVICE_SOURCE ) );
 
 		// You can also use the map function at any time 
 		// in order to copy memory from GPU to CPU and vice versa.

@@ -99,16 +99,21 @@ namespace GeometryDemo
         const osg::FrameStamp* framestamp = ctx.getGraphicsContext()->getState()->getFrameStamp();
         float time = (float)framestamp->getSimulationTime();
 
+
         ///////////////////
         // MOVE VERTICES //
         ///////////////////
         warp(_numBlocks,
              _numThreads,
-			 _vertices->map( ctx ),
+			 _vertices->map( ctx ),			// Maps the data to the device memory
 			 _vertices->getNumElements(),
 			 _initPos->map( ctx ),
 			 _initNormals->map( ctx ),
              time );
+
+		// Read out new vertex position on the CPU or change the values with
+		// osgCompute::MAP_HOST_TARGET
+		//_verts = (float*)_vertices->map( ctx, osgCompute::MAP_HOST_SOURCE );
 
 		return;
     }

@@ -456,41 +456,41 @@ namespace osgCuda
 			// Sync PBO with Texture-Data if Texture is allocated
 			syncPBO( stream );
 		}
-		else if( !this->getIsRenderTarget() )
-		{
-			/////////////////////////////
-			// ALLOCATE TEXTURE MEMORY //
-			/////////////////////////////
-			// else allocate the memory.
-			glBindTexture( GL_TEXTURE_2D, tex->_id );
+		//else if( !this->getIsRenderTarget() )
+		//{
+		//	/////////////////////////////
+		//	// ALLOCATE TEXTURE MEMORY //
+		//	/////////////////////////////
+		//	// else allocate the memory.
+		//	glBindTexture( GL_TEXTURE_2D, tex->_id );
 
-			// Allocate memory for texture if not done so far in order to allow slot
-			// to call glTexSubImage() during runtime
-			glTexImage2D(
-				GL_TEXTURE_2D, 0,
-				tex->_profile._internalFormat,
-				tex->_profile._width, tex->_profile._height,
-				tex->_profile._border,
-				tex->_profile._internalFormat, texType, NULL );
+		//	// Allocate memory for texture if not done so far in order to allow slot
+		//	// to call glTexSubImage() during runtime
+		//	glTexImage2D(
+		//		GL_TEXTURE_2D, 0,
+		//		tex->_profile._internalFormat,
+		//		tex->_profile._width, tex->_profile._height,
+		//		tex->_profile._border,
+		//		tex->_profile._internalFormat, texType, NULL );
 
-			GLenum errorNo = glGetError();
-			if( errorNo != GL_NO_ERROR )
-			{
-				osg::notify(osg::FATAL)
-					<< "osgCuda::Texture2DBuffer::allocPBO(): error during glTexImage2D(). Returned code is "
-					<< std::hex<<errorNo<<"."
-					<< std::endl;
+		//	GLenum errorNo = glGetError();
+		//	if( errorNo != GL_NO_ERROR )
+		//	{
+		//		osg::notify(osg::FATAL)
+		//			<< "osgCuda::Texture2DBuffer::allocPBO(): error during glTexImage2D(). Returned code is "
+		//			<< std::hex<<errorNo<<"."
+		//			<< std::endl;
 
-				glBindTexture( GL_TEXTURE_2D, 0 );
-				bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
-				return false;
-			}
+		//		glBindTexture( GL_TEXTURE_2D, 0 );
+		//		bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
+		//		return false;
+		//	}
 
-			glBindTexture( GL_TEXTURE_2D, 0 );
+		//	glBindTexture( GL_TEXTURE_2D, 0 );
 
-			// Mark context based Texture-Object as allocated
-			tex->setAllocated( true );
-		}
+		//	// Mark context based Texture-Object as allocated
+		//	tex->setAllocated( true );
+		//}
 
 		return true;
 	}
@@ -503,6 +503,8 @@ namespace osgCuda
 		: osg::Texture2D(),
 		  _proxy(NULL)
 	{
+		clearLocal();
+
 		// some flags for textures are not available right now
 		// like resize to a power of two and mipmaps
 		asTexture()->setResizeNonPowerOfTwoHint( false );
@@ -518,6 +520,8 @@ namespace osgCuda
 				<< "osgCuda::Texture2D::destructor(): proxy is still valid!!!."
 				<< std::endl;
 		}
+
+		clearLocal();
 	}
 
 	//------------------------------------------------------------------------------
@@ -618,11 +622,8 @@ namespace osgCuda
 	void Texture2D::apply( osg::State& state ) const
 	{
 		const osgCompute::Context* curCtx = osgCompute::Context::getContext( state.getContextID() );
-		if( curCtx )
-		{
-			if( NULL != _proxy && _proxy->getMapping( *curCtx ) != osgCompute::UNMAPPED )
-				_proxy->unmap( *curCtx );
-		}
+		if( curCtx && _proxy != NULL )
+			_proxy->checkMappingWithinApply( *curCtx );
 
 		osg::Texture2D::apply( state );
 	}

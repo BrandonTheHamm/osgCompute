@@ -65,8 +65,6 @@ namespace PtclDemo
         /////////////
         // ADVANCE //
         /////////////
-
-
 		if( _firstFrame )
 		{
 			_lastTime = fs->getSimulationTime();

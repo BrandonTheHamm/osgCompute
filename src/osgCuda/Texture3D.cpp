@@ -459,38 +459,38 @@ namespace osgCuda
 			// if it is already allocated
 			syncPBO( stream );
 		}
-		else if( !this->getIsRenderTarget() )
-		{
-			/////////////////////
-			// ALLOCATE MEMORY //
-			/////////////////////
-			glBindTexture( GL_TEXTURE_3D, tex->_id );
+		//else if( !this->getIsRenderTarget() )
+		//{
+		//	/////////////////////
+		//	// ALLOCATE MEMORY //
+		//	/////////////////////
+		//	glBindTexture( GL_TEXTURE_3D, tex->_id );
 
-			tex3DExt->glTexImage3D(
-				GL_TEXTURE_3D, 0,
-				tex->_profile._internalFormat,
-				tex->_profile._width, tex->_profile._height, tex->_profile._depth,
-				tex->_profile._border,
-				tex->_profile._internalFormat, texType, NULL );
+		//	tex3DExt->glTexImage3D(
+		//		GL_TEXTURE_3D, 0,
+		//		tex->_profile._internalFormat,
+		//		tex->_profile._width, tex->_profile._height, tex->_profile._depth,
+		//		tex->_profile._border,
+		//		tex->_profile._internalFormat, texType, NULL );
 
-			GLenum errorNo = glGetError();
-			if( errorNo != GL_NO_ERROR )
-			{
-				osg::notify(osg::FATAL)
-					<< "osgCuda::Texture3D::allocPBO(): error during glTexImage3D(). Returned code is "
-					<< std::hex<<errorNo<<"."
-					<< std::endl;
+		//	GLenum errorNo = glGetError();
+		//	if( errorNo != GL_NO_ERROR )
+		//	{
+		//		osg::notify(osg::FATAL)
+		//			<< "osgCuda::Texture3D::allocPBO(): error during glTexImage3D(). Returned code is "
+		//			<< std::hex<<errorNo<<"."
+		//			<< std::endl;
 
-				glBindTexture( GL_TEXTURE_3D, 0 );
-				bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
-				return false;
-			}
+		//		glBindTexture( GL_TEXTURE_3D, 0 );
+		//		bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
+		//		return false;
+		//	}
 
-			glBindTexture( GL_TEXTURE_3D, 0 );
+		//	glBindTexture( GL_TEXTURE_3D, 0 );
 
-			// set allocated flag for texture object
-			tex->setAllocated( true );
-		}
+		//	// set allocated flag for texture object
+		//	tex->setAllocated( true );
+		//}
 
 		return true;
 	}
@@ -503,6 +503,7 @@ namespace osgCuda
 		: osg::Texture3D(),
 		  _proxy(NULL)
 	{
+		clearLocal();
 		// some flags for textures are not available right now
 		// like resize to a power of two and mipmaps
 		asTexture()->setResizeNonPowerOfTwoHint( false );
@@ -518,6 +519,8 @@ namespace osgCuda
 				<< "osgCuda::Texture3D::destructor(): proxy is still valid!!!."
 				<< std::endl;
 		}
+
+		clearLocal();
 	}
 
 	//------------------------------------------------------------------------------
@@ -618,11 +621,8 @@ namespace osgCuda
 	void Texture3D::apply( osg::State& state ) const
 	{
 		const osgCompute::Context* curCtx = osgCompute::Context::getContext( state.getContextID() );
-		if( curCtx )
-		{
-			if( NULL != _proxy && _proxy->getMapping( *curCtx ) != osgCompute::UNMAPPED )
-				_proxy->unmap( *curCtx );
-		}
+		if( curCtx && _proxy != NULL )
+			_proxy->checkMappingWithinApply( *curCtx );
 
 		osg::Texture3D::apply( state );
 	}

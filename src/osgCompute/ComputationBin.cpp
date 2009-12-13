@@ -68,7 +68,7 @@ namespace osgCompute
         }
 
 
-        if( (_computeOrder & PRE_TRAVERSAL ) == PRE_TRAVERSAL )
+        if( (_computeOrder & OSGCOMPUTE_PRE_TRAVERSAL ) == OSGCOMPUTE_PRE_TRAVERSAL )
         {
             if( _launchCallback ) 
                 (*_launchCallback)( *this, *_context ); 
@@ -81,7 +81,7 @@ namespace osgCompute
         // render sub-graph leafs
         drawLeafs(renderInfo, previous );
 
-        if( (_computeOrder & PRE_TRAVERSAL ) != PRE_TRAVERSAL )
+        if( (_computeOrder & OSGCOMPUTE_PRE_TRAVERSAL ) != OSGCOMPUTE_PRE_TRAVERSAL )
         {
             if( _launchCallback ) 
                 (*_launchCallback)( *this, *_context ); 
