@@ -1,4 +1,6 @@
-#include <malloc.h>
+#if defined(__linux)
+    #include <malloc.h>
+#endif
 #include <memory.h>
 #include <osg/GL>
 #include <cuda_runtime.h>
