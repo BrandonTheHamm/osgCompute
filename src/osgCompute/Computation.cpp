@@ -536,8 +536,6 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     Context* Computation::getContext( osg::State& state )
     {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
         ContextMapItr itr = _contextMap.find( state.getContextID() );
         if( itr == _contextMap.end() )
             return NULL;
@@ -548,8 +546,6 @@ namespace osgCompute
     //------------------------------------------------------------------------------
 	Context* Computation::getOrCreateContext( osg::State& state )
     {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
 		// find or create context
 		bool contextCreated = false;
         Context* context = NULL;

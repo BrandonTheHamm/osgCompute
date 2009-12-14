@@ -241,8 +241,6 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	void Buffer::clear( const Context& context ) const
 	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
 		BufferStream* curStream = _streams[context.getId()];
 		if( curStream != NULL )
 		{
@@ -287,8 +285,6 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	BufferStream* Buffer::lookupStream( const Context& context ) const
 	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
 		/////////////////////
 		// ALLOCATE STREAM //
 		/////////////////////

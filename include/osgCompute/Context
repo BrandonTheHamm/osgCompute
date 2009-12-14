@@ -71,9 +71,7 @@ namespace osgCompute
         unsigned int                        _id;
         osg::ref_ptr<osg::GraphicsContext>  _gc;
         bool                                _clear;
-        mutable OpenThreads::Mutex          _mutex;
         int                                 _device;
-        bool                                _embedded;
 		mutable ResourcePtrSet				_resources;
 
     private:

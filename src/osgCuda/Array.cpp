@@ -959,8 +959,6 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	void Array::resetModifiedCounts() const
 	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mutex);
-
 		for( std::vector<osgCompute::BufferStream*>::iterator itr = osgCompute::Buffer::_streams.begin(); 
 			itr != osgCompute::Buffer::_streams.end();
 			++itr )

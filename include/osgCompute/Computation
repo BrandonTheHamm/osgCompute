@@ -208,20 +208,18 @@ namespace osgCompute
 
         virtual void setParentComputation( Computation* parentComputation );
 
-        bool                                _enabled;
-        LaunchCallback*                     _launchCallback; 
-        ModuleList                          _modules;
-        ResourceMap                         _resources;
-        ComputeOrder                        _computeOrder;
-        bool                                _subgraphChanged;
-        osg::ref_ptr<ResourceVisitor>       _resourceVisitor;
-        Computation*                        _parentComputation; 
-        bool                                _resourcesCollected;
-        bool                                _autoCheckSubgraph;
+        bool                                	_enabled;
+        LaunchCallback*                     	_launchCallback; 
+        ModuleList                          	_modules;
+        ResourceMap                         	_resources;
+        ComputeOrder                        	_computeOrder;
+        bool                                	_subgraphChanged;
+        osg::ref_ptr<ResourceVisitor>       	_resourceVisitor;
+        Computation*                        	_parentComputation; 
+        bool                                	_resourcesCollected;
+        bool                                	_autoCheckSubgraph;
 
-        mutable ContextMap                  _contextMap;
-
-        mutable OpenThreads::Mutex          _mutex;
+        mutable ContextMap                  	_contextMap;
 
     private:
 

@@ -16,13 +16,10 @@ namespace osgCuda
     //////////////////////////////////////////////////////////////////////////////////////////////////
     // STATIC FUNCTIONS //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////
-    static OpenThreads::Mutex           s_sharedMutex;
     static std::set< int >              s_sharedDevices;
 
     static bool setupSharedDevice( int device )
     {
-        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
-
         std::set< int >::iterator itr = s_sharedDevices.find( device );
         if( itr != s_sharedDevices.end() )
             return true;

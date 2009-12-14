@@ -24,15 +24,12 @@ namespace osgCompute
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
-	static OpenThreads::Mutex	s_sharedMutex;
 	static std::set< Context* >	s_Contexts;
 	static unsigned int			s_ContextIds = 0;
 
 	//------------------------------------------------------------------------------
 	static void addContext( Context& context )
 	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
-
 		for( std::set< Context* >::iterator itr = s_Contexts.begin();
 			  itr != s_Contexts.end();
 			  ++itr )
@@ -45,8 +42,6 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	static void removeContext( Context& context )
 	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
-
 		for( std::set< Context* >::iterator itr = s_Contexts.begin();
 			itr != s_Contexts.end();
 			++itr )
@@ -60,8 +55,6 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	const Context* Context::getContext( unsigned int id )
 	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
-
 		for( std::set< Context* >::iterator itr = s_Contexts.begin();
 			itr != s_Contexts.end();
 			++itr )
@@ -74,8 +67,6 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	const Context* Context::getContextFromGraphicsContext( unsigned int graphicContextId )
 	{
-		OpenThreads::ScopedLock<OpenThreads::Mutex> lock(s_sharedMutex);
-
 		for( std::set< Context* >::iterator itr = s_Contexts.begin();
 			itr != s_Contexts.end();
 			++itr )
@@ -221,7 +212,6 @@ namespace osgCompute
         // do not clear the id!!!
         _gc = NULL;
         _clear = true;
-        _embedded = false;
         // default use device 0
         _device = 0;
     }

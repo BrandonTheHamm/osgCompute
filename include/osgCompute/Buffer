@@ -134,7 +134,6 @@ namespace osgCompute
 		unsigned int									_elementSize;
         osg::ref_ptr<SubloadCallback>                   _subloadCallback;
 
-        mutable OpenThreads::Mutex                      _mutex;
         mutable std::vector<BufferStream*>              _streams;
 
     private:
