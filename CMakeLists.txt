@@ -152,9 +152,9 @@ ADD_SUBDIRECTORY(src)
 
 
 ############################
-# Build multithreading version
+# Build multithreading version - not supported at the moment
 ############################
-OPTION(BUILD_MULTITHREADING_VERSION "Enable to build osgCompute and osgCuda with osg multi-threading support" ON)
+#OPTION(BUILD_MULTITHREADING_VERSION "Enable to build osgCompute and osgCuda with osg multi-threading support" ON)
 
 
 ############################
