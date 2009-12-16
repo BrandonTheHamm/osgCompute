@@ -86,13 +86,19 @@ int main(int argc, char *argv[])
 
 
     osg::ref_ptr< osgCuda::Texture2D > trgTexture = new osgCuda::Texture2D;
+	//trgTexture->setInternalFormat( GL_RGBA8UI_EXT );
+	//trgTexture->setSourceFormat( GL_RGBA_INTEGER_EXT );
+	//trgTexture->setSourceType( GL_UNSIGNED_BYTE );
 	trgTexture->setInternalFormat( GL_RGBA );
+	trgTexture->setSourceFormat( GL_RGBA );
 	trgTexture->setSourceType( GL_UNSIGNED_BYTE );
+
     trgTexture->setName( "trgBuffer" );
     trgTexture->setTextureWidth(srcImage->s());
-    trgTexture->setTextureHeight(srcImage->t());
-    trgTexture->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
-    trgTexture->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+	trgTexture->setTextureHeight(srcImage->t());
+	trgTexture->setResizeNonPowerOfTwoHint(false);
+    trgTexture->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
+    trgTexture->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
 	// mark this buffer as the target buffer which
 	// is displayed
     trgTexture->addHandle( "TRG_BUFFER" );
@@ -114,7 +120,8 @@ int main(int argc, char *argv[])
     // SCENE SETUP //
     /////////////////
     osg::Group* scene = new osg::Group;
-    scene->addChild( computation );
+	//scene->addChild( getTexturedQuad(*trgTexture) );
+	scene->addChild( computation );
 
     //////////////////
     // VIEWER SETUP //

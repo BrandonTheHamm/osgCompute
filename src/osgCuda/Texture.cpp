@@ -163,18 +163,17 @@ namespace osgCuda
 		unsigned int elementBitSize;
 		if( asTexture()->getImage(0) )
 		{
-			elementBitSize =
-				osg::Image::computePixelSizeInBits(
-				asTexture()->getImage(0)->getPixelFormat(),
-				asTexture()->getImage(0)->getDataType() );
+			elementBitSize = osg::Image::computePixelSizeInBits(
+								asTexture()->getImage(0)->getPixelFormat(),
+								asTexture()->getImage(0)->getDataType() );
 
 		}
 		else
 		{
-			elementBitSize =
-				osg::Image::computePixelSizeInBits(
-				asTexture()->getInternalFormat(),
-				asTexture()->getSourceType() );
+			GLenum format = osg::Image::computePixelFormat( asTexture()->getInternalFormat() );
+			GLenum type = osg::Image::computeFormatDataType( asTexture()->getInternalFormat() );
+
+			elementBitSize = osg::Image::computePixelSizeInBits( format, type );
 		}
 
 		elementSize = ((elementBitSize % 8) == 0)? elementBitSize/8 : elementBitSize/8 +1;

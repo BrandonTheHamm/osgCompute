@@ -163,18 +163,22 @@ namespace osgCuda
 			return;
 		}
 
-		GLenum texType = GL_NONE;
-		if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT )
-		{
-			if( !_texref->getImage() )
-				return;
+		//GLenum texType = GL_NONE;
+		//if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT )
+		//{
+		//	if( !_texref->getImage() )
+		//		return;
 
-			texType = _texref->getImage()->getDataType();
-		}
-		else
-		{
-			texType = asTexture()->getSourceType();
-		}
+		//	texType = _texref->getImage()->getDataType();
+		//}
+		//else
+		//{
+		//	texType = asTexture()->getSourceType();
+		//}
+
+
+		GLenum format = osg::Image::computePixelFormat( asTexture()->getInternalFormat() );
+		GLenum type = osg::Image::computeFormatDataType( asTexture()->getInternalFormat() );
 
 		bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB,  stream._bo );
 		glBindTexture( GL_TEXTURE_RECTANGLE, tex->_id );
@@ -184,8 +188,8 @@ namespace osgCuda
 			GL_TEXTURE_RECTANGLE, 0, 0, 0,
 			getDimension(0),
 			getDimension(1),
-			tex->_profile._internalFormat,
-			texType,
+			format,//tex->_profile._internalFormat,
+			type,//texType,
 			NULL );
 
 		GLenum errorStatus = glGetError();
@@ -233,25 +237,29 @@ namespace osgCuda
 			return;
 		}
 
-		GLenum texType = GL_NONE;
-		if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
-			_texref->getImage() )
-		{
-			texType = _texref->getImage()->getDataType();
-		}
-		else
-		{
-			texType = asTexture()->getSourceType();
-		}
+		//GLenum texType = GL_NONE;
+		//if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
+		//	_texref->getImage() )
+		//{
+		//	texType = _texref->getImage()->getDataType();
+		//}
+		//else
+		//{
+		//	texType = asTexture()->getSourceType();
+		//}
 
-		if( texType == GL_NONE )
-		{
-			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::syncPBO(): texture type unknown."
-				<< std::endl;
+		//if( texType == GL_NONE )
+		//{
+		//	osg::notify(osg::FATAL)
+		//		<< "osgCuda::TextureRectangleBuffer::syncPBO(): texture type unknown."
+		//		<< std::endl;
 
-			return;
-		}
+		//	return;
+		//}
+
+
+		GLenum format = osg::Image::computePixelFormat( asTexture()->getInternalFormat() );
+		GLenum type = osg::Image::computeFormatDataType( asTexture()->getInternalFormat() );
 
 		////////////////////
 		// UNREGISTER PBO //
@@ -274,7 +282,8 @@ namespace osgCuda
 		bufferExt->glBindBuffer( GL_PIXEL_PACK_BUFFER_ARB,  stream._bo );
 
 		// PACK the data for the PBO
-		glGetTexImage( GL_TEXTURE_RECTANGLE, 0, tex->_profile._internalFormat, texType, NULL );
+		//glGetTexImage( GL_TEXTURE_RECTANGLE, 0, tex->_profile._internalFormat, texType, NULL );
+		glGetTexImage( GL_TEXTURE_RECTANGLE, 0, format, type, NULL );
 
 		GLenum errorStatus = glGetError();
 		if( errorStatus != GL_NO_ERROR )
@@ -353,25 +362,25 @@ namespace osgCuda
 			return false;
 		}
 
-		GLenum texType = GL_NONE;
-		if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
-			_texref->getImage() )
-		{
-			texType = _texref->getImage()->getDataType();
-		}
-		else
-		{
-			texType = asTexture()->getSourceType();
-		}
+		//GLenum texType = GL_NONE;
+		//if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
+		//	_texref->getImage() )
+		//{
+		//	texType = _texref->getImage()->getDataType();
+		//}
+		//else
+		//{
+		//	texType = asTexture()->getSourceType();
+		//}
 
-		if( texType == GL_NONE )
-		{
-			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::allocPBO(): texture type unknown."
-				<< std::endl;
+		//if( texType == GL_NONE )
+		//{
+		//	osg::notify(osg::FATAL)
+		//		<< "osgCuda::TextureRectangleBuffer::allocPBO(): texture type unknown."
+		//		<< std::endl;
 
-			return false;
-		}
+		//	return false;
+		//}
 
 		///////////////
 		// ALLOC PBO //

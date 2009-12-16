@@ -81,16 +81,6 @@ namespace TexDemo
                _tmpBuffer->map( ctx ),
 			   _srcArray->map( ctx, osgCompute::MAP_DEVICE_SOURCE ) );
 
-		// You can also use the map function at any time 
-		// in order to copy memory from GPU to CPU and vice versa.
-		// To do so use the MAPPING flags (e.g. MAP_HOST_SOURCE).
-		// Each time map() is called the buffer intern checks whether
-		// he has to synchronize the memory.
-		// Uncomment the following line if you want to observe the
-		// generated memory of the swap() kernel.
-
-		// unsigned char* data = static_cast<unsigned char*>( _tmpBuffer->map( ctx, osgCompute::MAP_HOST_SOURCE ) );
-
         // Run a 3x3 sobel filter 
         sobel( _blocks, 
 			   _threads, 
@@ -104,6 +94,18 @@ namespace TexDemo
 		//	_trgBuffer->map( ctx ), 
 		//	_tmpBuffer->map( ctx ),
 		//	_tmpBuffer->getByteSize() );
+
+
+		// You can also use the map function at any time 
+		// in order to copy memory from GPU to CPU and vice versa.
+		// To do so use the MAPPING flags (e.g. MAP_HOST_SOURCE).
+		// Each time map() is called the buffer intern checks whether
+		// he has to synchronize the memory.
+		// Uncomment the following line if you want to observe the
+		// generated memory of the swap() kernel.
+
+
+		// unsigned char* data = static_cast<unsigned char*>( _trgBuffer->map( ctx, osgCompute::MAP_HOST_SOURCE ) );
     }
 
     //------------------------------------------------------------------------------

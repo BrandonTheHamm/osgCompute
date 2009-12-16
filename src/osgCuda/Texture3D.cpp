@@ -165,18 +165,8 @@ namespace osgCuda
 			return;
 		}
 
-		GLenum texType = GL_NONE;
-		if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT )
-		{
-			if( !_texref->getImage() )
-				return;
-
-			texType = _texref->getImage()->getDataType();
-		}
-		else
-		{
-			texType = asTexture()->getSourceType();
-		}
+		GLenum format = osg::Image::computePixelFormat( asTexture()->getInternalFormat() );
+		GLenum type = osg::Image::computeFormatDataType( asTexture()->getInternalFormat() );
 
 		bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB,  stream._bo );
 		glBindTexture( GL_TEXTURE_3D, tex->_id );
@@ -186,17 +176,17 @@ namespace osgCuda
 			GL_TEXTURE_3D, 0, 0, 0, 0,
 			getDimension(0),
 			getDimension(1),
-			getDimension(2),
-			tex->_profile._internalFormat,
-			texType,
+			getDimension(2), 
+			format,
+			type,
 			NULL );
 
 		GLenum errorStatus = glGetError();
 		if( errorStatus != GL_NO_ERROR )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture3DBuffer::syncTexture(): error occured during glTex(Sub)Image3D(). Returned code is "
-				<< std::hex<<errorStatus<<"."
+				<< "osgCuda::Texture3DBuffer::syncTexture(): error occurred during glTex(Sub)Image3D(). Returned code is "
+				<< std::hex<<errorStatus<<". Maybe you have no source format and type specified."
 				<< std::endl;
 		}
 
@@ -237,25 +227,8 @@ namespace osgCuda
 			return;
 		}
 
-		GLenum texType = GL_NONE;
-		if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
-			_texref->getImage() )
-		{
-			texType = _texref->getImage()->getDataType();
-		}
-		else
-		{
-			texType = asTexture()->getSourceType();
-		}
-
-		if( texType == GL_NONE )
-		{
-			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture3DBuffer::syncPBO(): texture type unknown."
-				<< std::endl;
-
-			return;
-		}
+		GLenum format = osg::Image::computePixelFormat( asTexture()->getInternalFormat() );
+		GLenum type = osg::Image::computeFormatDataType( asTexture()->getInternalFormat() );
 
 		////////////////////
 		// UNREGISTER PBO //
@@ -277,7 +250,7 @@ namespace osgCuda
 		bufferExt->glBindBuffer( GL_PIXEL_PACK_BUFFER_ARB,  stream._bo );
 
 		// PACK the data for the PBO
-		glGetTexImage( GL_TEXTURE_3D, 0, tex->_profile._internalFormat, texType, NULL );
+		glGetTexImage( GL_TEXTURE_3D, 0, format, type, NULL );
 
 		GLenum errorStatus = glGetError();
 		if( errorStatus != GL_NO_ERROR )
@@ -355,26 +328,6 @@ namespace osgCuda
 			return false;
 		}
 
-		GLenum texType = GL_NONE;
-		if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
-			_texref->getImage() )
-		{
-			texType = _texref->getImage()->getDataType();
-		}
-		else
-		{
-			texType = asTexture()->getSourceType();
-		}
-
-		if( texType == GL_NONE )
-		{
-			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture3DBuffer::allocPBO(): texture type unknown."
-				<< std::endl;
-
-			return false;
-		}
-
 		///////////////
 		// ALLOC PBO //
 		///////////////
@@ -408,7 +361,7 @@ namespace osgCuda
 			return UINT_MAX;
 		}
 
-		bufferExt->glBufferData( GL_ARRAY_BUFFER_ARB, getByteSize(), tmpData, GL_DYNAMIC_DRAW );
+		bufferExt->glBufferData( GL_ARRAY_BUFFER_ARB, getByteSize(), tmpData, GL_STATIC_DRAW );
 		errorNo = glGetError();
 		if (errorNo != GL_NO_ERROR)
 		{
@@ -461,38 +414,6 @@ namespace osgCuda
 			// if it is already allocated
 			syncPBO( stream );
 		}
-		//else if( !this->getIsRenderTarget() )
-		//{
-		//	/////////////////////
-		//	// ALLOCATE MEMORY //
-		//	/////////////////////
-		//	glBindTexture( GL_TEXTURE_3D, tex->_id );
-
-		//	tex3DExt->glTexImage3D(
-		//		GL_TEXTURE_3D, 0,
-		//		tex->_profile._internalFormat,
-		//		tex->_profile._width, tex->_profile._height, tex->_profile._depth,
-		//		tex->_profile._border,
-		//		tex->_profile._internalFormat, texType, NULL );
-
-		//	GLenum errorNo = glGetError();
-		//	if( errorNo != GL_NO_ERROR )
-		//	{
-		//		osg::notify(osg::FATAL)
-		//			<< "osgCuda::Texture3D::allocPBO(): error during glTexImage3D(). Returned code is "
-		//			<< std::hex<<errorNo<<"."
-		//			<< std::endl;
-
-		//		glBindTexture( GL_TEXTURE_3D, 0 );
-		//		bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
-		//		return false;
-		//	}
-
-		//	glBindTexture( GL_TEXTURE_3D, 0 );
-
-		//	// set allocated flag for texture object
-		//	tex->setAllocated( true );
-		//}
 
 		return true;
 	}
@@ -552,6 +473,19 @@ namespace osgCuda
 				_proxy->unref();
 				_proxy = NULL;
 			}
+		}
+
+		// print warning if the source format and source type do not match
+		// the internal texture format
+		GLenum format = osg::Image::computePixelFormat( asTexture()->getInternalFormat() );
+		GLenum type = osg::Image::computeFormatDataType( asTexture()->getInternalFormat() );
+		if( NULL == getImage() && 
+			(format != getSourceFormat() || type != getSourceType()) )
+		{
+			osg::notify( osg::WARN ) 
+				<< "osgCuda::Texture3D::getOrCreateBuffer(): No image found but type and format do not match the internal texture format."
+				<< "This might lead to errors during glTexSubImage1D(). Please make sure to setup source type and format properly."
+				<< std::endl;
 		}
 
 		return _proxy;
