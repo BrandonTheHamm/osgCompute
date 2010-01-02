@@ -180,6 +180,17 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
+	bool Context::isResourceRegistered( const Resource& resource ) const
+	{
+		ResourcePtrSetCnstItr itr = _resources.find( &resource );
+		if( itr != _resources.end() )
+			return true;
+
+		return false;
+	}
+
+
+	//------------------------------------------------------------------------------
 	bool Context::isClear() const
 	{
 		return _clear;

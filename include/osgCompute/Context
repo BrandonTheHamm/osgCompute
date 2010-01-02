@@ -52,6 +52,7 @@ namespace osgCompute
         virtual bool isConnectedWithGraphicsContext() const;
         virtual void setDevice( int device );
         virtual int getDevice() const;
+		virtual bool isResourceRegistered( const Resource& resource ) const;
 
 		virtual void clear();
 		virtual bool isClear() const;

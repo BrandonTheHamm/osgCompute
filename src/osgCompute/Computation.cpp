@@ -17,6 +17,7 @@
 #include <osg/NodeVisitor>
 #include <osg/OperationThread>
 #include <osgUtil/CullVisitor>
+#include <osgUtil/GLObjectsVisitor>
 #include <osgCompute/Visitor>
 #include <osgCompute/Computation>
 
@@ -47,42 +48,49 @@ namespace osgCompute
             nv.pushOntoNodePath(this);
 
             osgUtil::CullVisitor* cv = dynamic_cast<osgUtil::CullVisitor*>( &nv );
+			osgUtil::GLObjectsVisitor* ov = dynamic_cast<osgUtil::GLObjectsVisitor*>( &nv );
             ResourceVisitor* rv = dynamic_cast<ResourceVisitor*>( &nv );
-            if( (cv != NULL) && 
-                _enabled )
+            if( cv != NULL )
             {
-				getOrCreateContext( *cv->getState() );
-
-				if( (_computeOrder & OSGCOMPUTE_RENDER) == OSGCOMPUTE_RENDER )
+				if( _enabled && (_computeOrder & OSGCOMPUTE_RENDER) == OSGCOMPUTE_RENDER )
 					addBin( *cv );
 				else
 					nv.apply(*this);
             }
-            else
+			else if( ov != NULL )
+			{
+				getOrCreateContext( *ov->getState() );
+
+				nv.apply( *this );
+			}
+            else if( rv != NULL )
             {
-                if( rv != NULL )
-                {
-                    collectResources();
-                }
-                else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
-                {
-                    update( nv );
+                collectResources();
 
-					if( (_computeOrder & UPDATE_PRE_TRAVERSAL) == UPDATE_PRE_TRAVERSAL )
-						launch();
+				nv.apply( *this );
+            }
+            else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
+            {
+                update( nv );
 
-                }
-				else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
-				{
-					handleevent( nv );
-				}
+				if( _enabled && (_computeOrder & UPDATE_PRE_TRAVERSAL) == UPDATE_PRE_TRAVERSAL )
+					launch();
 
-                nv.apply( *this );
+				nv.apply( *this );
 
-				if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR && 
-					(_computeOrder & UPDATE_POST_TRAVERSAL) == UPDATE_POST_TRAVERSAL )
+				if( _enabled && (_computeOrder & UPDATE_POST_TRAVERSAL) == UPDATE_POST_TRAVERSAL )
 					launch();
             }
+			else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
+			{
+				handleevent( nv );
+
+				nv.apply( *this );
+			}
+			else
+			{
+				nv.apply( *this );
+			}
 
             nv.popFromNodePath(); 
         } 
@@ -576,6 +584,17 @@ namespace osgCompute
 		if( contextCreated || getAutoCheckSubgraph() )
 			distributeContext( *context );
 
+		if( contextCreated )
+		{
+			// initialize modules with context
+			context->apply();
+			for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+			{
+				if( !context->isResourceRegistered( *(*itr) ) )
+					(*itr)->init( *context );
+			}
+		}
+
         return context;
     }
 
@@ -751,10 +770,20 @@ namespace osgCompute
                     curResource->init();
             }
 
+			// initialize modules
             for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             {
                 if( (*itr)->isClear() )
                     (*itr)->init();
+
+				for( ContextMapItr ctxItr = _contextMap.begin(); ctxItr != _contextMap.end(); ++ctxItr )
+				{
+					if( !ctxItr->second->isResourceRegistered( *(*itr) ) )
+					{
+						ctxItr->second->apply();
+						(*itr)->init( *(*ctxItr).second );
+					}
+				}
             }
 
             // decrement update counter when all resources have been initialized
