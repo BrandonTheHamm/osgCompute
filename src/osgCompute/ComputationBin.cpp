@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #include <osg/Notify>
@@ -71,7 +71,7 @@ namespace osgCompute
         if( (_computeOrder & OSGCOMPUTE_PRE_TRAVERSAL ) == OSGCOMPUTE_PRE_TRAVERSAL )
         {
             if( _launchCallback ) 
-                (*_launchCallback)( *this, *_context ); 
+                (*_launchCallback)( *_computation ); 
             else launch(); 
 
             // don't forget to decrement dynamic object count
@@ -84,7 +84,7 @@ namespace osgCompute
         if( (_computeOrder & OSGCOMPUTE_PRE_TRAVERSAL ) != OSGCOMPUTE_PRE_TRAVERSAL )
         {
             if( _launchCallback ) 
-                (*_launchCallback)( *this, *_context ); 
+                (*_launchCallback)( *_computation ); 
             else launch();  
 
             // don't forget to decrement dynamic object count
@@ -124,9 +124,9 @@ namespace osgCompute
 
         // MODULES 
         if( _computation->hasModules())
-		{
+        {
             _modules = _computation->getModules();
-		}
+        }
 
         // OBJECT 
         setName( _computation->getName() );
@@ -209,53 +209,53 @@ namespace osgCompute
         return _modules.size(); 
     }
 
-	//------------------------------------------------------------------------------
-	bool ComputationBin::isClear() const
-	{ 
-		return _clear; 
-	}
+    //------------------------------------------------------------------------------
+    bool ComputationBin::isClear() const
+    { 
+        return _clear; 
+    }
 
-	//------------------------------------------------------------------------------
-	Computation* ComputationBin::getComputation()
-	{ 
-		return _computation; 
-	}
+    //------------------------------------------------------------------------------
+    Computation* ComputationBin::getComputation()
+    { 
+        return _computation; 
+    }
 
-	//------------------------------------------------------------------------------
-	const Computation* ComputationBin::getComputation() const
-	{ 
-		return _computation; 
-	}
+    //------------------------------------------------------------------------------
+    const Computation* ComputationBin::getComputation() const
+    { 
+        return _computation; 
+    }
 
-	//------------------------------------------------------------------------------
-	LaunchCallback* ComputationBin::getLaunchCallback()
-	{ 
-		return _launchCallback; 
-	}
+    //------------------------------------------------------------------------------
+    LaunchCallback* ComputationBin::getLaunchCallback()
+    { 
+        return _launchCallback; 
+    }
 
-	//------------------------------------------------------------------------------
-	const LaunchCallback* ComputationBin::getLaunchCallback() const
-	{ 
-		return _launchCallback; 
-	}
+    //------------------------------------------------------------------------------
+    const LaunchCallback* ComputationBin::getLaunchCallback() const
+    { 
+        return _launchCallback; 
+    }
 
-	//------------------------------------------------------------------------------
-	void ComputationBin::setContext( Context& context )
-	{
-		_context = &context;
-	}
+    //------------------------------------------------------------------------------
+    void ComputationBin::setContext( Context& context )
+    {
+        _context = &context;
+    }
 
-	//------------------------------------------------------------------------------
-	Context* ComputationBin::getContext()
-	{
-		return _context.get();
-	}
+    //------------------------------------------------------------------------------
+    Context* ComputationBin::getContext()
+    {
+        return _context.get();
+    }
 
-	//------------------------------------------------------------------------------
-	const Context* ComputationBin::getContext() const
-	{
-		return _context.get();
-	}
+    //------------------------------------------------------------------------------
+    const Context* ComputationBin::getContext() const
+    {
+        return _context.get();
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
@@ -287,8 +287,8 @@ namespace osgCompute
         {
             if( (*itr)->isEnabled() )
             {
-				if( (*itr)->isClear() )
-					(*itr)->init();
+                if( (*itr)->isClear() )
+                    (*itr)->init();
 
                 (*itr)->launch();
             }

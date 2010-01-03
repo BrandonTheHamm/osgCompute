@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #ifndef PTCLDEMO_PTCL_EMITTER
@@ -22,8 +22,8 @@
 
 namespace PtclDemo
 {
-	/**
-	*/
+    /**
+    */
     class PtclEmitter : public osgCompute::Module 
     {
     public:
@@ -35,9 +35,9 @@ namespace PtclDemo
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-		inline void setSeedBox( osg::Vec3f& seedMin, osg::Vec3f& seedMax ) { _seedBoxMin = seedMin; _seedBoxMax = seedMax; }
+        inline void setSeedBox( osg::Vec3f& seedMin, osg::Vec3f& seedMax ) { _seedBoxMin = seedMin; _seedBoxMax = seedMax; }
 
-		virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
     protected:
         virtual ~PtclEmitter();
         void clearLocal();
@@ -47,7 +47,7 @@ namespace PtclDemo
 
         osg::Vec3f                                        _seedBoxMin;
         osg::Vec3f                                        _seedBoxMax;
-		osg::ref_ptr<osgCompute::Buffer>                  _ptcls;
+        osg::ref_ptr<osgCompute::Buffer>                  _ptcls;
         osg::ref_ptr<osgCompute::Buffer>                  _seeds;
 
     private:

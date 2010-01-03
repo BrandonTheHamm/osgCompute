@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #ifndef OSGCOMPUTE_COMPUTATION
@@ -42,13 +42,13 @@ namespace osgUtil
 #define META_Computation( libraryname, classname, binlibrary, binclass, ctxlibrary, ctxclass, visitorlibrary, visitorclass )  \
     META_Object( libraryname, classname )                                                       		\
     virtual std::string                  binLibraryName() const { return #binlibrary; }          		\
-	virtual std::string                  binClassName() const { return #binclass; }              		\
+    virtual std::string                  binClassName() const { return #binclass; }              		\
     virtual std::string                  contextLibraryName() const { return #ctxlibrary; }      		\
     virtual std::string                  contextClassName() const { return #ctxclass; }          		\
     virtual osgCompute::Context*         newContext() const { return new ctxlibrary::ctxclass; } 		\
-	virtual std::string                  visitorLibraryName() const { return #visitorlibrary; }      	\
-	virtual std::string                  visitorClassName() const { return #visitorclass; }          	\
-	virtual osgCompute::ResourceVisitor* newVisitor() const { return new visitorlibrary::visitorclass; }
+    virtual std::string                  visitorLibraryName() const { return #visitorlibrary; }      	\
+    virtual std::string                  visitorClassName() const { return #visitorclass; }          	\
+    virtual osgCompute::ResourceVisitor* newVisitor() const { return new visitorlibrary::visitorclass; }
 
 namespace osgCompute
 {
@@ -74,8 +74,8 @@ namespace osgCompute
             RENDER_PRE_RENDER_PRE_TRAVERSAL = OSGCOMPUTE_RENDER | OSGCOMPUTE_PRE_RENDER | OSGCOMPUTE_PRE_TRAVERSAL,
             RENDER_POST_RENDER_POST_TRAVERSAL = OSGCOMPUTE_RENDER | OSGCOMPUTE_POST_RENDER | OSGCOMPUTE_POST_TRAVERSAL,
             RENDER_POST_RENDER_PRE_TRAVERSAL = OSGCOMPUTE_RENDER | OSGCOMPUTE_POST_RENDER | OSGCOMPUTE_PRE_TRAVERSAL,
-			UPDATE_POST_TRAVERSAL = OSGCOMPUTE_UPDATE | OSGCOMPUTE_POST_TRAVERSAL,
-			UPDATE_PRE_TRAVERSAL = OSGCOMPUTE_UPDATE | OSGCOMPUTE_PRE_TRAVERSAL,
+            UPDATE_POST_TRAVERSAL = OSGCOMPUTE_UPDATE | OSGCOMPUTE_POST_TRAVERSAL,
+            UPDATE_PRE_TRAVERSAL = OSGCOMPUTE_UPDATE | OSGCOMPUTE_PRE_TRAVERSAL,
         };
 
     public:
@@ -99,14 +99,14 @@ namespace osgCompute
         /** The derived class must provide a valid library name of the required computation bin. */
         virtual std::string binLibraryName() const = 0;
         /** The derived class must provide a valid class name of the required computation bin. */
-		virtual std::string binClassName() const = 0;
+        virtual std::string binClassName() const = 0;
 
-		/** The derived class must provide a valid library name of the required computation bin. */
-		virtual std::string visitorLibraryName() const = 0;
-		/** The derived class must provide a valid class name of the required computation bin. */
-		virtual std::string visitorClassName() const = 0;
-		/** The derived class must provide a method which allows to create new bins*/
-		virtual osgCompute::ResourceVisitor* newVisitor() const = 0;
+        /** The derived class must provide a valid library name of the required computation bin. */
+        virtual std::string visitorLibraryName() const = 0;
+        /** The derived class must provide a valid class name of the required computation bin. */
+        virtual std::string visitorClassName() const = 0;
+        /** The derived class must provide a method which allows to create new bins*/
+        virtual osgCompute::ResourceVisitor* newVisitor() const = 0;
 
         /** Load a module dynamically (not implemented yet) */
         virtual void loadModule( const std::string& modName );
@@ -182,11 +182,11 @@ namespace osgCompute
         /** Restore object to default state. Calls clearLocal(). */
         virtual void clear();
 
-		virtual bool setContext( Context& context );
-		virtual Context* getOrCreateContext( osg::State& state );
-		virtual Context* getContext( osg::State& state );
+        virtual bool setContext( Context& context );
+        virtual Context* getOrCreateContext( osg::State& state );
+        virtual Context* getContext( osg::State& state );
 
-		virtual void releaseGLObjects( osg::State* state ) const;
+        virtual void releaseGLObjects( osg::State* state ) const;
 
     protected:
         friend class ContextVisitor;
@@ -196,15 +196,15 @@ namespace osgCompute
 
         void clearLocal();
 
-		virtual void acceptContext(  Context& context );
-		virtual void removeContext( osg::State& state );
+        virtual void acceptContext(  Context& context );
+        virtual void removeContext( osg::State& state );
         virtual void distributeContext( Context& context );
         virtual void update( osg::NodeVisitor& uv );
-		virtual void collectResources();
+        virtual void collectResources();
 
-		virtual void launch();
-		virtual void addBin( osgUtil::CullVisitor& cv );
-		virtual void handleevent( osg::NodeVisitor& ev );
+        virtual void launch();
+        virtual void addBin( osgUtil::CullVisitor& cv );
+        virtual void handleevent( osg::NodeVisitor& ev );
 
         virtual void setParentComputation( Computation* parentComputation );
 

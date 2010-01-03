@@ -29,4 +29,4 @@ namespace osgCuda
     void Computation::clearLocal() 
     {
     }
-}
+} 

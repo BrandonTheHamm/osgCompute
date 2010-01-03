@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #include <vector_types.h>
@@ -21,13 +21,13 @@
 //------------------------------------------------------------------------------
 extern "C"
 void reseed( unsigned int numBlocks,
-             unsigned int numThreads,
-             void* ptcls,
-             void* seeds,
-             unsigned int seedCount,
-             unsigned int seedIdx,
-             float3 bbmin,
-             float3 bbmax );
+            unsigned int numThreads,
+            void* ptcls,
+            void* seeds,
+            unsigned int seedCount,
+            unsigned int seedIdx,
+            float3 bbmin,
+            float3 bbmax );
 
 
 namespace PtclDemo
@@ -71,15 +71,15 @@ namespace PtclDemo
         // PARAMS //
         ////////////
         unsigned int seedIdx = static_cast<unsigned int>(rand());
-		float3 bbmin;
-		bbmin.x = _seedBoxMin.x();
-		bbmin.y = _seedBoxMin.y();
-		bbmin.z = _seedBoxMin.z();
+        float3 bbmin;
+        bbmin.x = _seedBoxMin.x();
+        bbmin.y = _seedBoxMin.y();
+        bbmin.z = _seedBoxMin.z();
 
-		float3 bbmax;
-		bbmax.x = _seedBoxMax.x();
-		bbmax.y = _seedBoxMax.y();
-		bbmax.z = _seedBoxMax.z();
+        float3 bbmax;
+        bbmax.x = _seedBoxMax.x();
+        bbmax.y = _seedBoxMax.y();
+        bbmax.z = _seedBoxMax.z();
 
         ////////////
         // RESEED //

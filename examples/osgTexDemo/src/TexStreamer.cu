@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #ifndef TEXDEMO_TEXSTREAMER_KERNEL_H
@@ -61,7 +61,7 @@ void gaussKernel( uchar4* trg )
     int yNext = ((y+1) >= (gridDim.y * blockDim.y))? 0 : y+1;
     int yNext2 = ((y+2) >= (gridDim.y * blockDim.y))? 0 : y+2;
 
-	// compute thread indices
+    // compute thread indices
     unsigned int idx[25];
     idx[0] = yPrev2 * width + xPrev2;
     idx[1] = yPrev2 * width + xPrev;
@@ -89,7 +89,7 @@ void gaussKernel( uchar4* trg )
     idx[23] = yNext2* width + xNext;
     idx[24] = yNext2* width + xNext2;
 
-	// prepare weights
+    // prepare weights
     float weights[25];
     weights[0] = 2;
     weights[1] = 7;
@@ -121,12 +121,12 @@ void gaussKernel( uchar4* trg )
     weights[23] = 7;
     weights[24] = 2;
 
-	// perform gauss kernel
+    // perform gauss kernel
     float4 src = make_float4(0,0,0,0);
     for( unsigned int p=0; p<25; ++p )
     {
         uchar4 texValue = tex1Dfetch( gaussTex, idx[p] );
-    
+
         src.x += weights[p] * texValue.x;
         src.y += weights[p] * texValue.y;
         src.z += weights[p] * texValue.z;
@@ -140,13 +140,13 @@ void gaussKernel( uchar4* trg )
     src.y = clamp( src.y, 0, 255.0f );
     src.z = clamp( src.z, 0, 255.0f );
 
-	// write result
+    // write result
     trg[idx[12]] = 
-		make_uchar4( 
-			(unsigned char)(src.x), 
-			(unsigned char)(src.y),
-			(unsigned char)(src.z),
-			255);
+        make_uchar4( 
+        (unsigned char)(src.x), 
+        (unsigned char)(src.y),
+        (unsigned char)(src.z),
+        255);
 }
 
 //-------------------------------------------------------------------------
@@ -199,7 +199,7 @@ void sobelKernel( uchar4* trg )
     for( unsigned int p=0; p<9; ++p )
     {
         uchar4 texValue = tex1Dfetch( srcTex, idx[p] );
-    
+
         srcX.x += weightsX[p] * texValue.x;
         srcX.y += weightsX[p] * texValue.y;
         srcX.z += weightsX[p] * texValue.z;
@@ -209,7 +209,7 @@ void sobelKernel( uchar4* trg )
     for( unsigned int p=0; p<9; ++p )
     {
         uchar4 texValue = tex1Dfetch( srcTex, idx[p] );
-    
+
         srcY.x += weightsY[p] * texValue.x;
         srcY.y += weightsY[p] * texValue.y;
         srcY.z += weightsY[p] * texValue.z;
@@ -220,16 +220,16 @@ void sobelKernel( uchar4* trg )
     src.y = clamp( sqrt(srcX.y * srcX.y + srcY.y * srcY.y), 0, 255 );
     src.z = clamp( sqrt(srcX.z * srcX.z + srcY.z * srcY.z), 0, 255 );
 
-   
+
     trg[idx[4]] = 
-    make_uchar4( 
-    (unsigned char)(src.x), 
-    (unsigned char)(src.y),
-    (unsigned char)(src.z),
-    255);
+        make_uchar4( 
+        (unsigned char)(src.x), 
+        (unsigned char)(src.y),
+        (unsigned char)(src.z),
+        255);
 }
 
- 
+
 //-------------------------------------------------------------------------
 __global__ 
 void swapKernel( uchar4* trg ) 
@@ -245,16 +245,16 @@ void swapKernel( uchar4* trg )
 
     // compute texture coordinates
     float2 texCoord = make_float2( ((float) x / (float) width) ,
-                                   ((float) y / (float) height) );
+        ((float) y / (float) height) );
 
     // sample value
     float4 src = tex2D( swapTex, texCoord.x, texCoord.y );
     // swap channels
     trg[trgIdx] = make_uchar4( 
-                        (unsigned char)(src.z*255.0f), 
-                        (unsigned char)(src.x*255.0f),
-                        (unsigned char)(src.y*255.0f),
-                        (unsigned char)(src.w*255.0f));
+        (unsigned char)(src.z*255.0f), 
+        (unsigned char)(src.x*255.0f),
+        (unsigned char)(src.y*255.0f),
+        (unsigned char)(src.w*255.0f));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -277,8 +277,8 @@ void sobel( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcB
     // bind texture
     cudaError res = cudaBindTexture( 0, srcTex, srcBuffer, byteSize ); 
 
-	// call kernel
-	sobelKernel<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trgBuffer) );
+    // call kernel
+    sobelKernel<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trgBuffer) );
 }
 
 //-------------------------------------------------------------------------

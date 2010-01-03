@@ -24,7 +24,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     BufferStream::BufferStream() 
         :   _mapping( UNMAPPED ),
-            _allocHint(0)
+        _allocHint(0)
     {
     }
 
@@ -65,14 +65,14 @@ namespace osgCompute
             return false;
         }
 
-		if( _elementSize == 0 )
-		{
-			osg::notify(osg::FATAL)  
-				<< getName() << " [Buffer::init()]: no element size specified."                  
-				<< std::endl;
+        if( _elementSize == 0 )
+        {
+            osg::notify(osg::FATAL)  
+                << getName() << " [Buffer::init()]: no element size specified."                  
+                << std::endl;
 
-			return false;
-		}
+            return false;
+        }
 
         ///////////////////////
         // COMPUTE BYTE SIZE //
@@ -84,92 +84,92 @@ namespace osgCompute
         return Resource::init();
     }
 
-	//------------------------------------------------------------------------------
-	void Buffer::setElementSize( unsigned int elementSize ) 
-	{ 
-		if( !isClear() )
-			return;
+    //------------------------------------------------------------------------------
+    void Buffer::setElementSize( unsigned int elementSize ) 
+    { 
+        if( !isClear() )
+            return;
 
-		_elementSize = elementSize; 
-	}
+        _elementSize = elementSize; 
+    }
 
-	//------------------------------------------------------------------------------
-	unsigned int Buffer::getElementSize() const 
-	{ 
-		return _elementSize; 
-	}
+    //------------------------------------------------------------------------------
+    unsigned int Buffer::getElementSize() const 
+    { 
+        return _elementSize; 
+    }
 
-	//------------------------------------------------------------------------------
-	unsigned int Buffer::getByteSize() const 
-	{ 
-		return getElementSize() * getNumElements(); 
-	}
+    //------------------------------------------------------------------------------
+    unsigned int Buffer::getByteSize() const 
+    { 
+        return getElementSize() * getNumElements(); 
+    }
 
-	//------------------------------------------------------------------------------
-	void Buffer::setDimension( unsigned int dimIdx, unsigned int dimSize )
-	{
-		if( !isClear() )
-			return;
+    //------------------------------------------------------------------------------
+    void Buffer::setDimension( unsigned int dimIdx, unsigned int dimSize )
+    {
+        if( !isClear() )
+            return;
 
-		if (_dimensions.size()<=dimIdx)
-			_dimensions.resize(dimIdx+1,0);
+        if (_dimensions.size()<=dimIdx)
+            _dimensions.resize(dimIdx+1,0);
 
-		_dimensions[dimIdx] = dimSize;
-	}
+        _dimensions[dimIdx] = dimSize;
+    }
 
-	//------------------------------------------------------------------------------
-	unsigned int Buffer::getDimension( unsigned int dimIdx ) const
-	{ 
-		if( dimIdx > (_dimensions.size()-1) )
-			return 0;
+    //------------------------------------------------------------------------------
+    unsigned int Buffer::getDimension( unsigned int dimIdx ) const
+    { 
+        if( dimIdx > (_dimensions.size()-1) )
+            return 0;
 
-		return _dimensions[dimIdx];
-	}
+        return _dimensions[dimIdx];
+    }
 
-	//------------------------------------------------------------------------------
-	unsigned int Buffer::getNumDimensions() const
-	{ 
-		return _dimensions.size();
-	}
+    //------------------------------------------------------------------------------
+    unsigned int Buffer::getNumDimensions() const
+    { 
+        return _dimensions.size();
+    }
 
-	//------------------------------------------------------------------------------
-	unsigned int osgCompute::Buffer::getNumElements() const
-	{
-		return _numElements;
-	}
+    //------------------------------------------------------------------------------
+    unsigned int osgCompute::Buffer::getNumElements() const
+    {
+        return _numElements;
+    }
 
-	//------------------------------------------------------------------------------
-	void osgCompute::Buffer::setAllocHint( unsigned int allocHint )
-	{
-		if( !isClear() )
-			return;
+    //------------------------------------------------------------------------------
+    void osgCompute::Buffer::setAllocHint( unsigned int allocHint )
+    {
+        if( !isClear() )
+            return;
 
-		_allocHint = (_allocHint | allocHint);
-	}
+        _allocHint = (_allocHint | allocHint);
+    }
 
-	//------------------------------------------------------------------------------
-	unsigned int osgCompute::Buffer::getAllocHint() const
-	{
-		return _allocHint;
-	}
+    //------------------------------------------------------------------------------
+    unsigned int osgCompute::Buffer::getAllocHint() const
+    {
+        return _allocHint;
+    }
 
-	//------------------------------------------------------------------------------
-	void Buffer::setSubloadCallback( SubloadCallback* sc ) 
-	{ 
-		_subloadCallback = sc; 
-	}
+    //------------------------------------------------------------------------------
+    void Buffer::setSubloadCallback( SubloadCallback* sc ) 
+    { 
+        _subloadCallback = sc; 
+    }
 
-	//------------------------------------------------------------------------------
-	SubloadCallback* Buffer::getSubloadCallback() 
-	{ 
-		return _subloadCallback.get(); 
-	}
+    //------------------------------------------------------------------------------
+    SubloadCallback* Buffer::getSubloadCallback() 
+    { 
+        return _subloadCallback.get(); 
+    }
 
-	//------------------------------------------------------------------------------
-	const SubloadCallback* Buffer::getSubloadCallback() const 
-	{ 
-		return _subloadCallback.get(); 
-	}
+    //------------------------------------------------------------------------------
+    const SubloadCallback* Buffer::getSubloadCallback() const 
+    { 
+        return _subloadCallback.get(); 
+    }
 
     //------------------------------------------------------------------------------
     unsigned int Buffer::getMapping( unsigned int ) const
@@ -190,126 +190,126 @@ namespace osgCompute
         return stream->_mapping;
     }
 
-	//------------------------------------------------------------------------------
-	void Buffer::swap( unsigned int incr /*= 1 */ )
-	{
-		// Function should be implemented by swap buffers.
-	}
+    //------------------------------------------------------------------------------
+    void Buffer::swap( unsigned int incr /*= 1 */ )
+    {
+        // Function should be implemented by swap buffers.
+    }
 
-	//------------------------------------------------------------------------------
-	unsigned int Buffer::getSwapCount() const
-	{
-		// Function should be implemented by swap buffers.
-		return 0;
-	}
+    //------------------------------------------------------------------------------
+    unsigned int Buffer::getSwapCount() const
+    {
+        // Function should be implemented by swap buffers.
+        return 0;
+    }
 
-	//------------------------------------------------------------------------------
-	unsigned int Buffer::getSwapIdx() const
-	{
-		// Function should be implemented by swap buffers.
-		return 0;
-	}
+    //------------------------------------------------------------------------------
+    unsigned int Buffer::getSwapIdx() const
+    {
+        // Function should be implemented by swap buffers.
+        return 0;
+    }
 
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
-	//------------------------------------------------------------------------------
-	Buffer::~Buffer() 
-	{ 
-		clearLocal(); 
-	}
+    //------------------------------------------------------------------------------
+    Buffer::~Buffer() 
+    { 
+        clearLocal(); 
+    }
 
-	//------------------------------------------------------------------------------
-	void Buffer::clearLocal()
-	{
-		_dimensions.clear();
-		_numElements = 0;
-		_elementSize = 0;
-		_allocHint = 0;
-		_subloadCallback = NULL;
+    //------------------------------------------------------------------------------
+    void Buffer::clearLocal()
+    {
+        _dimensions.clear();
+        _numElements = 0;
+        _elementSize = 0;
+        _allocHint = 0;
+        _subloadCallback = NULL;
 
-		// The following is called implicitly by Resource::clearLocal():
-		// for( unsigned int s=0; s<_streams.size(); ++s )
-		//	 if( _streams[s] != NULL )
-		//		 delete _streams[s];
-		_streams.clear();
-	}
+        // The following is called implicitly by Resource::clearLocal():
+        // for( unsigned int s=0; s<_streams.size(); ++s )
+        //	 if( _streams[s] != NULL )
+        //		 delete _streams[s];
+        _streams.clear();
+    }
 
-	//------------------------------------------------------------------------------
-	BufferStream* Buffer::lookupStream() const
-	{
-		const Context* curCtx = Context::getAppliedContext();
-		if( NULL == curCtx )
-		{
-			osg::notify( osg::FATAL )  
-				<< getName() << " [Buffer::lookupStream()]: no context applied. Call context.apply() for some context first."
-				<< std::endl;
+    //------------------------------------------------------------------------------
+    BufferStream* Buffer::lookupStream() const
+    {
+        const Context* curCtx = Context::getAppliedContext();
+        if( NULL == curCtx )
+        {
+            osg::notify( osg::FATAL )  
+                << getName() << " [Buffer::lookupStream()]: no context applied. Call context.apply() for some context first."
+                << std::endl;
 
-			return NULL;
-		}
+            return NULL;
+        }
 
-		/////////////////////
-		// ALLOCATE STREAM //
-		/////////////////////
-		if( _streams.size() <= curCtx->getId() || 
-			NULL == _streams[curCtx->getId()] )
-			init( *curCtx );
+        /////////////////////
+        // ALLOCATE STREAM //
+        /////////////////////
+        if( _streams.size() <= curCtx->getId() || 
+            NULL == _streams[curCtx->getId()] )
+            init( *curCtx );
 
-		return _streams[curCtx->getId()];
-	}
+        return _streams[curCtx->getId()];
+    }
 
-	//------------------------------------------------------------------------------
-	BufferStream* Buffer::newStream() const
-	{
-		// implemented in the sub-classes
-		return NULL;
-	}
+    //------------------------------------------------------------------------------
+    BufferStream* Buffer::newStream() const
+    {
+        // implemented in the sub-classes
+        return NULL;
+    }
 
-	//------------------------------------------------------------------------------
-	void Buffer::init( const Context& context ) const
-	{
-		if( _streams.size()<= context.getId() )
-			_streams.resize( context.getId()+1, NULL );
+    //------------------------------------------------------------------------------
+    void Buffer::init( const Context& context ) const
+    {
+        if( _streams.size()<= context.getId() )
+            _streams.resize( context.getId()+1, NULL );
 
-		if( NULL == _streams[context.getId()] )
-		{
-			// create new buffer and attach it to the
-			// current context
-			_streams[context.getId()] = newStream();
+        if( NULL == _streams[context.getId()] )
+        {
+            // create new buffer and attach it to the
+            // current context
+            _streams[context.getId()] = newStream();
 
-			if( NULL == _streams[context.getId()] )
-			{
-				osg::notify( osg::FATAL )  
-					<< getName() << " [Buffer::init()]: allocation of data stream failed for context \""<<context.getId()<<"\"."
-					<< std::endl;
+            if( NULL == _streams[context.getId()] )
+            {
+                osg::notify( osg::FATAL )  
+                    << getName() << " [Buffer::init()]: allocation of data stream failed for context \""<<context.getId()<<"\"."
+                    << std::endl;
 
-				return;
-			}
-			_streams[context.getId()]->_allocHint = getAllocHint();
-			_streams[context.getId()]->_mapping = UNMAPPED;
-			_streams[context.getId()]->_context = const_cast<osgCompute::Context*>( &context );
-			Resource::init( context );
-		}
-	}
+                return;
+            }
+            _streams[context.getId()]->_allocHint = getAllocHint();
+            _streams[context.getId()]->_mapping = UNMAPPED;
+            _streams[context.getId()]->_context = const_cast<osgCompute::Context*>( &context );
+            Resource::init( context );
+        }
+    }
 
-	//------------------------------------------------------------------------------
-	void Buffer::clear( const Context& context ) const
-	{
-		BufferStream* curStream = _streams[context.getId()];
-		if( curStream != NULL )
-		{
-			std::vector<BufferStream*>::iterator itr = _streams.begin();
-			while( (*itr) != curStream )
-				itr++;
+    //------------------------------------------------------------------------------
+    void Buffer::clear( const Context& context ) const
+    {
+        BufferStream* curStream = _streams[context.getId()];
+        if( curStream != NULL )
+        {
+            std::vector<BufferStream*>::iterator itr = _streams.begin();
+            while( (*itr) != curStream )
+                itr++;
 
-			// delete stream and detach 
-			// it this from context
-			delete curStream;
-			_streams.erase( itr );
-		}
+            // delete stream and detach 
+            // it this from context
+            delete curStream;
+            _streams.erase( itr );
+        }
 
-		Resource::clear( context );
-	}
-}
+        Resource::clear( context );
+    }
+} 

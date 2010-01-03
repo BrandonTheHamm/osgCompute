@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 #include "PtclMover"
 
@@ -55,38 +55,38 @@ namespace PtclDemo
         if( isClear() )
             return;
 
-		const osgCompute::Context* ctx = osgCompute::Context::getAppliedContext();
+        const osgCompute::Context* ctx = osgCompute::Context::getAppliedContext();
         if( !ctx->isConnectedWithGraphicsContext() )
             return;
-		const osg::State* state = ctx->getGraphicsContext()->getState();
-		const osg::FrameStamp* fs = state->getFrameStamp();
-		if( fs == NULL )
-			return;
+        const osg::State* state = ctx->getGraphicsContext()->getState();
+        const osg::FrameStamp* fs = state->getFrameStamp();
+        if( fs == NULL )
+            return;
 
         /////////////
         // ADVANCE //
         /////////////
-		if( _firstFrame )
-		{
-			_lastTime = fs->getSimulationTime();
-			_firstFrame = false;
-		}
+        if( _firstFrame )
+        {
+            _lastTime = fs->getSimulationTime();
+            _firstFrame = false;
+        }
         float elapsedtime = static_cast<float>(fs->getSimulationTime() - _lastTime);
         _lastTime = fs->getSimulationTime();
 
         ////////////////////
         // MOVE PARTICLES //
         ////////////////////
-        move( _numBlocks, 
-              _numThreads, 
-              _ptcls->map(), 
-              elapsedtime );
+        move(_numBlocks, 
+            _numThreads, 
+            _ptcls->map(), 
+            elapsedtime );
     }
 
     //------------------------------------------------------------------------------
     void PtclMover::acceptResource( osgCompute::Resource& resource )
     {
-		// Search for the particle buffer
+        // Search for the particle buffer
         if( resource.isAddressedByHandle("PTCL_BUFFER") )
             _ptcls = dynamic_cast<osgCompute::Buffer*>( &resource );
     }

@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #ifndef OSGCOMPUTE_CALLBACK
@@ -24,41 +24,42 @@ namespace osgCompute
 {
     class Resource;
     class Context;
-	class Module;
+    class Module;
+    class Computation;
 
-	//! Module callback class
-	/**
-	* Callback class which is used for adding event callbacks or update callbacks to modules.<br>
-	* This allows users to customize a callback function during the update cycle or the event traversal.
-	*
-	*/
-	class LIBRARY_EXPORT ModuleCallback : public virtual osg::Object
-	{
-	public:
-		/** Constructor. The object will be initialized with default values. */
-		inline ModuleCallback() { clearLocal(); }
+    //! Module callback class
+    /**
+    * Callback class which is used for adding event callbacks or update callbacks to modules.<br>
+    * This allows users to customize a callback function during the update cycle or the event traversal.
+    *
+    */
+    class LIBRARY_EXPORT ModuleCallback : public virtual osg::Object
+    {
+    public:
+        /** Constructor. The object will be initialized with default values. */
+        inline ModuleCallback() { clearLocal(); }
 
-		/** Do customized callback code.*/
-		virtual void operator()( Module& module, osg::NodeVisitor& nv ) = 0;
+        /** Do customized callback code.*/
+        virtual void operator()( Module& module, osg::NodeVisitor& nv ) = 0;
 
-		/** Restore object to default state. Calls clearLocal(). */
-		virtual void clear() { clearLocal(); }
-	protected:
+        /** Restore object to default state. Calls clearLocal(). */
+        virtual void clear() { clearLocal(); }
+    protected:
 
-		/** Destructor. Release the memory by calling clearLocal(). */
-		virtual ~ModuleCallback() { clearLocal(); }
+        /** Destructor. Release the memory by calling clearLocal(). */
+        virtual ~ModuleCallback() { clearLocal(); }
 
-		/** Clear local members.*/
-		void clearLocal() {}
+        /** Clear local members.*/
+        void clearLocal() {}
 
-	private:
+    private:
 
-		/** Copy constructor. This constructor should not be called. */
-		ModuleCallback( const ModuleCallback&, const osg::CopyOp& ) {}
+        /** Copy constructor. This constructor should not be called. */
+        ModuleCallback( const ModuleCallback&, const osg::CopyOp& ) {}
 
-		/** Copy operator. This operator should not be called. */
-		ModuleCallback &operator=(const ModuleCallback &) { return *this; }
-	};
+        /** Copy operator. This operator should not be called. */
+        ModuleCallback &operator=(const ModuleCallback &) { return *this; }
+    };
 
     /**
     */
@@ -72,14 +73,14 @@ namespace osgCompute
         virtual void clear() { clearLocal(); }
 
         /** Do customized callback code. */
-        virtual void subload( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& buffer, const Context& context ) const = 0;
-        virtual void load( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& buffer, const Context& context ) const = 0;
+        virtual void subload( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& resource ) const = 0;
+        virtual void load( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& resource ) const = 0;
 
     protected:
 
         /** Destructor. Release the memory by calling clearLocal(). */
         virtual ~SubloadCallback() { clearLocal(); }
-        
+
         /** Clear local members.*/
         void clearLocal() {}
 
@@ -108,7 +109,7 @@ namespace osgCompute
         virtual void clear() { clearLocal(); }
 
         /** Do customized callback code.*/
-        virtual void operator()( const osg::Referenced& reference, const Context& context ) const = 0;
+        virtual void operator()( Computation& computation ) = 0;
 
     protected:
 

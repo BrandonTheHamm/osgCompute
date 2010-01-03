@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #include <sstream>
@@ -29,7 +29,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------ 
     Computation::Computation() 
         :   osg::Group(),
-            _parentComputation( NULL )
+        _parentComputation( NULL )
     { 
         clearLocal(); 
     }
@@ -48,49 +48,49 @@ namespace osgCompute
             nv.pushOntoNodePath(this);
 
             osgUtil::CullVisitor* cv = dynamic_cast<osgUtil::CullVisitor*>( &nv );
-			osgUtil::GLObjectsVisitor* ov = dynamic_cast<osgUtil::GLObjectsVisitor*>( &nv );
+            osgUtil::GLObjectsVisitor* ov = dynamic_cast<osgUtil::GLObjectsVisitor*>( &nv );
             ResourceVisitor* rv = dynamic_cast<ResourceVisitor*>( &nv );
             if( cv != NULL )
             {
-				if( _enabled && (_computeOrder & OSGCOMPUTE_RENDER) == OSGCOMPUTE_RENDER )
-					addBin( *cv );
-				else
-					nv.apply(*this);
+                if( _enabled && (_computeOrder & OSGCOMPUTE_RENDER) == OSGCOMPUTE_RENDER )
+                    addBin( *cv );
+                else
+                    nv.apply(*this);
             }
-			else if( ov != NULL )
-			{
-				getOrCreateContext( *ov->getState() );
+            else if( ov != NULL )
+            {
+                getOrCreateContext( *ov->getState() );
 
-				nv.apply( *this );
-			}
+                nv.apply( *this );
+            }
             else if( rv != NULL )
             {
                 collectResources();
 
-				nv.apply( *this );
+                nv.apply( *this );
             }
             else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
             {
                 update( nv );
 
-				if( _enabled && (_computeOrder & UPDATE_PRE_TRAVERSAL) == UPDATE_PRE_TRAVERSAL )
-					launch();
+                if( _enabled && (_computeOrder & UPDATE_PRE_TRAVERSAL) == UPDATE_PRE_TRAVERSAL )
+                    launch();
 
-				nv.apply( *this );
+                nv.apply( *this );
 
-				if( _enabled && (_computeOrder & UPDATE_POST_TRAVERSAL) == UPDATE_POST_TRAVERSAL )
-					launch();
+                if( _enabled && (_computeOrder & UPDATE_POST_TRAVERSAL) == UPDATE_POST_TRAVERSAL )
+                    launch();
             }
-			else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
-			{
-				handleevent( nv );
+            else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
+            {
+                handleevent( nv );
 
-				nv.apply( *this );
-			}
-			else
-			{
-				nv.apply( *this );
-			}
+                nv.apply( *this );
+            }
+            else
+            {
+                nv.apply( *this );
+            }
 
             nv.popFromNodePath(); 
         } 
@@ -101,7 +101,7 @@ namespace osgCompute
     {
         // not implemented yet
     }
-    
+
     //------------------------------------------------------------------------------
     void Computation::addModule( Module& module )
     {
@@ -115,12 +115,12 @@ namespace osgCompute
             module.acceptResource( *curResource );
         }
 
-		// increment traversal counter if required
-		if( module.getEventCallback() )
-			osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() + 1 );
+        // increment traversal counter if required
+        if( module.getEventCallback() )
+            osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() + 1 );
 
-		if( module.getUpdateCallback() )
-			osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() + 1 );
+        if( module.getUpdateCallback() )
+            osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() + 1 );
 
 
         _modules.push_back( &module );
@@ -134,12 +134,12 @@ namespace osgCompute
         {
             if( (*itr) == &module )
             {
-				// decrement traversal counter if necessary
-				if( module.getEventCallback() )
-					osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
+                // decrement traversal counter if necessary
+                if( module.getEventCallback() )
+                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
 
-				if( module.getUpdateCallback() )
-					osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
+                if( module.getUpdateCallback() )
+                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
 
                 _modules.erase( itr );
                 subgraphChanged();
@@ -156,12 +156,12 @@ namespace osgCompute
         {
             if( (*itr)->isAddressedByHandle( moduleHandle ) )
             {
-				// decrement traversal counter if necessary
-				if( (*itr)->getEventCallback() )
-					osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
+                // decrement traversal counter if necessary
+                if( (*itr)->getEventCallback() )
+                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
 
-				if( (*itr)->getUpdateCallback() )
-					osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
+                if( (*itr)->getUpdateCallback() )
+                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
 
 
                 _modules.erase( itr );
@@ -181,19 +181,19 @@ namespace osgCompute
         ModuleListItr itr;
         while( !_modules.empty() )
         {
-			itr = _modules.begin();
+            itr = _modules.begin();
 
-			Module* curModule = (*itr).get();
-			if( curModule != NULL )
-			{
-				// decrement traversal counter if necessary
-				if( curModule->getEventCallback() )
-					osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
+            Module* curModule = (*itr).get();
+            if( curModule != NULL )
+            {
+                // decrement traversal counter if necessary
+                if( curModule->getEventCallback() )
+                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
 
-				if( curModule->getUpdateCallback() )
-					osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
-			}
-			_modules.erase( itr );
+                if( curModule->getUpdateCallback() )
+                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
+            }
+            _modules.erase( itr );
         }
 
         subgraphChanged();
@@ -320,8 +320,8 @@ namespace osgCompute
             for( ModuleListItr moditr = _modules.begin(); moditr != _modules.end(); ++moditr )
                 (*moditr)->removeResource( resource );
 
-             _resources.erase( itr );
-             subgraphChanged();
+            _resources.erase( itr );
+            subgraphChanged();
         }
     }
 
@@ -377,103 +377,103 @@ namespace osgCompute
 
 
 
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	//------------------------------------------------------------------------------
-	void Computation::setLaunchCallback( LaunchCallback* lc ) 
-	{ 
-		if( lc == _launchCallback )
-			return;
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    void Computation::setLaunchCallback( LaunchCallback* lc ) 
+    { 
+        if( lc == _launchCallback )
+            return;
 
-		_launchCallback = lc; 
-	}
+        _launchCallback = lc; 
+    }
 
-	//------------------------------------------------------------------------------
-	LaunchCallback* Computation::getLaunchCallback() 
-	{ 
-		return _launchCallback; 
-	}
+    //------------------------------------------------------------------------------
+    LaunchCallback* Computation::getLaunchCallback() 
+    { 
+        return _launchCallback; 
+    }
 
-	//------------------------------------------------------------------------------
-	const LaunchCallback* Computation::getLaunchCallback() const 
-	{ 
-		return _launchCallback; 
-	}
+    //------------------------------------------------------------------------------
+    const LaunchCallback* Computation::getLaunchCallback() const 
+    { 
+        return _launchCallback; 
+    }
 
-	//------------------------------------------------------------------------------
-	void Computation::setComputeOrder( Computation::ComputeOrder co )
-	{
-		// deactivate auto update
-		if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
-			setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() - 1 );
-		
-		_computeOrder = co;
+    //------------------------------------------------------------------------------
+    void Computation::setComputeOrder( Computation::ComputeOrder co )
+    {
+        // deactivate auto update
+        if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
+            setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() - 1 );
 
-		// set auto update active in case we use the update traversal to compute things
-		if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
-			setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
-	}
+        _computeOrder = co;
 
-	//------------------------------------------------------------------------------
-	Computation::ComputeOrder Computation::getComputeOrder()
-	{
-		return _computeOrder;
-	}
+        // set auto update active in case we use the update traversal to compute things
+        if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
+            setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
+    }
 
-	//------------------------------------------------------------------------------
-	Computation* Computation::getParentComputation() const
-	{
-		return _parentComputation;
-	}
+    //------------------------------------------------------------------------------
+    Computation::ComputeOrder Computation::getComputeOrder()
+    {
+        return _computeOrder;
+    }
 
-	//------------------------------------------------------------------------------
-	void Computation::setAutoCheckSubgraph( bool autoCheckSubgraph )
-	{
-		_autoCheckSubgraph = autoCheckSubgraph;
-	}
+    //------------------------------------------------------------------------------
+    Computation* Computation::getParentComputation() const
+    {
+        return _parentComputation;
+    }
 
-	//------------------------------------------------------------------------------
-	bool Computation::getAutoCheckSubgraph()
-	{
-		return _autoCheckSubgraph;
-	}
+    //------------------------------------------------------------------------------
+    void Computation::setAutoCheckSubgraph( bool autoCheckSubgraph )
+    {
+        _autoCheckSubgraph = autoCheckSubgraph;
+    }
 
-	//------------------------------------------------------------------------------
-	void Computation::enable() 
-	{ 
-		_enabled = true; 
-	}
+    //------------------------------------------------------------------------------
+    bool Computation::getAutoCheckSubgraph()
+    {
+        return _autoCheckSubgraph;
+    }
 
-	//------------------------------------------------------------------------------
-	void Computation::disable() 
-	{ 
-		_enabled = false; 
-	}
+    //------------------------------------------------------------------------------
+    void Computation::enable() 
+    { 
+        _enabled = true; 
+    }
 
-	//------------------------------------------------------------------------------
-	bool Computation::isEnabled() const
-	{
-		return _enabled;
-	}
+    //------------------------------------------------------------------------------
+    void Computation::disable() 
+    { 
+        _enabled = false; 
+    }
 
-	//------------------------------------------------------------------------------
-	void Computation::releaseGLObjects( osg::State* state ) const
-	{
-		for( ContextMapItr itr = _contextMap.begin();
-			 itr != _contextMap.end();
-			 ++itr )
-		{
-			if( (*itr).second->getGraphicsContext()->getState() == state )
-			{
-				(*itr).second->clearResources();
-				_contextMap.erase( itr );
-				break;
-			}
-		}
+    //------------------------------------------------------------------------------
+    bool Computation::isEnabled() const
+    {
+        return _enabled;
+    }
 
-		Group::releaseGLObjects( state );
-	}
+    //------------------------------------------------------------------------------
+    void Computation::releaseGLObjects( osg::State* state ) const
+    {
+        for( ContextMapItr itr = _contextMap.begin();
+            itr != _contextMap.end();
+            ++itr )
+        {
+            if( (*itr).second->getGraphicsContext()->getState() == state )
+            {
+                (*itr).second->clearResources();
+                _contextMap.erase( itr );
+                break;
+            }
+        }
+
+        Group::releaseGLObjects( state );
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
@@ -492,16 +492,16 @@ namespace osgCompute
         _resourceVisitor = NULL;
         _contextMap.clear();
 
-		// clear node or group related members
+        // clear node or group related members
         removeChildren(0,osg::Group::getNumChildren());
-		setDataVariance( osg::Object::DYNAMIC );
-		setUpdateCallback( NULL );
-		setEventCallback( NULL );
+        setDataVariance( osg::Object::DYNAMIC );
+        setUpdateCallback( NULL );
+        setEventCallback( NULL );
 
-		// setup computation order
-		_computeOrder = UPDATE_PRE_TRAVERSAL;//RENDER_PRE_RENDER_PRE_TRAVERSAL;//
-		if( (_computeOrder & OSGCOMPUTE_UPDATE) == OSGCOMPUTE_UPDATE )
-			setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
+        // setup computation order
+        _computeOrder = UPDATE_PRE_TRAVERSAL;//RENDER_PRE_RENDER_PRE_TRAVERSAL;//
+        if( (_computeOrder & OSGCOMPUTE_UPDATE) == OSGCOMPUTE_UPDATE )
+            setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
     }
 
     //------------------------------------------------------------------------------
@@ -517,26 +517,26 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     bool osgCompute::Computation::setContext( Context& context )
     {
-		if( !context.isConnectedWithGraphicsContext() ||
-			context.getGraphicsContext()->getState() == NULL )
-			return false;
+        if( !context.isConnectedWithGraphicsContext() ||
+            context.getGraphicsContext()->getState() == NULL )
+            return false;
 
-		if( _parentComputation == NULL )
-		{
-			_contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
-		
-			// Pass on context to subgraph
-			distributeContext( context );
-		}
-		else
-		{
-			// Search for topmost computation
-			Computation* topComp = this;
-			while( NULL != topComp->getParentComputation() )
-				topComp = topComp->getParentComputation();
+        if( _parentComputation == NULL )
+        {
+            _contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
 
-			topComp->setContext( context );
-		}
+            // Pass on context to subgraph
+            distributeContext( context );
+        }
+        else
+        {
+            // Search for topmost computation
+            Computation* topComp = this;
+            while( NULL != topComp->getParentComputation() )
+                topComp = topComp->getParentComputation();
+
+            topComp->setContext( context );
+        }
 
         return true;
     }
@@ -552,10 +552,10 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-	Context* Computation::getOrCreateContext( osg::State& state )
+    Context* Computation::getOrCreateContext( osg::State& state )
     {
-		// find or create context
-		bool contextCreated = false;
+        // find or create context
+        bool contextCreated = false;
         Context* context = NULL;
         ContextMapItr itr = _contextMap.find( state.getContextID() );
         if( itr == _contextMap.end() )
@@ -570,19 +570,19 @@ namespace osgCompute
                 return NULL;
             }
 
-			context->connectWithGraphicsContext( *state.getGraphicsContext() );
+            context->connectWithGraphicsContext( *state.getGraphicsContext() );
             _contextMap.insert( std::make_pair< unsigned int, osg::ref_ptr<Context> >( state.getContextID(), context) );
-			context->init();
-			contextCreated = true;
+            context->init();
+            contextCreated = true;
         }
         else
         {
             context = (*itr).second.get();
         }
 
-		// traverse subgraph and pass on context 
-		if( contextCreated || getAutoCheckSubgraph() )
-			distributeContext( *context );
+        // traverse subgraph and pass on context 
+        if( contextCreated || getAutoCheckSubgraph() )
+            distributeContext( *context );
 
         return context;
     }
@@ -590,24 +590,24 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Computation::addBin( osgUtil::CullVisitor& cv )
     {
-		if( !cv.getState() )
-		{
-			osg::notify(osg::FATAL)  << "Computation::addBin() for \""
-				<< getName()<<"\": CullVisitor must provide a valid state."
-				<< std::endl;
+        if( !cv.getState() )
+        {
+            osg::notify(osg::FATAL)  << "Computation::addBin() for \""
+                << getName()<<"\": CullVisitor must provide a valid state."
+                << std::endl;
 
-			return;
-		}
+            return;
+        }
 
-		Context* ctx = getContext( *cv.getState() );
-		if( !ctx )
-		{
-			osg::notify(osg::FATAL)  
-				<< getName() << " [Computation::addBin()]: cannot find valid context."
-				<< std::endl;
+        Context* ctx = getContext( *cv.getState() );
+        if( !ctx )
+        {
+            osg::notify(osg::FATAL)  
+                << getName() << " [Computation::addBin()]: cannot find valid context."
+                << std::endl;
 
-			return;
-		}
+            return;
+        }
 
         ///////////////////////
         // SETUP REDIRECTION //
@@ -616,7 +616,7 @@ namespace osgCompute
         if( !oldRB )
         {
             osg::notify(osg::FATAL)  
-               << getName() << " [Computation::addBin()]: current CullVisitor has no active RenderBin."
+                << getName() << " [Computation::addBin()]: current CullVisitor has no active RenderBin."
                 << std::endl;
 
             return;
@@ -626,7 +626,7 @@ namespace osgCompute
         // We have to look for a better method to add more computation bins
         // to the same hierarchy level
         int rbNum = 0;
-		if( (_computeOrder & OSGCOMPUTE_POST_RENDER) !=  OSGCOMPUTE_POST_RENDER )
+        if( (_computeOrder & OSGCOMPUTE_POST_RENDER) !=  OSGCOMPUTE_POST_RENDER )
         {
             osgUtil::RenderBin::RenderBinList::const_iterator itr = rbList.begin();
             if( itr != rbList.end() && (*itr).first < 0 )
@@ -663,58 +663,65 @@ namespace osgCompute
         pb->init( *this );
         pb->setContext( *ctx );
 
-		//////////////
-		// TRAVERSE //
-		//////////////
+        //////////////
+        // TRAVERSE //
+        //////////////
         cv.setCurrentRenderBin( pb );
         cv.apply( *this );
         cv.setCurrentRenderBin( oldRB );
     }
 
-	//------------------------------------------------------------------------------
-	void Computation::launch()
-	{
-		// For all contexts launch modules
-		for( ContextMapItr itr = _contextMap.begin(); itr != _contextMap.end(); ++itr )
-		{
-			Context* curCtx = itr->second.get();
-			if( curCtx->isClear() )
-				continue;
+    //------------------------------------------------------------------------------
+    void Computation::launch()
+    {
+        if( _launchCallback ) 
+        {
+            (*_launchCallback)( *this ); 
+        }
+        else
+        {
+            // For all contexts launch modules
+            for( ContextMapItr itr = _contextMap.begin(); itr != _contextMap.end(); ++itr )
+            {
+                Context* curCtx = itr->second.get();
+                if( curCtx->isClear() )
+                    continue;
 
-			// Apply context 
-			curCtx->apply();
+                // Apply context 
+                curCtx->apply();
 
-			// Launch modules
-			for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-			{
-				if( (*itr)->isEnabled() )
-				{
-					if( (*itr)->isClear() )
-						(*itr)->init();
+                // Launch modules
+                for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+                {
+                    if( (*itr)->isEnabled() )
+                    {
+                        if( (*itr)->isClear() )
+                            (*itr)->init();
 
-					(*itr)->launch();
-				}
-			}
-		}
-	}
+                        (*itr)->launch();
+                    }
+                }
+            }
+        }
+    }
 
-	//------------------------------------------------------------------------------
-	void Computation::acceptContext( Context& context )
-	{
-		if( !context.isConnectedWithGraphicsContext() ||
-			context.getGraphicsContext()->getState() == NULL )
-			return;
+    //------------------------------------------------------------------------------
+    void Computation::acceptContext( Context& context )
+    {
+        if( !context.isConnectedWithGraphicsContext() ||
+            context.getGraphicsContext()->getState() == NULL )
+            return;
 
-		_contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
-	}
+        _contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
+    }
 
-	//------------------------------------------------------------------------------
-	void osgCompute::Computation::removeContext( osg::State& state )
-	{
-		ContextMapItr itr = _contextMap.find( state.getContextID() );
-		if( itr != _contextMap.end() )
-			_contextMap.erase(itr);
-	}
+    //------------------------------------------------------------------------------
+    void osgCompute::Computation::removeContext( osg::State& state )
+    {
+        ContextMapItr itr = _contextMap.find( state.getContextID() );
+        if( itr != _contextMap.end() )
+            _contextMap.erase(itr);
+    }
 
     //------------------------------------------------------------------------------
     void osgCompute::Computation::distributeContext( Context& context )
@@ -733,7 +740,7 @@ namespace osgCompute
         // distribute context to the subgraph
         ctxVisitor->apply( *this );
     }
-    
+
     //------------------------------------------------------------------------------
     void Computation::update( osg::NodeVisitor& uv )
     {
@@ -777,11 +784,11 @@ namespace osgCompute
                 subgraphChanged();
         }
 
-		for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-		{
-			if( (*itr)->getUpdateCallback() )
-				(*(*itr)->getUpdateCallback())( *(*itr), uv );
-		}
+        for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+        {
+            if( (*itr)->getUpdateCallback() )
+                (*(*itr)->getUpdateCallback())( *(*itr), uv );
+        }
     }
 
     //------------------------------------------------------------------------------
@@ -811,18 +818,18 @@ namespace osgCompute
         _resourcesCollected = true;
     }
 
-	//------------------------------------------------------------------------------
-	void Computation::handleevent( osg::NodeVisitor& ev )
-	{
-		if( getEventCallback() )
-			(*getEventCallback())( this, &ev );
-		else
-		{
-			for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-			{
-				if( (*itr)->getEventCallback() )
-					(*(*itr)->getEventCallback())( *(*itr), ev );
-			}
-		}
-	}  
-}
+    //------------------------------------------------------------------------------
+    void Computation::handleevent( osg::NodeVisitor& ev )
+    {
+        if( getEventCallback() )
+            (*getEventCallback())( this, &ev );
+        else
+        {
+            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+            {
+                if( (*itr)->getEventCallback() )
+                    (*(*itr)->getEventCallback())( *(*itr), ev );
+            }
+        }
+    }  
+} 

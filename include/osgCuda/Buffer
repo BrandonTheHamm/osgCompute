@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #ifndef OSGCUDA_BUFFER
@@ -26,7 +26,7 @@ namespace osgCuda
 {
     /**
     */
-	class BufferStream : public osgCompute::BufferStream
+    class BufferStream : public osgCompute::BufferStream
     {
     public:
         void*							_devPtr;
@@ -47,21 +47,21 @@ namespace osgCuda
     };
 
     /**
-	*/
-	class LIBRARY_EXPORT Buffer : public osgCompute::Buffer
+    */
+    class LIBRARY_EXPORT Buffer : public osgCompute::Buffer
     {
     public:
         Buffer();
-		
-		META_Object(osgCuda,Buffer)
+
+        META_Object(osgCuda,Buffer)
 
         virtual bool init();
         virtual void clear();
 
         virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
         virtual void unmap( unsigned int hint = 0 );
-		virtual bool setMemory( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 );
-		virtual bool resetMemory( unsigned int hint = 0 );
+        virtual bool setMemory( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 );
+        virtual bool resetMemory( unsigned int hint = 0 );
 
         virtual void setImage( osg::Image* image );
         virtual osg::Image* getImage();
@@ -81,7 +81,7 @@ namespace osgCuda
         bool allocStream( unsigned int mapping, BufferStream& stream );
         bool syncStream( unsigned int mapping, BufferStream& stream );
         virtual osgCompute::BufferStream* newStream() const;
-		void resetModifiedCounts() const;
+        void resetModifiedCounts() const;
 
     protected:
         mutable osg::ref_ptr<osg::Array>     _array;

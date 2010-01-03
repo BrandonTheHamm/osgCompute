@@ -102,7 +102,7 @@ namespace osgCompute
                         addResource( *res->getOrCreateBuffer() );
             }
         }
-            
+
         osg::NodeVisitor::apply( node );
     }
 
@@ -155,65 +155,65 @@ namespace osgCompute
         // done by the computation itself
     }
 
-	//------------------------------------------------------------------------------
-	bool ResourceVisitor::isClear() const
-	{
-		return _clear;
-	}
+    //------------------------------------------------------------------------------
+    bool ResourceVisitor::isClear() const
+    {
+        return _clear;
+    }
 
-	//------------------------------------------------------------------------------
-	void ResourceVisitor::setComputation( Computation* computation )
-	{
-		_computation = computation;
-	}
+    //------------------------------------------------------------------------------
+    void ResourceVisitor::setComputation( Computation* computation )
+    {
+        _computation = computation;
+    }
 
-	//------------------------------------------------------------------------------
-	Computation* ResourceVisitor::getComputation()
-	{
-		return _computation;
-	}
+    //------------------------------------------------------------------------------
+    Computation* ResourceVisitor::getComputation()
+    {
+        return _computation;
+    }
 
-	//------------------------------------------------------------------------------
-	const Computation* ResourceVisitor::getComputation() const
-	{
-		return _computation;
-	}
+    //------------------------------------------------------------------------------
+    const Computation* ResourceVisitor::getComputation() const
+    {
+        return _computation;
+    }
 
-	//------------------------------------------------------------------------------
-	void ResourceVisitor::addResource( Resource& resource )
-	{
-		_ptrResources->insert( &resource );
-	}
+    //------------------------------------------------------------------------------
+    void ResourceVisitor::addResource( Resource& resource )
+    {
+        _ptrResources->insert( &resource );
+    }
 
-	//------------------------------------------------------------------------------
-	void ResourceVisitor::removeResource( Resource& resource )
-	{
-		ResourceSetItr itr = _ptrResources->find( &resource );
-		if( itr != _ptrResources->end() )
-			_ptrResources->erase( itr );
-	}
+    //------------------------------------------------------------------------------
+    void ResourceVisitor::removeResource( Resource& resource )
+    {
+        ResourceSetItr itr = _ptrResources->find( &resource );
+        if( itr != _ptrResources->end() )
+            _ptrResources->erase( itr );
+    }
 
-	//------------------------------------------------------------------------------
-	bool ResourceVisitor::hasResource( Resource& resource )
-	{
-		ResourceSetItr itr = _ptrResources->find( &resource );
-		if( itr != _ptrResources->end() )
-			return true;
+    //------------------------------------------------------------------------------
+    bool ResourceVisitor::hasResource( Resource& resource )
+    {
+        ResourceSetItr itr = _ptrResources->find( &resource );
+        if( itr != _ptrResources->end() )
+            return true;
 
-		return false;
-	}
+        return false;
+    }
 
-	//------------------------------------------------------------------------------
-	ResourceSet& ResourceVisitor::getResources()
-	{
-		return *_ptrResources;
-	}
+    //------------------------------------------------------------------------------
+    ResourceSet& ResourceVisitor::getResources()
+    {
+        return *_ptrResources;
+    }
 
-	//------------------------------------------------------------------------------
-	const ResourceSet& ResourceVisitor::getResources() const
-	{
-		return *_ptrResources;
-	}
+    //------------------------------------------------------------------------------
+    const ResourceSet& ResourceVisitor::getResources() const
+    {
+        return *_ptrResources;
+    }
 
     //------------------------------------------------------------------------------
     void ResourceVisitor::reset() 
@@ -282,45 +282,45 @@ namespace osgCompute
             return;
 
         // setup shared context
-		osg::GraphicsContext* gc = _context->getGraphicsContext();
+        osg::GraphicsContext* gc = _context->getGraphicsContext();
         if( computation.getContext( *gc->getState() ) != _context.get()  )
             computation.acceptContext( *_context );
 
         osg::NodeVisitor::traverse( computation );
     }
 
-	//------------------------------------------------------------------------------
-	void ContextVisitor::apply( osg::Group& group )
-	{
-		if( Computation* comp = dynamic_cast<Computation*>( &group ) )
-			apply( *comp );
-		else
-			osg::NodeVisitor::apply( group );
-	}
+    //------------------------------------------------------------------------------
+    void ContextVisitor::apply( osg::Group& group )
+    {
+        if( Computation* comp = dynamic_cast<Computation*>( &group ) )
+            apply( *comp );
+        else
+            osg::NodeVisitor::apply( group );
+    }
 
-	//------------------------------------------------------------------------------
-	void ContextVisitor::setContext( Context* context )
-	{
-		_context = context;
-	}
+    //------------------------------------------------------------------------------
+    void ContextVisitor::setContext( Context* context )
+    {
+        _context = context;
+    }
 
-	//------------------------------------------------------------------------------
-	Context* ContextVisitor::getContext()
-	{
-		return _context.get();
-	}
+    //------------------------------------------------------------------------------
+    Context* ContextVisitor::getContext()
+    {
+        return _context.get();
+    }
 
-	//------------------------------------------------------------------------------
-	const Context* ContextVisitor::getContext() const
-	{
-		return _context.get();
-	}
+    //------------------------------------------------------------------------------
+    const Context* ContextVisitor::getContext() const
+    {
+        return _context.get();
+    }
 
-	//------------------------------------------------------------------------------
-	bool ContextVisitor::isClear() const
-	{
-		return _clear;
-	}
+    //------------------------------------------------------------------------------
+    bool ContextVisitor::isClear() const
+    {
+        return _clear;
+    }
 
     //------------------------------------------------------------------------------
     void ContextVisitor::clear()
@@ -337,4 +337,4 @@ namespace osgCompute
         _context = NULL;
         _clear = true;
     }
-}
+} 

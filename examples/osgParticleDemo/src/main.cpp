@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #include <iostream>
@@ -114,9 +114,9 @@ osg::Geode* getGeode( unsigned int numParticles )
 {
     osg::Geode* geode = new osg::Geode;
 
-	//////////////
-	// GEOMETRY //
-	//////////////
+    //////////////
+    // GEOMETRY //
+    //////////////
     osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
 
     // Initialize the Particles
@@ -171,49 +171,49 @@ int main(int argc, char *argv[])
     osg::Vec3 bbmax(4,4,4);
     unsigned int numParticles = 64000;
 
-	///////////////
-	// RESOURCES //
-	///////////////
-	// Seeds
-	osg::FloatArray* seedValues = new osg::FloatArray();
-	for( unsigned int s=0; s<numParticles; ++s )
-		seedValues->push_back( float(rand()) / RAND_MAX );
+    ///////////////
+    // RESOURCES //
+    ///////////////
+    // Seeds
+    osg::FloatArray* seedValues = new osg::FloatArray();
+    for( unsigned int s=0; s<numParticles; ++s )
+        seedValues->push_back( float(rand()) / RAND_MAX );
 
-	osgCuda::Buffer* seedBuffer = new osgCuda::Buffer;
-	seedBuffer->setElementSize( sizeof(float) );
-	seedBuffer->setName( "ptclSeedBuffer" );
-	seedBuffer->setDimension(0,numParticles);
-	seedBuffer->setArray( seedValues );
-	seedBuffer->addHandle( "PTCL_SEEDS" );
+    osgCuda::Buffer* seedBuffer = new osgCuda::Buffer;
+    seedBuffer->setElementSize( sizeof(float) );
+    seedBuffer->setName( "ptclSeedBuffer" );
+    seedBuffer->setDimension(0,numParticles);
+    seedBuffer->setArray( seedValues );
+    seedBuffer->addHandle( "PTCL_SEEDS" );
 
-	///////////////////
-	// SETUP MODULES //
-	///////////////////
-	// Create module
-	PtclDemo::PtclMover* ptclMover = new PtclDemo::PtclMover;
-	ptclMover->setName( "ptclMover" );
+    ///////////////////
+    // SETUP MODULES //
+    ///////////////////
+    // Create module
+    PtclDemo::PtclMover* ptclMover = new PtclDemo::PtclMover;
+    ptclMover->setName( "ptclMover" );
 
-	PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
-	ptclEmitter->setName( "ptclEmitter" );
-	ptclEmitter->setSeedBox( bbmin, bbmax );
+    PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
+    ptclEmitter->setName( "ptclEmitter" );
+    ptclEmitter->setSeedBox( bbmin, bbmax );
 
-	osgCuda::Computation* computationEmit = new osgCuda::Computation;
-	// Execute the computation during the update traversal before the subgraph is handled. 
-	// This is the default behaviour. Use the following line to execute the computation in
-	// the rendering traversal after the subgraph has been rendered.
-	//computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
-	computationEmit->setName("emit");
-	computationEmit->addModule( *ptclEmitter );  
-	computationEmit->addResource( *seedBuffer );
-	// The particle buffer is located in the subgraph of
-	// the modules
-	computationEmit->addChild( getGeode( numParticles ) );
+    osgCuda::Computation* computationEmit = new osgCuda::Computation;
+    // Execute the computation during the update traversal before the subgraph is handled. 
+    // This is the default behaviour. Use the following line to execute the computation in
+    // the rendering traversal after the subgraph has been rendered.
+    //computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
+    computationEmit->setName("emit");
+    computationEmit->addModule( *ptclEmitter );  
+    computationEmit->addResource( *seedBuffer );
+    // The particle buffer is located in the subgraph of
+    // the modules
+    computationEmit->addChild( getGeode( numParticles ) );
 
-	osgCuda::Computation* computationMove = new osgCuda::Computation;
-	//computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
-	computationMove->setName( "move" );
-	computationMove->addModule( *ptclMover );
-	computationMove->addChild( computationEmit );
+    osgCuda::Computation* computationMove = new osgCuda::Computation;
+    //computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
+    computationMove->setName( "move" );
+    computationMove->addModule( *ptclMover );
+    computationMove->addChild( computationEmit );
 
     /////////////////
     // SETUP SCENE //
@@ -231,9 +231,9 @@ int main(int argc, char *argv[])
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.setUpViewInWindow( 50, 50, 640, 480);
 
-	// You must use the single threaded version since osgCompute currently
-	// does only support single threaded applications. Please ask in the
-	// forum for the multi-threaded version if you need it.
+    // You must use the single threaded version since osgCompute currently
+    // does only support single threaded applications. Please ask in the
+    // forum for the multi-threaded version if you need it.
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
 
     viewer.setSceneData( scene );

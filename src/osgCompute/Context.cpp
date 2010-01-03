@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #include <sstream>
@@ -21,86 +21,86 @@
 
 namespace osgCompute
 {
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	static std::set< Context* >	s_Contexts;
-	static Context*				s_AppliedContext;
-	static unsigned int			s_ContextIds = 0;
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    static std::set< Context* >	s_Contexts;
+    static Context*				s_AppliedContext;
+    static unsigned int			s_ContextIds = 0;
 
-	//------------------------------------------------------------------------------
-	static void addContext( Context& context )
-	{
-		for( std::set< Context* >::iterator itr = s_Contexts.begin();
-			  itr != s_Contexts.end();
-			  ++itr )
-			if( (*itr) == &context )
-				return;
+    //------------------------------------------------------------------------------
+    static void addContext( Context& context )
+    {
+        for( std::set< Context* >::iterator itr = s_Contexts.begin();
+            itr != s_Contexts.end();
+            ++itr )
+            if( (*itr) == &context )
+                return;
 
-		s_Contexts.insert( &context );
-	}
+        s_Contexts.insert( &context );
+    }
 
-	//------------------------------------------------------------------------------
-	static void removeContext( Context& context )
-	{
-		for( std::set< Context* >::iterator itr = s_Contexts.begin();
-			itr != s_Contexts.end();
-			++itr )
-			if( (*itr) == &context )
-			{
-				s_Contexts.erase( itr );
-				return;
-			}
-	}
+    //------------------------------------------------------------------------------
+    static void removeContext( Context& context )
+    {
+        for( std::set< Context* >::iterator itr = s_Contexts.begin();
+            itr != s_Contexts.end();
+            ++itr )
+            if( (*itr) == &context )
+            {
+                s_Contexts.erase( itr );
+                return;
+            }
+    }
 
-	//------------------------------------------------------------------------------
-	static void setAppliedContext( Context* context )
-	{
-		s_AppliedContext = context;
-	}
+    //------------------------------------------------------------------------------
+    static void setAppliedContext( Context* context )
+    {
+        s_AppliedContext = context;
+    }
 
-	//------------------------------------------------------------------------------
-	const Context* Context::getAppliedContext()
-	{
-		return s_AppliedContext;
-	}
+    //------------------------------------------------------------------------------
+    const Context* Context::getAppliedContext()
+    {
+        return s_AppliedContext;
+    }
 
-	//------------------------------------------------------------------------------
-	unsigned int Context::getAppliedContextId()
-	{
-		return s_AppliedContext->getId();
-	}
+    //------------------------------------------------------------------------------
+    unsigned int Context::getAppliedContextId()
+    {
+        return s_AppliedContext->getId();
+    }
 
-	//------------------------------------------------------------------------------
-	const Context* Context::getContext( unsigned int id )
-	{
-		for( std::set< Context* >::iterator itr = s_Contexts.begin();
-			itr != s_Contexts.end();
-			++itr )
-			if( (*itr)->getId() == id )
-				return (*itr);
+    //------------------------------------------------------------------------------
+    const Context* Context::getContext( unsigned int id )
+    {
+        for( std::set< Context* >::iterator itr = s_Contexts.begin();
+            itr != s_Contexts.end();
+            ++itr )
+            if( (*itr)->getId() == id )
+                return (*itr);
 
-		return NULL;
-	}
+        return NULL;
+    }
 
-	//------------------------------------------------------------------------------
-	const Context* Context::getContextFromGraphicsContext( unsigned int graphicContextId )
-	{
-		for( std::set< Context* >::iterator itr = s_Contexts.begin();
-			itr != s_Contexts.end();
-			++itr )
-			if( (*itr)->isConnectedWithGraphicsContext() && 
-				(*itr)->getGraphicsContext()->getState()->getContextID() == graphicContextId )
-				return (*itr);
+    //------------------------------------------------------------------------------
+    const Context* Context::getContextFromGraphicsContext( unsigned int graphicContextId )
+    {
+        for( std::set< Context* >::iterator itr = s_Contexts.begin();
+            itr != s_Contexts.end();
+            ++itr )
+            if( (*itr)->isConnectedWithGraphicsContext() && 
+                (*itr)->getGraphicsContext()->getState()->getContextID() == graphicContextId )
+                return (*itr);
 
-		return NULL;
-	}
+        return NULL;
+    }
 
-	//------------------------------------------------------------------------------
-	static unsigned int getUniqueContextId()
-	{
-		return s_ContextIds++;
-	}
+    //------------------------------------------------------------------------------
+    static unsigned int getUniqueContextId()
+    {
+        return s_ContextIds++;
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
@@ -109,16 +109,16 @@ namespace osgCompute
     Context::Context()
         : osg::Referenced()
     {
-		clearLocal();
-		_id = getUniqueContextId();
-		addContext( *this );
+        clearLocal();
+        _id = getUniqueContextId();
+        addContext( *this );
     }
 
     //------------------------------------------------------------------------------
     Context::~Context()
     {
         clearLocal();
-		removeContext( *this );
+        removeContext( *this );
     }
 
 
@@ -134,110 +134,110 @@ namespace osgCompute
     {
         if( isClear() )
             if( !init() )
-				return;
+                return;
 
-		// if this context is connected to a graphics context 
-		// we have to ensure the context is active.
-		if( _gc.valid() && !_gc->isCurrent() )
-			_gc->makeCurrent();
+        // if this context is connected to a graphics context 
+        // we have to ensure the context is active.
+        if( _gc.valid() && !_gc->isCurrent() )
+            _gc->makeCurrent();
 
-		// make context the current context
-		if( getAppliedContext() != this )
-			setAppliedContext( this );
+        // make context the current context
+        if( getAppliedContext() != this )
+            setAppliedContext( this );
     }
 
 
-	//------------------------------------------------------------------------------
-	void Context::detach()
-	{
-		if( getAppliedContext() == this )
-			setAppliedContext( NULL );
-	}
+    //------------------------------------------------------------------------------
+    void Context::detach()
+    {
+        if( getAppliedContext() == this )
+            setAppliedContext( NULL );
+    }
 
 
-	//------------------------------------------------------------------------------
-	unsigned int Context::getId() const
-	{
-		return _id;
-	}
+    //------------------------------------------------------------------------------
+    unsigned int Context::getId() const
+    {
+        return _id;
+    }
 
-	//------------------------------------------------------------------------------
-	void Context::connectWithGraphicsContext( osg::GraphicsContext& gc )
-	{
-		if( !isClear() )
-			return;
+    //------------------------------------------------------------------------------
+    void Context::connectWithGraphicsContext( osg::GraphicsContext& gc )
+    {
+        if( !isClear() )
+            return;
 
-		_gc = &gc;
-	}
+        _gc = &gc;
+    }
 
-	//------------------------------------------------------------------------------
-	osg::GraphicsContext* Context::getGraphicsContext()
-	{
-		return _gc.get();
-	}
+    //------------------------------------------------------------------------------
+    osg::GraphicsContext* Context::getGraphicsContext()
+    {
+        return _gc.get();
+    }
 
-	//------------------------------------------------------------------------------
-	const osg::GraphicsContext* Context::getGraphicsContext() const
-	{
-		return _gc.get();
-	}
+    //------------------------------------------------------------------------------
+    const osg::GraphicsContext* Context::getGraphicsContext() const
+    {
+        return _gc.get();
+    }
 
-	//------------------------------------------------------------------------------
-	void Context::removeGraphicsContext()
-	{
-		if( !isClear() )
-			return;
+    //------------------------------------------------------------------------------
+    void Context::removeGraphicsContext()
+    {
+        if( !isClear() )
+            return;
 
-		_gc = NULL;
-	}
+        _gc = NULL;
+    }
 
-	//------------------------------------------------------------------------------
-	bool Context::isConnectedWithGraphicsContext() const
-	{
-		return _gc.valid();
-	}
+    //------------------------------------------------------------------------------
+    bool Context::isConnectedWithGraphicsContext() const
+    {
+        return _gc.valid();
+    }
 
-	//------------------------------------------------------------------------------
-	void Context::setDevice( int device )
-	{ 
-		if( !isClear() )
-			return;
+    //------------------------------------------------------------------------------
+    void Context::setDevice( int device )
+    { 
+        if( !isClear() )
+            return;
 
-		_device = device;  
-	}
+        _device = device;  
+    }
 
-	//------------------------------------------------------------------------------
-	int Context::getDevice() const 
-	{ 
-		return _device; 
-	}
+    //------------------------------------------------------------------------------
+    int Context::getDevice() const 
+    { 
+        return _device; 
+    }
 
-	//------------------------------------------------------------------------------
-	bool Context::isResourceRegistered( const Resource& resource ) const
-	{
-		ResourcePtrSetCnstItr itr = _resources.find( &resource );
-		if( itr != _resources.end() )
-			return true;
+    //------------------------------------------------------------------------------
+    bool Context::isResourceRegistered( const Resource& resource ) const
+    {
+        ResourcePtrSetCnstItr itr = _resources.find( &resource );
+        if( itr != _resources.end() )
+            return true;
 
-		return false;
-	}
+        return false;
+    }
 
 
-	//------------------------------------------------------------------------------
-	bool Context::isClear() const
-	{
-		return _clear;
-	}
+    //------------------------------------------------------------------------------
+    bool Context::isClear() const
+    {
+        return _clear;
+    }
 
-	//------------------------------------------------------------------------------
-	void Context::clearResources() const
-	{
-		while( !_resources.empty() )
-		{
-			ResourcePtrSetItr itr = _resources.begin();
-			(*itr)->clear( *this );
-		}
-	}
+    //------------------------------------------------------------------------------
+    void Context::clearResources() const
+    {
+        while( !_resources.empty() )
+        {
+            ResourcePtrSetItr itr = _resources.begin();
+            (*itr)->clear( *this );
+        }
+    }
 
     //------------------------------------------------------------------------------
     void Context::clear()
@@ -250,9 +250,9 @@ namespace osgCompute
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
     void Context::clearLocal()
-	{
-		// clear resources first!!!
-		clearResources();
+    {
+        // clear resources first!!!
+        clearResources();
         // do not clear the id!!!
         _gc = NULL;
         _clear = true;
@@ -260,23 +260,23 @@ namespace osgCompute
         _device = 0;
     }
 
-	//------------------------------------------------------------------------------
-	void Context::registerResource( const Resource& resource ) const
-	{
-		ResourcePtrSetItr itr = _resources.find( &resource );
-		if( itr != _resources.end() )
-			return;
+    //------------------------------------------------------------------------------
+    void Context::registerResource( const Resource& resource ) const
+    {
+        ResourcePtrSetItr itr = _resources.find( &resource );
+        if( itr != _resources.end() )
+            return;
 
-		_resources.insert( &resource );
-	}
+        _resources.insert( &resource );
+    }
 
-	//------------------------------------------------------------------------------
-	void Context::unregisterResource( const Resource& resource ) const
-	{
-		ResourcePtrSetItr itr = _resources.find( &resource );
-		if( itr == _resources.end() )
-			return;
+    //------------------------------------------------------------------------------
+    void Context::unregisterResource( const Resource& resource ) const
+    {
+        ResourcePtrSetItr itr = _resources.find( &resource );
+        if( itr == _resources.end() )
+            return;
 
-		_resources.erase( itr );
-	}
+        _resources.erase( itr );
+    } 
 }

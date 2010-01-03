@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -38,7 +38,7 @@ float4 reseed( float* seeds, unsigned int seedCount, unsigned int seedIdx, unsig
     float intFac3 = seeds[idx3];
 
     return make_float4(lerp(bbmin.x,bbmax.x,intFac1), lerp(bbmin.y,bbmax.y,intFac3),
-                       lerp(bbmin.z,bbmax.z,intFac2), 1);
+        lerp(bbmin.z,bbmax.z,intFac2), 1);
 }
 
 //------------------------------------------------------------------------------
@@ -81,23 +81,23 @@ void reseedKernel( float4* ptcls, float* seeds, unsigned int seedCount, unsigned
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 extern "C" __host__
-void reseed( unsigned int numBlocks, 
-             unsigned int numThreads, 
-             void* ptcls, 
-             void* seeds, 
-             unsigned int seedCount, 
-             unsigned int seedIdx, 
-             float3 bbmin, 
-             float3 bbmax )
+void reseed(unsigned int numBlocks, 
+            unsigned int numThreads, 
+            void* ptcls, 
+            void* seeds, 
+            unsigned int seedCount, 
+            unsigned int seedIdx, 
+            float3 bbmin, 
+            float3 bbmax )
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );
 
     reseedKernel<<< blocks, threads >>>(
-                        reinterpret_cast<float4*>(ptcls),
-                        reinterpret_cast<float*>(seeds),
-                        seedCount,
-                        seedIdx,
-                        bbmin,
-                        bbmax );
+        reinterpret_cast<float4*>(ptcls),
+        reinterpret_cast<float*>(seeds),
+        seedCount,
+        seedIdx,
+        bbmin,
+        bbmax );
 }

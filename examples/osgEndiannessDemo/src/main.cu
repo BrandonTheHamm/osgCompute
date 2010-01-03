@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #ifndef ENDIANNESS_KERNEL_H
@@ -35,10 +35,10 @@ __device__
 inline unsigned int swapBytes( unsigned int value )
 {
     unsigned int res =  
-         ((value & 0x000000ffU) << 24)
-       | ((value & 0x0000ff00U) << 8)
-       | ((value & 0x00ff0000U) >> 8)
-       | ((value & 0xff000000U) >> 24);
+        ((value & 0x000000ffU) << 24)
+        | ((value & 0x0000ff00U) << 8)
+        | ((value & 0x00ff0000U) >> 8)
+        | ((value & 0xff000000U) >> 24);
 
     return res;
 }

@@ -1,16 +1,16 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
- *                                                                     
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 3 of
- * the License, or (at your option) any later version.
- *                                                                     
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesse General Public License for more details.
- *
- * The full license is in LICENSE file included with this distribution.
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
 */
 
 #include <osgCompute/Module>
@@ -27,41 +27,41 @@ namespace osgCompute
         return Resource::init();
     }
 
-	//------------------------------------------------------------------------------
-	void Module::setUpdateCallback( ModuleCallback* uc ) 
-	{ 
-		_updateCallback = uc; 
-	}
+    //------------------------------------------------------------------------------
+    void Module::setUpdateCallback( ModuleCallback* uc ) 
+    { 
+        _updateCallback = uc; 
+    }
 
-	//------------------------------------------------------------------------------
-	ModuleCallback* Module::getUpdateCallback() 
-	{ 
-		return _updateCallback.get(); 
-	}
+    //------------------------------------------------------------------------------
+    ModuleCallback* Module::getUpdateCallback() 
+    { 
+        return _updateCallback.get(); 
+    }
 
-	//------------------------------------------------------------------------------
-	const ModuleCallback* Module::getUpdateCallback() const 
-	{ 
-		return _updateCallback.get(); 
-	}
+    //------------------------------------------------------------------------------
+    const ModuleCallback* Module::getUpdateCallback() const 
+    { 
+        return _updateCallback.get(); 
+    }
 
-	//------------------------------------------------------------------------------
-	void Module::setEventCallback( ModuleCallback* ec ) 
-	{ 
-		_eventCallback = ec; 
-	}
+    //------------------------------------------------------------------------------
+    void Module::setEventCallback( ModuleCallback* ec ) 
+    { 
+        _eventCallback = ec; 
+    }
 
-	//------------------------------------------------------------------------------
-	ModuleCallback* Module::getEventCallback() 
-	{ 
-		return _eventCallback.get(); 
-	}
+    //------------------------------------------------------------------------------
+    ModuleCallback* Module::getEventCallback() 
+    { 
+        return _eventCallback.get(); 
+    }
 
-	//------------------------------------------------------------------------------
-	const ModuleCallback* Module::getEventCallback() const 
-	{ 
-		return _eventCallback.get(); 
-	}
+    //------------------------------------------------------------------------------
+    const ModuleCallback* Module::getEventCallback() const 
+    { 
+        return _eventCallback.get(); 
+    }
 
     //------------------------------------------------------------------------------
     void Module::acceptResource( Resource& resource ) 
@@ -96,30 +96,30 @@ namespace osgCompute
         return NULL; 
     }
 
-	//------------------------------------------------------------------------------
-	void Module::enable() 
-	{ 
-		_enabled = true; 
-	}
+    //------------------------------------------------------------------------------
+    void Module::enable() 
+    { 
+        _enabled = true; 
+    }
 
-	//------------------------------------------------------------------------------
-	void Module::disable() 
-	{ 
-		_enabled = false; 
-	}
+    //------------------------------------------------------------------------------
+    void Module::disable() 
+    { 
+        _enabled = false; 
+    }
 
-	//------------------------------------------------------------------------------
-	bool Module::isEnabled() const
-	{
-		return _enabled;
-	}
+    //------------------------------------------------------------------------------
+    bool Module::isEnabled() const
+    {
+        return _enabled;
+    }
 
-	//------------------------------------------------------------------------------
-	void Module::clear()
-	{
-		clearLocal();
-		Resource::clear();
-	}
+    //------------------------------------------------------------------------------
+    void Module::clear()
+    {
+        clearLocal();
+        Resource::clear();
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
@@ -127,21 +127,21 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Module::clearLocal()
     {
-		_eventCallback = NULL;
-		_updateCallback = NULL;
+        _eventCallback = NULL;
+        _updateCallback = NULL;
         _enabled = true;
         _clear = true;
     }
 
-	//------------------------------------------------------------------------------
-	void Module::init( const Context& context ) const
-	{
-		Resource::init( context );
-	}
+    //------------------------------------------------------------------------------
+    void Module::init( const Context& context ) const
+    {
+        Resource::init( context );
+    }
 
-	//------------------------------------------------------------------------------
-	void Module::clear( const Context& context ) const
-	{
-		Resource::clear( context );
-	}
+    //------------------------------------------------------------------------------
+    void Module::clear( const Context& context ) const
+    {
+        Resource::clear( context );
+    }
 }

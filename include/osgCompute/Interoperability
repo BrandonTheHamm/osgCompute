@@ -21,51 +21,51 @@
 
 namespace osgCompute
 {
-	class InteropObject;
-	class InteropBuffer;
+    class InteropObject;
+    class InteropBuffer;
 
-	/**
-		Interface for all scene based objects 
-	*/
-	class LIBRARY_EXPORT InteropObject
-	{
-	public:
-		InteropObject() {}
+    /**
+    Interface for all scene based objects 
+    */
+    class LIBRARY_EXPORT InteropObject
+    {
+    public:
+        InteropObject() {}
 
-		virtual InteropBuffer* getBuffer() = 0;
-		virtual const InteropBuffer* getBuffer() const= 0;
-		virtual InteropBuffer* getOrCreateBuffer() = 0;
+        virtual InteropBuffer* getBuffer() = 0;
+        virtual const InteropBuffer* getBuffer() const= 0;
+        virtual InteropBuffer* getOrCreateBuffer() = 0;
 
-		virtual void addHandle( const std::string& handle ) = 0;
-		virtual void removeHandle( const std::string& handle ) = 0;
-		virtual bool isAddressedByHandle( const std::string& handle ) const = 0;
+        virtual void addHandle( const std::string& handle ) = 0;
+        virtual void removeHandle( const std::string& handle ) = 0;
+        virtual bool isAddressedByHandle( const std::string& handle ) const = 0;
 
-	protected:
-		virtual ~InteropObject() {}
+    protected:
+        virtual ~InteropObject() {}
 
-	private:
-		// copy constructor and operator should not be called
-		InteropObject( const InteropObject& , const osg::CopyOp& ) {}
-		InteropObject& operator=(const InteropObject&) { return (*this); }
-	};
+    private:
+        // copy constructor and operator should not be called
+        InteropObject( const InteropObject& , const osg::CopyOp& ) {}
+        InteropObject& operator=(const InteropObject&) { return (*this); }
+    };
 
-	/**
-	*/
-	class LIBRARY_EXPORT InteropBuffer : public osgCompute::Buffer
-	{
-	public:
-		InteropBuffer() {}
+    /**
+    */
+    class LIBRARY_EXPORT InteropBuffer : public osgCompute::Buffer
+    {
+    public:
+        InteropBuffer() {}
 
-		virtual InteropObject* getObject() = 0;
+        virtual InteropObject* getObject() = 0;
 
-	protected:
-		virtual ~InteropBuffer() {}
+    protected:
+        virtual ~InteropBuffer() {}
 
-	private:
-		// copy constructor and operator should not be called
-		InteropBuffer( const InteropBuffer& , const osg::CopyOp& ) {}
-		InteropBuffer& operator=(const InteropBuffer&) { return (*this); }
-	};
+    private:
+        // copy constructor and operator should not be called
+        InteropBuffer( const InteropBuffer& , const osg::CopyOp& ) {}
+        InteropBuffer& operator=(const InteropBuffer&) { return (*this); }
+    };
 }
 
 #endif //OSGCUDA_INTEROPERABILITY_H
