@@ -25,7 +25,7 @@ namespace osgCompute
         if( NULL == _computation )
         {
             osg::notify(osg::FATAL)  
-                << "osgCompute::ResourceVisitor::init(): no computation applied."
+                << " [osgCompute::ResourceVisitor::init()]: no computation attached."
                 << std::endl;
 
             return false;
@@ -259,7 +259,7 @@ namespace osgCompute
         if( !_context.valid() )
         {
             osg::notify(osg::FATAL)  
-                << "osgCompute::ContextVisitor::init(): no context applied."
+                << " [osgCompute::ContextVisitor::init()]: no context attached."
                 << std::endl;
 
             return false;

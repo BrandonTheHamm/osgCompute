@@ -274,7 +274,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void ComputationBin::launch() const
+    void ComputationBin::launch()
     {
         if( _clear || !_computation || !_context.valid() )
             return;
@@ -282,15 +282,15 @@ namespace osgCompute
         // Apply context 
         _context->apply();
 
-        ////////////////////
-        // LAUNCH MODULES //
-        ////////////////////
+        // Launch modules
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
         {
             if( (*itr)->isEnabled() )
             {
-                // launch module
-                (*itr)->launch( *_context );
+				if( (*itr)->isClear() )
+					(*itr)->init();
+
+                (*itr)->launch();
             }
         }
     }

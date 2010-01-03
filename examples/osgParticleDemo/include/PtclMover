@@ -31,7 +31,7 @@ namespace PtclDemo
 		// Modules have to implement at least this
 		// three methods:
         virtual bool init();
-        virtual void launch( const osgCompute::Context& context ) const;
+        virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
 		virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
@@ -39,11 +39,11 @@ namespace PtclDemo
         virtual ~PtclMover();
         void clearLocal();
 
-        mutable double                      _lastTime;
-        mutable bool						_firstFrame;
+        double                      _lastTime;
+        bool						_firstFrame;
 
-        unsigned int                        _numBlocks;
-        unsigned int                        _numThreads;
+        unsigned int                _numBlocks;
+        unsigned int                _numThreads;
 
 		osg::ref_ptr<osgCompute::Buffer>    _ptcls;
 

@@ -40,7 +40,7 @@ namespace osgCompute
         Module() { clearLocal(); }
 
         virtual bool init();
-        virtual void launch( const Context& context ) const = 0;
+        virtual void launch() = 0;
 
         virtual void acceptResource( Resource& resource );
         virtual bool usesResource( const std::string& handle ) const;
@@ -61,12 +61,13 @@ namespace osgCompute
 		virtual bool isEnabled() const;
 
 		virtual void clear();
-		virtual void init( const Context& context ) const;
-		virtual void clear( const Context& context ) const;
 
     protected:
         virtual ~Module() { clearLocal(); }
-        void clearLocal();
+		void clearLocal();
+
+		virtual void init( const Context& context ) const;
+		virtual void clear( const Context& context ) const;
 
 		osg::ref_ptr<ModuleCallback>   _updateCallback;
 		osg::ref_ptr<ModuleCallback>   _eventCallback;

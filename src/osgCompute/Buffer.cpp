@@ -59,7 +59,7 @@ namespace osgCompute
         if( _dimensions.empty() )
         {
             osg::notify(osg::FATAL)  
-                << "Buffer::init(): no dimensions specified."                  
+                << getName() << " [Buffer::init()]: no dimensions specified."                  
                 << std::endl;
 
             return false;
@@ -68,7 +68,7 @@ namespace osgCompute
 		if( _elementSize == 0 )
 		{
 			osg::notify(osg::FATAL)  
-				<< "Buffer::init(): no element size specified."                  
+				<< getName() << " [Buffer::init()]: no element size specified."                  
 				<< std::endl;
 
 			return false;
@@ -172,17 +172,16 @@ namespace osgCompute
 	}
 
     //------------------------------------------------------------------------------
-    unsigned int Buffer::getMapping( const Context& context, unsigned int ) const
+    unsigned int Buffer::getMapping( unsigned int ) const
     {
         if( isClear() )
             return osgCompute::UNMAPPED;
 
-        BufferStream* stream = lookupStream( context );
+        BufferStream* stream = lookupStream();
         if( NULL == stream )
         {
             osg::notify(osg::FATAL)  
-                << "Buffer::getMapping(): cannot receive stream for \""
-                << context.getId() << "\"."
+                << getName() << " [Buffer::getMapping()]: cannot read stream. Maybe no context is applied."
                 << std::endl;
 
             return osgCompute::UNMAPPED;
@@ -211,6 +210,63 @@ namespace osgCompute
 		return 0;
 	}
 
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	Buffer::~Buffer() 
+	{ 
+		clearLocal(); 
+	}
+
+	//------------------------------------------------------------------------------
+	void Buffer::clearLocal()
+	{
+		_dimensions.clear();
+		_numElements = 0;
+		_elementSize = 0;
+		_allocHint = 0;
+		_subloadCallback = NULL;
+
+		// The following is called implicitly by Resource::clearLocal():
+		// for( unsigned int s=0; s<_streams.size(); ++s )
+		//	 if( _streams[s] != NULL )
+		//		 delete _streams[s];
+		_streams.clear();
+	}
+
+	//------------------------------------------------------------------------------
+	BufferStream* Buffer::lookupStream() const
+	{
+		const Context* curCtx = Context::getAppliedContext();
+		if( NULL == curCtx )
+		{
+			osg::notify( osg::FATAL )  
+				<< getName() << " [Buffer::lookupStream()]: no context applied. Call context.apply() for some context first."
+				<< std::endl;
+
+			return NULL;
+		}
+
+		/////////////////////
+		// ALLOCATE STREAM //
+		/////////////////////
+		if( _streams.size() <= curCtx->getId() || 
+			NULL == _streams[curCtx->getId()] )
+			init( *curCtx );
+
+		return _streams[curCtx->getId()];
+	}
+
+	//------------------------------------------------------------------------------
+	BufferStream* Buffer::newStream() const
+	{
+		// implemented in the sub-classes
+		return NULL;
+	}
+
 	//------------------------------------------------------------------------------
 	void Buffer::init( const Context& context ) const
 	{
@@ -221,12 +277,12 @@ namespace osgCompute
 		{
 			// create new buffer and attach it to the
 			// current context
-			_streams[context.getId()] = newStream( context );
+			_streams[context.getId()] = newStream();
 
 			if( NULL == _streams[context.getId()] )
 			{
 				osg::notify( osg::FATAL )  
-					<< "Buffer::lookupStream(): allocation of data stream failed for context \""<<context.getId()<<"\"."
+					<< getName() << " [Buffer::init()]: allocation of data stream failed for context \""<<context.getId()<<"\"."
 					<< std::endl;
 
 				return;
@@ -255,50 +311,5 @@ namespace osgCompute
 		}
 
 		Resource::clear( context );
-	}
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-	//------------------------------------------------------------------------------
-	Buffer::~Buffer() 
-	{ 
-		clearLocal(); 
-	}
-
-	//------------------------------------------------------------------------------
-	void Buffer::clearLocal()
-	{
-		_dimensions.clear();
-		_numElements = 0;
-		_elementSize = 0;
-		_allocHint = 0;
-		_subloadCallback = NULL;
-
-		// The following is called implicitly by Resource::clearLocal():
-		// for( unsigned int s=0; s<_streams.size(); ++s )
-		//	 if( _streams[s] != NULL )
-		//		 delete _streams[s];
-		_streams.clear();
-	}
-
-	//------------------------------------------------------------------------------
-	BufferStream* Buffer::lookupStream( const Context& context ) const
-	{
-		/////////////////////
-		// ALLOCATE STREAM //
-		/////////////////////
-		if( _streams.size() <= context.getId() || 
-			NULL == _streams[context.getId()] )
-			init(context);
-
-		return _streams[context.getId()];
-	}
-
-	//------------------------------------------------------------------------------
-	BufferStream* Buffer::newStream( const Context& ) const
-	{
-		// implemented in the sub-classes
-		return NULL;
 	}
 }

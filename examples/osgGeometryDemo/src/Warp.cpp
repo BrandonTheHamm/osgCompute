@@ -91,12 +91,14 @@ namespace GeometryDemo
     }
   
     //------------------------------------------------------------------------------  
-    void Warp::launch( const osgCompute::Context& ctx ) const
+    void Warp::launch()
     {
         if( isClear() )
             return;
 
-        const osg::FrameStamp* framestamp = ctx.getGraphicsContext()->getState()->getFrameStamp();
+
+		const osgCompute::Context* ctx = osgCompute::Context::getAppliedContext();
+        const osg::FrameStamp* framestamp = ctx->getGraphicsContext()->getState()->getFrameStamp();
         float time = (float)framestamp->getSimulationTime();
 
 
@@ -105,17 +107,15 @@ namespace GeometryDemo
         ///////////////////
         warp(_numBlocks,
              _numThreads,
-			 _vertices->map( ctx ),			// Maps the data to the device memory
+			 _vertices->map(),			// Maps the data to the device memory
 			 _vertices->getNumElements(),
-			 _initPos->map( ctx ),
-			 _initNormals->map( ctx ),
+			 _initPos->map(),
+			 _initNormals->map(),
              time );
 
 		// Read out new vertex position on the CPU or change the values with
 		// osgCompute::MAP_HOST_TARGET
-		//_verts = (float*)_vertices->map( ctx, osgCompute::MAP_HOST_SOURCE );
-
-		return;
+		//_verts = (float*)_vertices->map( osgCompute::MAP_HOST_SOURCE );
     }
 
     //------------------------------------------------------------------------------

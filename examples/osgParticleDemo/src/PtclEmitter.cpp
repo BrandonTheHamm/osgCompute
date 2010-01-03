@@ -62,7 +62,7 @@ namespace PtclDemo
     }
 
     //------------------------------------------------------------------------------
-    void PtclEmitter::launch( const osgCompute::Context& ctx ) const
+    void PtclEmitter::launch()
     {
         if( isClear() )
             return;
@@ -87,8 +87,8 @@ namespace PtclDemo
         reseed(
             _numBlocks,
             _numThreads,
-            _ptcls->map( ctx ),
-            _seeds->map( ctx ),
+            _ptcls->map(),
+            _seeds->map(),
             _seeds->getDimension(0),
             seedIdx,
             bbmin,

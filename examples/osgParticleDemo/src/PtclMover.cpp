@@ -50,14 +50,15 @@ namespace PtclDemo
     }
 
     //------------------------------------------------------------------------------  
-    void PtclMover::launch( const osgCompute::Context& ctx ) const
+    void PtclMover::launch()
     {
         if( isClear() )
             return;
 
-        if( !ctx.isConnectedWithGraphicsContext() )
+		const osgCompute::Context* ctx = osgCompute::Context::getAppliedContext();
+        if( !ctx->isConnectedWithGraphicsContext() )
             return;
-		const osg::State* state = ctx.getGraphicsContext()->getState();
+		const osg::State* state = ctx->getGraphicsContext()->getState();
 		const osg::FrameStamp* fs = state->getFrameStamp();
 		if( fs == NULL )
 			return;
@@ -78,7 +79,7 @@ namespace PtclDemo
         ////////////////////
         move( _numBlocks, 
               _numThreads, 
-              _ptcls->map( ctx ), 
+              _ptcls->map(), 
               elapsedtime );
     }
 

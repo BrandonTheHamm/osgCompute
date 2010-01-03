@@ -81,14 +81,6 @@ namespace osgCuda
 		clearLocal();
 	}
 
-	//------------------------------------------------------------------------------
-	void GeometryBuffer::clear( const osgCompute::Context& context ) const
-	{
-		if( getMapping( context ) != osgCompute::UNMAPPED )
-			unmap( context );
-
-		osgCompute::Buffer::clear( context );
-	}
 
 	//------------------------------------------------------------------------------
 	bool GeometryBuffer::init()
@@ -102,7 +94,7 @@ namespace osgCuda
 		if( _geomref->getVertexArray() == NULL || _geomref->getVertexArray()->getNumElements() == 0 )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::GeometryBuffer::initDimension(): no dimensions defined for geometry! setup vertex array first."
+				<< getName() << " [osgCuda::GeometryBuffer::init()]: no dimensions defined for geometry! setup vertex array first."
 				<< std::endl;
 
 			return false;
@@ -129,37 +121,23 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void* GeometryBuffer::map( const osgCompute::Context& context, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ ) const
+	void* GeometryBuffer::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
 	{
 		if( osgCompute::Resource::isClear() )
-		{
-			osg::notify(osg::WARN)
-				<< "GeometryBuffer::map(): geometry is dirty."
-				<< std::endl;
-
-			return NULL;
-		}
+			if( !init() )
+				return NULL;
 
 		if( mapping == osgCompute::UNMAPPED )
 		{
-			unmap( context, hint );
+			unmap( hint );
 			return NULL;
 		}
 
-		if( !context.isConnectedWithGraphicsContext() )
-		{
-			osg::notify(osg::WARN)
-				<< "GeometryBuffer::map(): context is not connected with a graphics context."
-				<< std::endl;
-
-			return NULL;
-		}
-
-		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
+		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream() );
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
-				<< "GeometryBuffer::map(): cannot receive geometry stream."
+				<< getName() << " [GeometryBuffer::map()]: cannot receive geometry stream."
 				<< std::endl;
 
 			return NULL;
@@ -180,22 +158,17 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void GeometryBuffer::unmap( const osgCompute::Context& context, unsigned int ) const
+	void GeometryBuffer::unmap( unsigned int )
 	{
 		if( osgCompute::Resource::isClear() )
-		{
-			osg::notify(osg::FATAL)
-				<< "osgCuda::GeometryBuffer::map(): geometry buffer is dirty."
-				<< std::endl;
+			if( !init() )
+				return;
 
-			return;
-		}
-
-		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
+		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream() );
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::GeometryBuffer::map(): cannot receive geometry stream."
+				<< getName() << " [osgCuda::GeometryBuffer::map()]: cannot receive geometry stream."
 				<< std::endl;
 
 			return;
@@ -205,9 +178,13 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool osgCuda::GeometryBuffer::setMemory( const osgCompute::Context& context, int value, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int count/* = UINT_MAX*/, unsigned int ) const
+	bool osgCuda::GeometryBuffer::setMemory( int value, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int count/* = UINT_MAX*/, unsigned int )
 	{
-		unsigned char* data = static_cast<unsigned char*>( map( context, mapping ) );
+		if( osgCompute::Resource::isClear() )
+			if( !init() )
+				return false;
+
+		unsigned char* data = static_cast<unsigned char*>( map( mapping ) );
 		if( NULL == data )
 			return false;
 
@@ -216,10 +193,10 @@ namespace osgCuda
 			if( NULL == memset( &data[offset], value, (count == UINT_MAX)? getByteSize() : count ) )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::setMemory(): error during memset() for host."
+					<< getName() << " [osgCuda::GeometryBuffer::setMemory()]: error during memset() for host."
 					<< std::endl;
 
-				unmap( context );
+				unmap();
 				return false;
 			}
 		}
@@ -229,10 +206,10 @@ namespace osgCuda
 			if( res != cudaSuccess )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::setMemory(): error during cudaMemset() for device data."
+					<< getName() << " [osgCuda::GeometryBuffer::setMemory()]: error during cudaMemset() for device data."
 					<< std::endl;
 
-				unmap( context );
+				unmap();
 				return false;
 			}
 		}
@@ -241,23 +218,17 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool GeometryBuffer::resetMemory( const osgCompute::Context& context, unsigned int  ) const
+	bool GeometryBuffer::resetMemory( unsigned int  )
 	{
 		if( osgCompute::Resource::isClear() )
-		{
-			osg::notify(osg::FATAL)
-				<< "osgCuda::GeometryBuffer::resetMemory(): buffer is dirty."
-				<< std::endl;
+			if( !init() )
+				return false;
 
-			return false;
-		}
-
-		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
+		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream() );
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::GeometryBuffer::resetMemory(): could not receive BufferStream for context \""
-				<< context.getId() << "\"."
+				<< getName() << " [osgCuda::GeometryBuffer::resetMemory()]: could not receive BufferStream."
 				<< std::endl;
 
 			return false;
@@ -272,8 +243,7 @@ namespace osgCuda
 			if( !memset( stream->_hostPtr, 0x0, getByteSize() ) )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::resetMemory(): error during memset() for host data within context \""
-					<< context.getId() << "\"."
+					<< getName() << " [osgCuda::GeometryBuffer::resetMemory()]: error during memset() for host memory."
 					<< std::endl;
 
 				return false;
@@ -292,7 +262,7 @@ namespace osgCuda
 				if( cudaSuccess != res )
 				{
 					osg::notify(osg::WARN)
-						<< "osgCuda::GeometryBuffer::resetMemory(): error during cudaGLMapBufferObject()."
+						<< getName() << " [osgCuda::GeometryBuffer::resetMemory()]: error during cudaGLMapBufferObject()."
 						<< " " << cudaGetErrorString( res ) << "."
 						<< std::endl;
 
@@ -304,7 +274,7 @@ namespace osgCuda
 			if( res != cudaSuccess )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::resetMemory(): error during cudaMemset() for device data."
+					<< getName() << " [osgCuda::GeometryBuffer::resetMemory()]: error during cudaMemset() for device memory."
 					<< std::endl;
 
 				return false;
@@ -326,7 +296,19 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void* GeometryBuffer::mapStream( GeometryStream& stream, unsigned int mapping, unsigned int offset ) const
+	void GeometryBuffer::clear( const osgCompute::Context& context ) const
+	{
+		if( osgCompute::Context::getAppliedContext() != &context )
+			const_cast<osgCompute::Context*>( &context )->apply();
+
+		if( getMapping() != osgCompute::UNMAPPED )
+			const_cast<GeometryBuffer*>(this)->unmap();
+
+		osgCompute::Buffer::clear( context );
+	}
+
+	//------------------------------------------------------------------------------
+	void* GeometryBuffer::mapStream( GeometryStream& stream, unsigned int mapping, unsigned int offset )
 	{
 		void* ptr = NULL;
 
@@ -413,7 +395,7 @@ namespace osgCuda
 				if( cudaSuccess != res )
 				{
 					osg::notify(osg::WARN)
-						<< "osgCuda::GeometryBuffer::mapStream(): error during cudaGLMapBufferObject(). "
+						<< getName() << " [osgCuda::GeometryBuffer::mapStream()]: error during cudaGLMapBufferObject(). "
 						<< cudaGetErrorString( res )  <<"."
 						<< std::endl;
 
@@ -440,7 +422,7 @@ namespace osgCuda
 		else
 		{
 			osg::notify(osg::WARN)
-				<< "osgCuda::GeometryBuffer::mapStream(): Wrong mapping type specified. Use one of the following types: "
+				<< getName() << " [osgCuda::GeometryBuffer::mapStream()]: Wrong mapping type specified. Use one of the following types: "
 				<< "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
 				<< std::endl;
 
@@ -468,7 +450,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void GeometryBuffer::unmapStream( GeometryStream& stream ) const
+	void GeometryBuffer::unmapStream( GeometryStream& stream )
 	{
 		// Copy host memory to VBO
 		if( stream._syncDevice )
@@ -476,7 +458,7 @@ namespace osgCuda
 			if( NULL == mapStream( stream, osgCompute::MAP_DEVICE_SOURCE, 0 ) )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::unmapStream(): error during device memory synchronization (mapStream())."
+					<< getName() << " [osgCuda::GeometryBuffer::unmapStream()]: error during device memory synchronization (mapStream())."
 					<< std::endl;
 
 				return;
@@ -490,7 +472,7 @@ namespace osgCuda
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::WARN)
-					<< "osgCuda::GeometryBuffer::unmapStream(): error during cudaGLUnmapBufferObject(). "
+					<< getName() << " [osgCuda::GeometryBuffer::unmapStream()]: error during cudaGLUnmapBufferObject(). "
 					<< cudaGetErrorString( res ) <<"."
 					<< std::endl;
 				return;
@@ -501,12 +483,12 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void GeometryBuffer::checkMappingWithinDraw( const osgCompute::Context& context ) const
+	void GeometryBuffer::checkMappingWithinDraw( const osgCompute::Context& context )
 	{
 		if( !context.isConnectedWithGraphicsContext() )
 			return;
 
-		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream(context) );
+		GeometryStream* stream = static_cast<GeometryStream*>( lookupStream() );
 		if( NULL == stream )
 			return;
 
@@ -523,7 +505,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool GeometryBuffer::setupStream( unsigned int mapping, GeometryStream& stream ) const
+	bool GeometryBuffer::setupStream( unsigned int mapping, GeometryStream& stream )
 	{
 		osg::State* state = stream._context->getGraphicsContext()->getState();
 		if( state == NULL )
@@ -545,7 +527,7 @@ namespace osgCuda
 				if( res != cudaSuccess )
 				{
 					osg::notify(osg::FATAL)
-						<< "osgCuda::GeometryBuffer::setupStream(): unable to unregister buffer object. "
+						<< getName() << " [osgCuda::GeometryBuffer::setupStream()]: unable to unregister buffer object. "
 						<< std::endl;
 
 					return false;
@@ -565,7 +547,7 @@ namespace osgCuda
 			if( res != cudaSuccess )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::setupStream(): unable to register buffer object again."
+					<< getName() << " [osgCuda::GeometryBuffer::setupStream()]: unable to register buffer object again."
 					<< std::endl;
 
 				return false;
@@ -589,7 +571,7 @@ namespace osgCuda
 				if( !curData )
 				{
 					osg::notify(osg::FATAL)
-						<< "osgCuda::GeometryBuffer::setupStream(): invalid buffer data found."
+						<< getName() << " [osgCuda::GeometryBuffer::setupStream()]: invalid buffer data found."
 						<< std::endl;
 
 					return false;
@@ -613,7 +595,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool GeometryBuffer::allocStream( unsigned int mapping, GeometryStream& stream ) const
+	bool GeometryBuffer::allocStream( unsigned int mapping, GeometryStream& stream )
 	{
 		if( mapping & osgCompute::MAP_HOST )
 		{
@@ -624,7 +606,7 @@ namespace osgCuda
 			if( NULL == stream._hostPtr )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::allocStream(): error during mallocHost()."
+					<< getName() << " [osgCuda::GeometryBuffer::allocStream()]: error during mallocHost()."
 					<< std::endl;
 
 				return false;
@@ -684,7 +666,7 @@ namespace osgCuda
 				if( res != cudaSuccess )
 				{
 					osg::notify(osg::FATAL)
-						<< "osgCuda::GeometryBuffer::allocStream(): unable to register buffer object."
+						<< getName() << " [osgCuda::GeometryBuffer::allocStream()]: unable to register buffer object."
 						<< std::endl;
 
 					return false;
@@ -703,7 +685,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool GeometryBuffer::syncStream( unsigned int mapping, GeometryStream& stream ) const
+	bool GeometryBuffer::syncStream( unsigned int mapping, GeometryStream& stream )
 	{
 		cudaError res;
 		if( mapping & osgCompute::MAP_DEVICE )
@@ -712,7 +694,7 @@ namespace osgCuda
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::syncStream(): error during cudaMemcpy() to device. "
+					<< getName() << " [osgCuda::GeometryBuffer::syncStream()]: error during cudaMemcpy() to device. "
 					<< cudaGetErrorString( res ) <<"."
 					<< std::endl;
 				return false;
@@ -750,7 +732,7 @@ namespace osgCuda
 					if( res != cudaSuccess )
 					{
 						osg::notify(osg::FATAL)
-							<< "osgCuda::GeometryBuffer::syncStream(): unable to register buffer object."
+							<< getName() << " [osgCuda::GeometryBuffer::syncStream()]: unable to register buffer object."
 							<< std::endl;
 
 						return false;
@@ -765,7 +747,7 @@ namespace osgCuda
 				if( cudaSuccess != res )
 				{
 					osg::notify(osg::WARN)
-						<< "osgCuda::GeometryBuffer::mapStream(): error during cudaGLMapBufferObject(). "
+						<< getName() << " [osgCuda::GeometryBuffer::mapStream()]: error during cudaGLMapBufferObject(). "
 						<< cudaGetErrorString( res )  <<"."
 						<< std::endl;
 
@@ -777,7 +759,7 @@ namespace osgCuda
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::GeometryBuffer::syncStream(): error during cudaMemcpy() to host. "
+					<< getName() << " [osgCuda::GeometryBuffer::syncStream()]: error during cudaMemcpy() to host memory. "
 					<< cudaGetErrorString( res ) <<"."
 					<< std::endl;
 
@@ -792,7 +774,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	osgCompute::BufferStream* GeometryBuffer::newStream( const osgCompute::Context& context ) const
+	osgCompute::BufferStream* GeometryBuffer::newStream() const
 	{
 		return new GeometryStream;
 	}
@@ -903,11 +885,14 @@ namespace osgCuda
 	{
 		if( state != NULL )
 		{
-			const osgCompute::Context* curCtx = osgCompute::Context::getContext( state->getContextID() );
+			const osgCompute::Context* curCtx = osgCompute::Context::getContextFromGraphicsContext( state->getContextID() );
 			if( NULL != curCtx && NULL != _proxy )
 			{
-				if( _proxy->getMapping( *curCtx ) != osgCompute::UNMAPPED )
-					_proxy->unmap( *curCtx );
+				if( osgCompute::Context::getAppliedContext() != curCtx )
+					const_cast<osgCompute::Context*>(curCtx)->apply();
+
+				if( _proxy->getMapping() != osgCompute::UNMAPPED )
+					_proxy->unmap();
 
 				_proxy->clear( *curCtx );
 			}
@@ -919,9 +904,14 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	void Geometry::drawImplementation( osg::RenderInfo& renderInfo ) const
 	{
-		const osgCompute::Context* curCtx = osgCompute::Context::getContext( renderInfo.getState()->getContextID() );
+		const osgCompute::Context* curCtx = osgCompute::Context::getContextFromGraphicsContext( renderInfo.getState()->getContextID() );
 		if( NULL != curCtx && NULL != _proxy )
+		{
+			if( osgCompute::Context::getAppliedContext() != curCtx )
+				const_cast<osgCompute::Context*>(curCtx)->apply();
+
 			_proxy->checkMappingWithinDraw( *curCtx );
+		}
 
 		osg::Geometry::drawImplementation( renderInfo );
 	}
@@ -946,7 +936,7 @@ namespace osgCuda
 		if( _proxy != NULL )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Geometry::destructor(): proxy is still valid!!!."
+				<< getName() << " [osgCuda::Geometry::destructor()]: proxy is still valid!!!."
 				<< std::endl;
 		}
 	}

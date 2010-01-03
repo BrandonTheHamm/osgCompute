@@ -110,6 +110,9 @@ int main(int argc, char *argv[])
 	texStreamer->setName( "my texture module" );
 
 	osgCuda::Computation* computation = new osgCuda::Computation;
+	// execute the computation during the rendering, but before
+	// the subgraph is rendered. Default is the execution during
+	// the update traversal.
 	computation->setComputeOrder(  osgCompute::Computation::RENDER_PRE_RENDER_PRE_TRAVERSAL );
 	computation->addModule( *texStreamer );
 	computation->addResource( *srcArray );

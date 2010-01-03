@@ -28,7 +28,6 @@ namespace osgCuda
 
 		virtual bool getIsRenderTarget() const;
 
-		virtual void clear( const osgCompute::Context& context ) const;
 		virtual void clear();
 	protected:
 		friend class TextureRectangle;
@@ -37,9 +36,12 @@ namespace osgCuda
 
 		virtual void setIsRenderTarget( bool isRenderTarget );
 		virtual void syncModifiedCounter( const osgCompute::Context& context ) const;
-		virtual bool allocPBO( TextureStream& stream ) const;
-		virtual void syncPBO( TextureStream& stream ) const;
-		virtual void syncTexture( TextureStream& stream ) const;
+		virtual bool allocPBO( TextureStream& stream );
+		virtual void syncPBO( TextureStream& stream );
+		virtual void syncTexture( TextureStream& stream );
+
+
+		virtual void clear( const osgCompute::Context& context ) const;
 
 		osg::ref_ptr<osgCuda::TextureRectangle> _texref;
 		bool							 _isRenderTarget;
@@ -134,7 +136,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void TextureRectangleBuffer::syncTexture( TextureStream& stream ) const
+	void TextureRectangleBuffer::syncTexture( TextureStream& stream )
 	{
 		if( stream._bo == UINT_MAX )
 			return;
@@ -147,7 +149,7 @@ namespace osgCuda
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::syncTexture(): cannot find required extension for context \""<<state->getContextID()<<"\"."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::syncTexture()]: cannot find required extension."
 				<< std::endl;
 
 			return;
@@ -157,24 +159,11 @@ namespace osgCuda
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::syncTexture(): texture object not allocated for context \""<<state->getContextID()<<"\"."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::syncTexture()]: texture object not allocated."
 				<< std::endl;
 
 			return;
 		}
-
-		//GLenum texType = GL_NONE;
-		//if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT )
-		//{
-		//	if( !_texref->getImage() )
-		//		return;
-
-		//	texType = _texref->getImage()->getDataType();
-		//}
-		//else
-		//{
-		//	texType = asTexture()->getSourceType();
-		//}
 
 
 		GLenum format = osg::Image::computePixelFormat( asTexture()->getInternalFormat() );
@@ -196,8 +185,7 @@ namespace osgCuda
 		if( errorStatus != GL_NO_ERROR )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::syncTexture(): error during glTex(Sub)ImageXD() for context \""
-				<< state->getContextID()<<"\". Returned code is "
+				<< getName() << " [osgCuda::TextureRectangleBuffer::syncTexture()]: error during glTex(Sub)ImageXD(). Returned code is "
 				<< std::hex<<errorStatus<<"."
 				<< std::endl;
 		}
@@ -208,7 +196,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void TextureRectangleBuffer::syncPBO( TextureStream& stream ) const
+	void TextureRectangleBuffer::syncPBO( TextureStream& stream )
 	{
 		if( stream._bo == UINT_MAX )
 			return;
@@ -221,7 +209,7 @@ namespace osgCuda
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::syncPBO(): cannot find required extension for context \""<<state->getContextID()<<"\"."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::syncPBO()]: cannot find required extension."
 				<< std::endl;
 
 			return;
@@ -231,31 +219,11 @@ namespace osgCuda
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::syncPBO() : texture object not allocated for context \""<<state->getContextID()<<"\"."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::syncPBO()]: texture object not allocated."
 				<< std::endl;
 
 			return;
 		}
-
-		//GLenum texType = GL_NONE;
-		//if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
-		//	_texref->getImage() )
-		//{
-		//	texType = _texref->getImage()->getDataType();
-		//}
-		//else
-		//{
-		//	texType = asTexture()->getSourceType();
-		//}
-
-		//if( texType == GL_NONE )
-		//{
-		//	osg::notify(osg::FATAL)
-		//		<< "osgCuda::TextureRectangleBuffer::syncPBO(): texture type unknown."
-		//		<< std::endl;
-
-		//	return;
-		//}
 
 
 		GLenum format = osg::Image::computePixelFormat( asTexture()->getInternalFormat() );
@@ -268,8 +236,8 @@ namespace osgCuda
 		if( cudaSuccess != res )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::syncPBO(): error during cudaGLUnregisterBufferObject() for context \""
-				<< state->getContextID()<<"\"." << " " << cudaGetErrorString( res ) <<"."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::syncPBO()]: error during cudaGLUnregisterBufferObject()." 
+				<< " " << cudaGetErrorString( res ) <<"."
 				<< std::endl;
 
 			return;
@@ -289,8 +257,7 @@ namespace osgCuda
 		if( errorStatus != GL_NO_ERROR )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::syncPBO(): error during glGetTexImage() for context \""
-				<< state->getContextID()<<"\". Returned code is "
+				<< getName() << " [osgCuda::TextureRectangleBuffer::syncPBO()]: error during glGetTexImage(). Returned code is "
 				<< std::hex<<errorStatus<<"."
 				<< std::endl;
 		}
@@ -305,8 +272,8 @@ namespace osgCuda
 		if( cudaSuccess != res )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::syncPBO(): error during cudaGLRegisterBufferObject() for context \""
-				<< state->getContextID()<<"\"." << " " << cudaGetErrorString( res ) << "."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::syncPBO()]: error during cudaGLRegisterBufferObject()." 
+				<< " " << cudaGetErrorString( res ) << "."
 				<< std::endl;
 		}
 
@@ -314,7 +281,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool TextureRectangleBuffer::allocPBO( TextureStream& stream ) const
+	bool TextureRectangleBuffer::allocPBO( TextureStream& stream )
 	{
 		osg::State* state = stream._context->getGraphicsContext()->getState();
 		if( state == NULL )
@@ -327,7 +294,7 @@ namespace osgCuda
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::allocPBO(): cannot find required extension."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::allocPBO()]: cannot find required extension."
 				<< std::endl;
 
 			return false;
@@ -342,7 +309,7 @@ namespace osgCuda
 			if( errorStatus != GL_NO_ERROR )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureRectangleBuffer::allocPBO(): apply() failed on texture resource. Maybe context is not active."
+					<< getName() << " [osgCuda::TextureRectangleBuffer::allocPBO()]: apply() failed on texture resource. Maybe context is not active."
 					<< std::endl;
 
 				return false;
@@ -356,31 +323,11 @@ namespace osgCuda
 		{
 
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::allocPBO(): cannot allocate texture object. Maybe context is not active."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::allocPBO()]: cannot allocate texture object. Maybe context is not active."
 				<< std::endl;
 
 			return false;
 		}
-
-		//GLenum texType = GL_NONE;
-		//if( asTexture()->getInternalFormatMode() == osg::Texture::USE_IMAGE_DATA_FORMAT &&
-		//	_texref->getImage() )
-		//{
-		//	texType = _texref->getImage()->getDataType();
-		//}
-		//else
-		//{
-		//	texType = asTexture()->getSourceType();
-		//}
-
-		//if( texType == GL_NONE )
-		//{
-		//	osg::notify(osg::FATAL)
-		//		<< "osgCuda::TextureRectangleBuffer::allocPBO(): texture type unknown."
-		//		<< std::endl;
-
-		//	return false;
-		//}
 
 		///////////////
 		// ALLOC PBO //
@@ -390,7 +337,7 @@ namespace osgCuda
 		if( 0 == stream._bo  || errorNo )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::allocPBO(): cannot generate BufferObject (glGenBuffers())."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::allocPBO()]: cannot generate BufferObject (glGenBuffers())."
 				<< std::endl;
 
 			return UINT_MAX;
@@ -409,7 +356,7 @@ namespace osgCuda
 		if (errorNo != GL_NO_ERROR)
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::allocPBO(): cannot bind BufferObject (glBindBuffer())."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::allocPBO()]: cannot bind BufferObject (glBindBuffer())."
 				<< std::endl;
 
 			return UINT_MAX;
@@ -420,7 +367,7 @@ namespace osgCuda
 		if (errorNo != GL_NO_ERROR)
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::allocPBO(): cannot initialize BufferObject (glBufferData())."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::allocPBO()]: cannot initialize BufferObject (glBufferData())."
 				<< std::endl;
 
 			return UINT_MAX;
@@ -439,7 +386,7 @@ namespace osgCuda
 		if( cudaSuccess != res )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::allocPBO(): something goes wrong within cudaGLRegisterBufferObject()."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::allocPBO()]: something goes wrong within cudaGLRegisterBufferObject()."
 				<< cudaGetErrorString(res) << "."
 				<< std::endl;
 
@@ -449,7 +396,7 @@ namespace osgCuda
 		if( UINT_MAX == stream._bo )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangleBuffer::allocPBO(): Could not generate buffer object (glGenBuffers())."
+				<< getName() << " [osgCuda::TextureRectangleBuffer::allocPBO()]: cannot generate buffer object (glGenBuffers())."
 				<< std::endl;
 
 			return false;
@@ -467,41 +414,6 @@ namespace osgCuda
 			// Sync PBO with Texture-Data if Texture is allocated
 			syncPBO( stream );
 		}
-		//else if( !this->getIsRenderTarget() )
-		//{
-		//	/////////////////////////////
-		//	// ALLOCATE TEXTURE MEMORY //
-		//	/////////////////////////////
-		//	// else allocate the memory.
-		//	glBindTexture( GL_TEXTURE_RECTANGLE, tex->_id );
-
-		//	// Allocate memory for texture if not done so far in order to allow slot
-		//	// to call glTexSubImage() during runtime
-		//	glTexImage2D(
-		//		GL_TEXTURE_RECTANGLE, 0,
-		//		tex->_profile._internalFormat,
-		//		tex->_profile._width, tex->_profile._height,
-		//		tex->_profile._border,
-		//		tex->_profile._internalFormat, texType, NULL );
-
-		//	GLenum errorNo = glGetError();
-		//	if( errorNo != GL_NO_ERROR )
-		//	{
-		//		osg::notify(osg::FATAL)
-		//			<< "osgCuda::TextureRectangleBuffer::allocPBO(): error during glTexImage2D(). Returned code is "
-		//			<< std::hex<<errorNo<<"."
-		//			<< std::endl;
-
-		//		glBindTexture( GL_TEXTURE_RECTANGLE, 0 );
-		//		bufferExt->glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
-		//		return false;
-		//	}
-
-		//	glBindTexture( GL_TEXTURE_RECTANGLE, 0 );
-
-		//	// Mark context based Texture-Object as allocated
-		//	tex->setAllocated( true );
-		//}
 
 		return true;
 	}
@@ -528,7 +440,7 @@ namespace osgCuda
 		if( _proxy != NULL )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureRectangle::destructor(): proxy is still valid!!!."
+				<< getName() << " [osgCuda::TextureRectangle::destructor()]: proxy is still valid!!!."
 				<< std::endl;
 		}
 
@@ -634,7 +546,12 @@ namespace osgCuda
 	{
 		const osgCompute::Context* curCtx = osgCompute::Context::getContext( state.getContextID() );
 		if( curCtx && _proxy != NULL )
+		{
+			if( osgCompute::Context::getAppliedContext() != curCtx )
+				const_cast<osgCompute::Context*>(curCtx)->apply();
+
 			_proxy->checkMappingWithinApply( *curCtx );
+		}
 
 		osg::TextureRectangle::apply( state );
 	}

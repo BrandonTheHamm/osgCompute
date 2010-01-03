@@ -92,11 +92,11 @@ namespace osgCompute
 		virtual bool init();
 
 		/***/
-        virtual void* map( const Context& context, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) const = 0;
-		virtual void unmap( const Context& context, unsigned int hint = 0 ) const = 0;
-		virtual bool setMemory( const Context& context, int value, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 ) const = 0;
-		virtual bool resetMemory( const Context& context, unsigned int hint = 0  ) const = 0;
-		virtual unsigned int getMapping( const Context& context, unsigned int hint = 0 ) const;
+        virtual void* map( unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) = 0;
+		virtual void unmap( unsigned int hint = 0 ) = 0;
+		virtual bool setMemory( int value, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 ) = 0;
+		virtual bool resetMemory( unsigned int hint = 0  ) = 0;
+		virtual unsigned int getMapping( unsigned int hint = 0 ) const;
 
 		virtual void setElementSize( unsigned int elementSize );
 		virtual unsigned int getElementSize() const;
@@ -118,15 +118,15 @@ namespace osgCompute
 		virtual unsigned int getSwapIdx() const;
 		virtual unsigned int getSwapCount() const;
 
-		virtual void init( const Context& context ) const;
-		virtual void clear( const Context& context ) const;
         virtual void clear();
 	protected:
 		virtual ~Buffer();
         void clearLocal();
 
-        virtual BufferStream* newStream( const Context& context ) const;
-        virtual BufferStream* lookupStream( const Context& context ) const;
+        virtual BufferStream* newStream() const;
+        virtual BufferStream* lookupStream() const;
+		virtual void init( const Context& context ) const;
+		virtual void clear( const Context& context ) const;
 
         unsigned int                                    _allocHint;
         std::vector<unsigned int>                       _dimensions;

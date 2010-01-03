@@ -564,7 +564,7 @@ namespace osgCompute
             if( !context )
             {
                 osg::notify(osg::FATAL)  
-                    << "Computation::getOrCreateContext() for \""<<getName()<<"\": cannot create context."
+                    << getName() << " [Computation::getOrCreateContext()]: cannot create context."
                     << std::endl;
 
                 return NULL;
@@ -583,17 +583,6 @@ namespace osgCompute
 		// traverse subgraph and pass on context 
 		if( contextCreated || getAutoCheckSubgraph() )
 			distributeContext( *context );
-
-		if( contextCreated )
-		{
-			// initialize modules with context
-			context->apply();
-			for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-			{
-				if( !context->isResourceRegistered( *(*itr) ) )
-					(*itr)->init( *context );
-			}
-		}
 
         return context;
     }
@@ -614,7 +603,7 @@ namespace osgCompute
 		if( !ctx )
 		{
 			osg::notify(osg::FATAL)  
-				<< "Computation::addBin() for \""<<getName()<<"\": cannot find valid context."
+				<< getName() << " [Computation::addBin()]: cannot find valid context."
 				<< std::endl;
 
 			return;
@@ -627,7 +616,7 @@ namespace osgCompute
         if( !oldRB )
         {
             osg::notify(osg::FATAL)  
-                << "Computation::addBin() for \""<<getName()<<"\": current CullVisitor has no active RenderBin."
+               << getName() << " [Computation::addBin()]: current CullVisitor has no active RenderBin."
                 << std::endl;
 
             return;
@@ -665,7 +654,7 @@ namespace osgCompute
         if( !pb )
         {
             osg::notify(osg::FATAL)  
-                << "Computation::addBin() for \""<<getName()<<"\": cannot create ComputationBin."
+                << getName() << " [Computation::addBin()]: cannot create ComputationBin."
                 << std::endl;
 
             return;
@@ -699,7 +688,12 @@ namespace osgCompute
 			for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
 			{
 				if( (*itr)->isEnabled() )
-					(*itr)->launch( *curCtx );
+				{
+					if( (*itr)->isClear() )
+						(*itr)->init();
+
+					(*itr)->launch();
+				}
 			}
 		}
 	}
@@ -730,7 +724,7 @@ namespace osgCompute
         if( !ctxVisitor->init() )
         {
             osg::notify(osg::FATAL)  
-                << "Computation::distributeContext() for \""<<getName()<<"\": cannot init context visitor."
+                << getName() << " [Computation::distributeContext()]: cannot init context visitor."
                 << std::endl;
 
             return;
@@ -770,22 +764,6 @@ namespace osgCompute
                     curResource->init();
             }
 
-			// initialize modules
-            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            {
-                if( (*itr)->isClear() )
-                    (*itr)->init();
-
-				for( ContextMapItr ctxItr = _contextMap.begin(); ctxItr != _contextMap.end(); ++ctxItr )
-				{
-					if( !ctxItr->second->isResourceRegistered( *(*itr) ) )
-					{
-						ctxItr->second->apply();
-						(*itr)->init( *(*ctxItr).second );
-					}
-				}
-            }
-
             // decrement update counter when all resources have been initialized
             osg::Node::setNumChildrenRequiringUpdateTraversal( 
                 osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
@@ -816,7 +794,7 @@ namespace osgCompute
             if( !_resourceVisitor->init() )
             {
                 osg::notify(osg::FATAL)  
-                    << "Computation::collectResources() for \""<<getName()<<"\": cannot init resource visitor."
+                    << getName() << " [Computation::collectResources()]: cannot init resource visitor."
                     << std::endl;
 
                 return;

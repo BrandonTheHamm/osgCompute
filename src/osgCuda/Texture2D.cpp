@@ -30,7 +30,6 @@ namespace osgCuda
 
 		virtual bool getIsRenderTarget() const;
 
-		virtual void clear( const osgCompute::Context& context ) const;
 		virtual void clear();
 	protected:
 		friend class Texture2D;
@@ -39,9 +38,11 @@ namespace osgCuda
 
 		virtual void setIsRenderTarget( bool isRenderTarget );
 		virtual void syncModifiedCounter( const osgCompute::Context& context ) const;
-		virtual bool allocPBO( TextureStream& stream ) const;
-		virtual void syncPBO( TextureStream& stream ) const;
-		virtual void syncTexture( TextureStream& stream ) const;
+		virtual bool allocPBO( TextureStream& stream );
+		virtual void syncPBO( TextureStream& stream );
+		virtual void syncTexture( TextureStream& stream );
+
+		virtual void clear( const osgCompute::Context& context ) const;
 
 		osg::ref_ptr<osgCuda::Texture2D> _texref;
 		bool							 _isRenderTarget;
@@ -136,7 +137,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void Texture2DBuffer::syncTexture( TextureStream& stream ) const
+	void Texture2DBuffer::syncTexture( TextureStream& stream )
 	{
 		if( stream._bo == UINT_MAX )
 			return;
@@ -149,7 +150,7 @@ namespace osgCuda
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::syncTexture(): cannot find required extension for context \""<<state->getContextID()<<"\"."
+				<< getName() << " [osgCuda::Texture2DBuffer::syncTexture()]: cannot find required extension."
 				<< std::endl;
 
 			return;
@@ -159,7 +160,7 @@ namespace osgCuda
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::syncTexture(): texture object not allocated for context \""<<state->getContextID()<<"\"."
+				<< getName() << " [osgCuda::Texture2DBuffer::syncTexture()]: texture object not allocated."
 				<< std::endl;
 
 			return;
@@ -184,8 +185,7 @@ namespace osgCuda
 		if( errorStatus != GL_NO_ERROR )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::syncTexture(): error during glTex(Sub)ImageXD() for context \""
-				<< state->getContextID()<<"\". Returned code is "
+				<< getName() << " [osgCuda::Texture2DBuffer::syncTexture()]: error during glTex(Sub)ImageXD(). Returned code is "
 				<< std::hex<<errorStatus
 				<< std::endl;
 
@@ -197,7 +197,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void Texture2DBuffer::syncPBO( TextureStream& stream ) const
+	void Texture2DBuffer::syncPBO( TextureStream& stream )
 	{
 		if( stream._bo == UINT_MAX )
 			return;
@@ -210,7 +210,7 @@ namespace osgCuda
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::syncPBO(): cannot find required extension for context \""<<state->getContextID()<<"\"."
+				<< getName() << " [osgCuda::Texture2DBuffer::syncPBO()]: cannot find required extension."
 				<< std::endl;
 
 			return;
@@ -220,7 +220,7 @@ namespace osgCuda
 		if( !tex )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::syncPBO() : texture object not allocated for context \""<<state->getContextID()<<"\"."
+				<< getName() << " [osgCuda::Texture2DBuffer::syncPBO()]: texture object not allocated ."
 				<< std::endl;
 
 			return;
@@ -236,8 +236,8 @@ namespace osgCuda
 		if( cudaSuccess != res )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::syncPBO(): error during cudaGLUnregisterBufferObject() for context \""
-				<< state->getContextID()<<"\"." << " " << cudaGetErrorString( res ) <<"."
+				<< getName() << " [osgCuda::Texture2DBuffer::syncPBO()]: error during cudaGLUnregisterBufferObject()." 
+				<< " " << cudaGetErrorString( res ) <<"."
 				<< std::endl;
 
 			return;
@@ -256,7 +256,7 @@ namespace osgCuda
 		if( errorStatus != GL_NO_ERROR )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::syncPBO(): error during glGetTexImage() for context \""
+				<< getName() << " [osgCuda::Texture2DBuffer::syncPBO()]: error during glGetTexImage() for context \""
 				<< state->getContextID()<<"\". Returned code is "
 				<< std::hex<<errorStatus<<"."
 				<< std::endl;
@@ -272,8 +272,7 @@ namespace osgCuda
 		if( cudaSuccess != res )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::syncPBO(): error during cudaGLRegisterBufferObject() for context \""
-				<< state->getContextID()<<"\"."
+				<< getName() << " [osgCuda::Texture2DBuffer::syncPBO()]: error during cudaGLRegisterBufferObject()."
 				<< std::endl;
 		}
 
@@ -281,7 +280,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool Texture2DBuffer::allocPBO( TextureStream& stream ) const
+	bool Texture2DBuffer::allocPBO( TextureStream& stream )
 	{
 		osg::State* state = stream._context->getGraphicsContext()->getState();
 		if( state == NULL )
@@ -294,7 +293,7 @@ namespace osgCuda
 		if( !bufferExt )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::allocPBO(): cannot find required extension."
+				<< getName() << " [osgCuda::Texture2DBuffer::allocPBO()]: cannot find required extension."
 				<< std::endl;
 
 			return false;
@@ -309,7 +308,7 @@ namespace osgCuda
 			if( errorStatus != GL_NO_ERROR )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::Texture2DBuffer::allocPBO(): apply() failed on texture resource. Maybe context is not active."
+					<< getName() << " [osgCuda::Texture2DBuffer::allocPBO()]: apply() failed on texture resource. Maybe context is not active."
 					<< std::endl;
 
 				return false;
@@ -323,7 +322,7 @@ namespace osgCuda
 		{
 
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::allocPBO(): cannot allocate texture object. Maybe context is not active."
+				<< getName() << " [osgCuda::Texture2DBuffer::allocPBO()]: cannot allocate texture object. Maybe context is not active."
 				<< std::endl;
 
 			return false;
@@ -337,7 +336,7 @@ namespace osgCuda
 		if( 0 == stream._bo  || errorNo )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::allocPBO(): cannot generate BufferObject (glGenBuffers())."
+				<< getName() << " [osgCuda::Texture2DBuffer::allocPBO()]: cannot generate BufferObject (glGenBuffers())."
 				<< std::endl;
 
 			return UINT_MAX;
@@ -356,7 +355,7 @@ namespace osgCuda
 		if (errorNo != GL_NO_ERROR)
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::allocPBO(): cannot bind BufferObject (glBindBuffer())."
+				<< getName() << " [osgCuda::Texture2DBuffer::allocPBO()]: cannot bind BufferObject (glBindBuffer())."
 				<< std::endl;
 
 			return UINT_MAX;
@@ -367,7 +366,7 @@ namespace osgCuda
 		if (errorNo != GL_NO_ERROR)
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::allocPBO(): cannot initialize BufferObject (glBufferData())."
+				<< getName() << " [osgCuda::Texture2DBuffer::allocPBO()]: cannot initialize BufferObject (glBufferData())."
 				<< std::endl;
 
 			return UINT_MAX;
@@ -386,7 +385,7 @@ namespace osgCuda
 		if( cudaSuccess != res )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::allocPBO(): something goes wrong within cudaGLRegisterBufferObject()."
+				<< getName() << " [osgCuda::Texture2DBuffer::allocPBO()]: something goes wrong within cudaGLRegisterBufferObject()."
 				<< cudaGetErrorString(res) << "."
 				<< std::endl;
 
@@ -396,7 +395,7 @@ namespace osgCuda
 		if( UINT_MAX == stream._bo )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::allocPBO(): Could not generate buffer object (glGenBuffers())."
+				<< getName() << " [osgCuda::Texture2DBuffer::allocPBO()]: cannot generate buffer object (glGenBuffers())."
 				<< std::endl;
 
 			return false;
@@ -440,7 +439,7 @@ namespace osgCuda
 		if( _proxy != NULL )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2D::destructor(): proxy is still valid!!!."
+				<< getName() << " [osgCuda::Texture2D::destructor()]: proxy is still valid!!!."
 				<< std::endl;
 		}
 
@@ -484,7 +483,7 @@ namespace osgCuda
 			(format != getSourceFormat() || type != getSourceType()) )
 		{
 			osg::notify( osg::WARN ) 
-				<< "osgCuda::Texture2D::getOrCreateBuffer(): No image found but type and format do not match the internal texture format."
+				<< getName() << " [osgCuda::Texture2D::getOrCreateBuffer()]: No image found but type and format do not match the internal texture format."
 				<< "This might lead to errors during glTexSubImage1D(). Please make sure to setup source type and format properly."
 				<< std::endl;
 		}
@@ -559,7 +558,12 @@ namespace osgCuda
 	{
 		const osgCompute::Context* curCtx = osgCompute::Context::getContext( state.getContextID() );
 		if( curCtx && _proxy != NULL )
+		{
+			if( osgCompute::Context::getAppliedContext() != curCtx )
+				const_cast<osgCompute::Context*>(curCtx)->apply();
+
 			_proxy->checkMappingWithinApply( *curCtx );
+		}
 
 		osg::Texture2D::apply( state );
 	}

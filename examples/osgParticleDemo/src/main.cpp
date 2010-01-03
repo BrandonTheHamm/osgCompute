@@ -198,17 +198,18 @@ int main(int argc, char *argv[])
 	ptclEmitter->setSeedBox( bbmin, bbmax );
 
 	osgCuda::Computation* computationEmit = new osgCuda::Computation;
-	//computationEmit->setComputeOrder( osgCompute::Computation::UPDATE_POST_TRAVERSAL );
-	//computationEmit->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
+	// Execute the computation during the update traversal before the subgraph is handled. 
+	// This is the default behaviour. Use the following line to execute the computation in
+	// the rendering traversal after the subgraph has been rendered.
+	//computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
 	computationEmit->setName("emit");
 	computationEmit->addModule( *ptclEmitter );  
 	computationEmit->addResource( *seedBuffer );
-	// Particles are located in the subgraph of
+	// The particle buffer is located in the subgraph of
 	// the modules
 	computationEmit->addChild( getGeode( numParticles ) );
 
 	osgCuda::Computation* computationMove = new osgCuda::Computation;
-	//computationMove->setComputeOrder( osgCompute::Computation::UPDATE_POST_TRAVERSAL );
 	//computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
 	computationMove->setName( "move" );
 	computationMove->addModule( *ptclMover );

@@ -32,7 +32,7 @@ public:
 
     META_Object( , SwapModule )
 	virtual bool init();
-	virtual void launch( const osgCompute::Context& context ) const;
+	virtual void launch();
 
     inline void setBuffer( osgCompute::Buffer* buffer ) { _buffer = buffer; }
 
@@ -51,9 +51,9 @@ private:
 };
 
 //------------------------------------------------------------------------------
-void SwapModule::launch( const osgCompute::Context& ctx ) const
+void SwapModule::launch()
 {
-    swapEndianness( _numBlocks, _numThreads, _buffer->map( ctx ) );
+    swapEndianness( _numBlocks, _numThreads, _buffer->map() );
 }
 
 //------------------------------------------------------------------------------
@@ -101,8 +101,7 @@ int main(int argc, char *argv[])
 	// it with the following command.
 	// context->setDevice( 0 );
 
-    // activate context. Initialize it if not done so far
-	context->init();
+    // activate context.
     context->apply();
 
     // create a buffer
@@ -127,15 +126,15 @@ int main(int argc, char *argv[])
 	// tells osgCompute that the buffer is updated on the CPU. This has an effect
 	// on later mappings of the GPU memory (e.g. MAP_DEVICE): before a pointer
 	// is returned the CPU data is copied to the GPU memory.
-    unsigned int* bufferPtr = (unsigned int*)buffer->map( *context, osgCompute::MAP_HOST_TARGET );
+    unsigned int* bufferPtr = (unsigned int*)buffer->map( osgCompute::MAP_HOST_TARGET );
     memcpy( bufferPtr, bigEndians, sizeof(bigEndians) );
 
-    module->launch( *context );
+    module->launch();
 
 	//////////////////
 	// AFTER LAUNCH //
 	//////////////////
-    bufferPtr = (unsigned int*)buffer->map( *context, osgCompute::MAP_HOST_SOURCE );
+    bufferPtr = (unsigned int*)buffer->map( osgCompute::MAP_HOST_SOURCE );
     osg::notify(osg::INFO)<<std::endl<<"After conversion: "<<std::endl;
     for( unsigned int v=0; v<buffer->getDimension(0); ++v )
         osg::notify(osg::INFO)<<std::hex<< bufferPtr[v] <<std::endl;

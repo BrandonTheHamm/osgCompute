@@ -33,7 +33,7 @@ namespace TexDemo
 		// Modules have to implement at least this
 		// three methods:
         virtual bool init();
-        virtual void launch( const osgCompute::Context& context ) const;
+        virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
 		virtual void clear() { clearLocal(); osgCompute::Module::clear(); }

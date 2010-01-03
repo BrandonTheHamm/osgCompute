@@ -98,7 +98,7 @@ namespace osgCuda
 		if( !asTexture() )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureBuffer::init(): object must be of type osg::Texture."
+				<< getName() << " [osgCuda::TextureBuffer::init()]: not connected to an object."
 				<< std::endl;
 
 			clear();
@@ -140,7 +140,7 @@ namespace osgCuda
 		if( dim[0] == 0 )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::initDimension(): no dimensions defined for texture! set the texture dimensions first."
+				<< getName() << " [osgCuda::Texture2DBuffer::initDimension()]: no dimensions defined for texture! set the texture dimensions first."
 				<< std::endl;
 
 			return false;
@@ -180,7 +180,7 @@ namespace osgCuda
 		if( elementSize == 0 )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::Texture2DBuffer::initElementSize(): cannot determine element size."
+				<< getName() << " [osgCuda::Texture2DBuffer::initElementSize()]: cannot determine element size."
 				<< std::endl;
 
 			return false;
@@ -191,32 +191,17 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void* TextureBuffer::map( const osgCompute::Context& context, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ ) const
+	void* TextureBuffer::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
 	{
 		if( osgCompute::Resource::isClear() )
-		{
-			osg::notify(osg::FATAL)
-				<< "TextureBuffer::map(): buffer is dirty."
-				<< std::endl;
+			if( !init() )
+				return NULL;
 
-			return NULL;
-		}
-
-		if( !context.isConnectedWithGraphicsContext() )
-		{
-			osg::notify(osg::FATAL)
-				<< "TextureBuffer::map(): context must be connected to graphics context."
-				<< std::endl;
-
-			return NULL;
-		}
-
-		TextureStream* stream = static_cast<TextureStream*>( lookupStream(context) );
+		TextureStream* stream = static_cast<TextureStream*>( lookupStream() );
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
-				<< "TextureBuffer::map(): could not receive TextureStream for context \""
-				<< context.getId() << "\"."
+				<< getName() << " [TextureBuffer::map()]: cannot receive TextureStream."
 				<< std::endl;
 
 			return NULL;
@@ -238,29 +223,23 @@ namespace osgCuda
 				stream->_syncDevice = true;
 			}
 		}
-		else unmap( context, hint );
+		else unmap( hint );
 
 		return ptr;
 	}
 
 	//------------------------------------------------------------------------------
-	void TextureBuffer::unmap( const osgCompute::Context& context, unsigned int ) const
+	void TextureBuffer::unmap( unsigned int )
 	{
 		if( osgCompute::Resource::isClear() )
-		{
-			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureBuffer::map(): buffer is dirty."
-				<< std::endl;
+			if( !init() )
+				return;
 
-			return;
-		}
-
-		TextureStream* stream = static_cast<TextureStream*>( lookupStream(context) );
+		TextureStream* stream = static_cast<TextureStream*>( lookupStream() );
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureBuffer::map(): could not receive TextureStream for context \""
-				<< context.getId() << "\"."
+				<< getName() << " [osgCuda::TextureBuffer::map()]: cannot receive TextureStream."
 				<< std::endl;
 
 			return;
@@ -270,9 +249,13 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool osgCuda::TextureBuffer::setMemory( const osgCompute::Context& context, int value, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int count, unsigned int ) const
+	bool osgCuda::TextureBuffer::setMemory( int value, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int count, unsigned int )
 	{
-		unsigned char* data = static_cast<unsigned char*>( map( context, mapping ) );
+		if( osgCompute::Resource::isClear() )
+			if( !init() )
+				return false;
+
+		unsigned char* data = static_cast<unsigned char*>( map( mapping ) );
 		if( NULL == data )
 			return false;
 
@@ -281,8 +264,7 @@ namespace osgCuda
 			if( NULL == memset( &data[offset], value, (count == UINT_MAX)? getByteSize() : count ) )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::setMemory(): error during memset() for host within context \""
-					<< context.getId() << "\"."
+					<< getName() << " [osgCuda::TextureBuffer::setMemory()]: error during memset() for host memory."
 					<< std::endl;
 
 				return false;
@@ -296,8 +278,8 @@ namespace osgCuda
 			if( res != cudaSuccess )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::setMemory(): error during cudaMemset() for device data within context \""
-					<< context.getId() << "\"."
+					<< getName() << " [osgCuda::TextureBuffer::setMemory()]: error during cudaMemset() for device memory."
+					<< cudaGetErrorString( res )  <<"."
 					<< std::endl;
 				return false;
 			}
@@ -309,23 +291,17 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool TextureBuffer::resetMemory( const osgCompute::Context& context, unsigned int   ) const
-	{
+	bool TextureBuffer::resetMemory( unsigned int )
+	{		
 		if( osgCompute::Resource::isClear() )
-		{
-			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureBuffer::resetMemory(): buffer is dirty."
-				<< std::endl;
+			if( !init() )
+				return false;
 
-			return false;
-		}
-
-		TextureStream* stream = static_cast<TextureStream*>( lookupStream(context) );
+		TextureStream* stream = static_cast<TextureStream*>( lookupStream() );
 		if( NULL == stream )
 		{
 			osg::notify(osg::FATAL)
-				<< "osgCuda::TextureBuffer::resetMemory(): could not receive BufferStream for context \""
-				<< context.getId() << "\"."
+				<< getName() << " [osgCuda::TextureBuffer::resetMemory()]: cannot receive BufferStream."
 				<< std::endl;
 
 			return false;
@@ -340,8 +316,7 @@ namespace osgCuda
 			if( NULL == memset( stream->_hostPtr, 0x0, getByteSize() ) )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::resetMemory(): error during memset() for host within context \""
-					<< context.getId() << "\"."
+					<< getName() << " [osgCuda::TextureBuffer::resetMemory(): error during memset() for host memory."
 					<< std::endl;
 
 				return false;
@@ -361,7 +336,7 @@ namespace osgCuda
 				if( cudaSuccess != res )
 				{
 					osg::notify(osg::WARN)
-						<< "osgCuda::TextureBuffer::resetMemory(): error during cudaGLMapBufferObject()."
+						<< getName() << " [osgCuda::TextureBuffer::resetMemory()]: error during cudaGLMapBufferObject()."
 						<< " " << cudaGetErrorString( res ) << "."
 						<< std::endl;
 
@@ -373,8 +348,8 @@ namespace osgCuda
 			if( res != cudaSuccess )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::resetMemory(): error during cudaMemset() for device data within context \""
-					<< context.getId() << "\"."
+					<< getName() << " [osgCuda::TextureBuffer::resetMemory()]: error during cudaMemset() for device memory."
+					<< " " << cudaGetErrorString( res ) << "."
 					<< std::endl;
 				return false;
 			}
@@ -398,14 +373,17 @@ namespace osgCuda
 	//------------------------------------------------------------------------------
 	void TextureBuffer::clear( const osgCompute::Context& context ) const
 	{
-		if( getMapping( context ) != osgCompute::UNMAPPED )
-			unmap( context );
+		if( osgCompute::Context::getAppliedContext() != &context )
+			const_cast<osgCompute::Context*>( &context )->apply();
+
+		if( getMapping() != osgCompute::UNMAPPED )
+			const_cast<TextureBuffer*>(this)->unmap();
 
 		osgCompute::Buffer::clear( context );
 	}
 
 	//------------------------------------------------------------------------------
-	void* TextureBuffer::mapStream( TextureStream& stream, unsigned int mapping, unsigned int offset ) const
+	void* TextureBuffer::mapStream( TextureStream& stream, unsigned int mapping, unsigned int offset )
 	{
 		void* ptr = NULL;
 		bool firstLoad = false;
@@ -495,7 +473,7 @@ namespace osgCuda
 				if( cudaSuccess != res )
 				{
 					osg::notify(osg::WARN)
-						<< "osgCuda::TextureBuffer::mapStream(): error during cudaGLMapBufferObject()."
+						<< getName() << " [osgCuda::TextureBuffer::mapStream()]: error during cudaGLMapBufferObject()."
 						<< " " << cudaGetErrorString( res ) << "."
 						<< std::endl;
 
@@ -520,7 +498,7 @@ namespace osgCuda
 		else
 		{
 			osg::notify(osg::WARN)
-				<< "osgCuda::TextureBuffer::mapStream(): wrong mapping type specified. Use one of the following types: "
+				<< getName() << " [osgCuda::TextureBuffer::mapStream()]: wrong mapping type specified. Use one of the following types: "
 				<< "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
 				<< std::endl;
 
@@ -548,7 +526,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void TextureBuffer::unmapStream( TextureStream& stream ) const
+	void TextureBuffer::unmapStream( TextureStream& stream )
 	{
 		if( stream._syncTex || stream._syncDevice )
 		{
@@ -556,7 +534,7 @@ namespace osgCuda
 			if( NULL == mapStream( stream, osgCompute::MAP_DEVICE_SOURCE, 0 ) )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::unmapStream(): error during device memory synchronization (mapStream())."
+					<< getName() << " [osgCuda::TextureBuffer::unmapStream()]: error during device memory synchronization (mapStream())."
 					<< std::endl;
 				return;
 			}
@@ -569,7 +547,7 @@ namespace osgCuda
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::WARN)
-					<< "osgCuda::TextureBuffer::unmapStream(): error during cudaGLUnmapBufferObject()."
+					<< getName() << " [osgCuda::TextureBuffer::unmapStream()]: error during cudaGLUnmapBufferObject()."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 				return;
@@ -588,12 +566,12 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void osgCuda::TextureBuffer::checkMappingWithinApply( const osgCompute::Context& context ) const
+	void osgCuda::TextureBuffer::checkMappingWithinApply( const osgCompute::Context& context )
 	{
 		if( !context.isConnectedWithGraphicsContext() )
 			return;
 
-		TextureStream* stream = static_cast<TextureStream*>( lookupStream(context) );
+		TextureStream* stream = static_cast<TextureStream*>( lookupStream() );
 		if( NULL == stream )
 			return;
 
@@ -610,7 +588,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool TextureBuffer::setupStream( unsigned int mapping, TextureStream& stream ) const
+	bool TextureBuffer::setupStream( unsigned int mapping, TextureStream& stream )
 	{
 		if( !asTexture()->getImage(0) )
 			return true;
@@ -622,7 +600,7 @@ namespace osgCuda
 			if( data == NULL )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::setupStream(): Cannot receive valid data pointer."
+					<< getName() << " [osgCuda::TextureBuffer::setupStream()]: cannot receive valid data pointer."
 					<< std::endl;
 
 				return false;
@@ -632,7 +610,7 @@ namespace osgCuda
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::setupStream(): error during cudaMemcpy()."
+					<< getName() << " [osgCuda::TextureBuffer::setupStream()]: error during cudaMemcpy()."
 					<< " " << cudaGetErrorString( res ) << "."
 					<< std::endl;
 
@@ -653,7 +631,7 @@ namespace osgCuda
 			if( data == NULL )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::setupStream(): Cannot receive valid data pointer."
+					<< getName() << " [osgCuda::TextureBuffer::setupStream()]: cannot receive valid data pointer."
 					<< std::endl;
 
 				return false;
@@ -663,7 +641,7 @@ namespace osgCuda
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::setupStream(): error during cudaMemcpy()."
+					<< getName() << " [osgCuda::TextureBuffer::setupStream()]: error during cudaMemcpy()."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 
@@ -682,7 +660,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool TextureBuffer::allocStream( unsigned int mapping, TextureStream& stream ) const
+	bool TextureBuffer::allocStream( unsigned int mapping, TextureStream& stream )
 	{
 		if( mapping & osgCompute::MAP_HOST )
 		{
@@ -693,7 +671,7 @@ namespace osgCuda
 			if( NULL == stream._hostPtr )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::allocStream(): something goes wrong within mallocHost()."
+					<< getName() << " [osgCuda::TextureBuffer::allocStream()]: something goes wrong within malloc()."
 					<< std::endl;
 
 				return false;
@@ -723,7 +701,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	bool TextureBuffer::syncStream( unsigned int mapping, TextureStream& stream ) const
+	bool TextureBuffer::syncStream( unsigned int mapping, TextureStream& stream )
 	{
 		cudaError res;
 		if( mapping & osgCompute::MAP_DEVICE )
@@ -732,7 +710,7 @@ namespace osgCuda
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::syncStream(): error during cudaMemcpy() to device."
+					<< getName() << " [osgCuda::TextureBuffer::syncStream()]: error during cudaMemcpy() to device."
 					<< " " << cudaGetErrorString( res ) <<"."
 					<< std::endl;
 
@@ -760,7 +738,7 @@ namespace osgCuda
 				if( cudaSuccess != res )
 				{
 					osg::notify(osg::WARN)
-						<< "osgCuda::TextureBuffer::syncStream(): error during cudaGLMapBufferObject()."
+						<< getName() << " [osgCuda::TextureBuffer::syncStream()]: error during cudaGLMapBufferObject()."
 						<< " " << cudaGetErrorString( res ) << "."
 						<< std::endl;
 
@@ -772,7 +750,7 @@ namespace osgCuda
 			if( cudaSuccess != res )
 			{
 				osg::notify(osg::FATAL)
-					<< "osgCuda::TextureBuffer::syncStream(): something goes wrong within cudaMemcpy() to host."
+					<< getName() << " [osgCuda::TextureBuffer::syncStream()]: something goes wrong within cudaMemcpy() to host memory."
 					<< " " << cudaGetErrorString( res ) << "."
 					<< std::endl;
 
@@ -787,7 +765,7 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	osgCompute::BufferStream* TextureBuffer::newStream( const osgCompute::Context& context ) const
+	osgCompute::BufferStream* TextureBuffer::newStream() const
 	{
 		return new TextureStream;
 	}

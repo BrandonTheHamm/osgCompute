@@ -80,7 +80,7 @@ namespace osgCompute
         virtual ~ComputationBin() { clearLocal(); }
         void clearLocal();
 
-        virtual void launch() const;
+        virtual void launch();
         virtual void drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
 
         // members

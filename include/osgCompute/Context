@@ -43,23 +43,29 @@ namespace osgCompute
 
         virtual bool init();
         virtual void apply();
+		virtual void detach();
 
         virtual unsigned int getId() const;
+
         virtual void connectWithGraphicsContext( osg::GraphicsContext& gc );
         virtual osg::GraphicsContext* getGraphicsContext();
         virtual const osg::GraphicsContext* getGraphicsContext() const;
         virtual void removeGraphicsContext();
         virtual bool isConnectedWithGraphicsContext() const;
+
         virtual void setDevice( int device );
         virtual int getDevice() const;
+
 		virtual bool isResourceRegistered( const Resource& resource ) const;
+		virtual void clearResources() const;
+
+		static unsigned int getAppliedContextId();
+		static const Context* getAppliedContext();
+		static const Context* getContext( unsigned int id );
+		static const Context* getContextFromGraphicsContext( unsigned int graphicContextId );
 
 		virtual void clear();
 		virtual bool isClear() const;
-
-		virtual void clearResources() const;
-		static const Context* getContext( unsigned int id );
-		static const Context* getContextFromGraphicsContext( unsigned int graphicContextId );
 
     protected:
 		friend class Resource;

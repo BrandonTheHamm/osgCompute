@@ -25,6 +25,7 @@ namespace osgCompute
 	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	static std::set< Context* >	s_Contexts;
+	static Context*				s_AppliedContext;
 	static unsigned int			s_ContextIds = 0;
 
 	//------------------------------------------------------------------------------
@@ -50,6 +51,24 @@ namespace osgCompute
 				s_Contexts.erase( itr );
 				return;
 			}
+	}
+
+	//------------------------------------------------------------------------------
+	static void setAppliedContext( Context* context )
+	{
+		s_AppliedContext = context;
+	}
+
+	//------------------------------------------------------------------------------
+	const Context* Context::getAppliedContext()
+	{
+		return s_AppliedContext;
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int Context::getAppliedContextId()
+	{
+		return s_AppliedContext->getId();
 	}
 
 	//------------------------------------------------------------------------------
@@ -113,14 +132,28 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Context::apply()
     {
-        if(isClear())
-            return;
+        if( isClear() )
+            if( !init() )
+				return;
 
 		// if this context is connected to a graphics context 
 		// we have to ensure the context is active.
 		if( _gc.valid() && !_gc->isCurrent() )
 			_gc->makeCurrent();
+
+		// make context the current context
+		if( getAppliedContext() != this )
+			setAppliedContext( this );
     }
+
+
+	//------------------------------------------------------------------------------
+	void Context::detach()
+	{
+		if( getAppliedContext() == this )
+			setAppliedContext( NULL );
+	}
+
 
 	//------------------------------------------------------------------------------
 	unsigned int Context::getId() const

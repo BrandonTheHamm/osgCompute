@@ -70,7 +70,7 @@ namespace TexDemo
     }
   
     //------------------------------------------------------------------------------  
-    void TexStreamer::launch( const osgCompute::Context& ctx ) const
+    void TexStreamer::launch()
     {
         if( isClear() )
             return;
@@ -78,21 +78,21 @@ namespace TexDemo
         // Swap RGB channels 
         swap(  _blocks, 
                _threads,
-               _tmpBuffer->map( ctx ),
-			   _srcArray->map( ctx, osgCompute::MAP_DEVICE_SOURCE ) );
+               _tmpBuffer->map(),
+			   _srcArray->map( osgCompute::MAP_DEVICE_SOURCE ) );
 
         // Run a 3x3 sobel filter 
         sobel( _blocks, 
 			   _threads, 
-               _trgBuffer->map( ctx ), 
-               _tmpBuffer->map( ctx ),
+               _trgBuffer->map(), 
+               _tmpBuffer->map(),
 			   _tmpBuffer->getByteSize() );
 
 		// ... or a 5x5 gauss filter
 		//gauss( _blocks, 
 		//	_threads, 
-		//	_trgBuffer->map( ctx ), 
-		//	_tmpBuffer->map( ctx ),
+		//	_trgBuffer->map(), 
+		//	_tmpBuffer->map(),
 		//	_tmpBuffer->getByteSize() );
 
 

@@ -115,18 +115,6 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
-	void Module::init( const Context& context ) const
-	{
-		Resource::init( context );
-	}
-
-	//------------------------------------------------------------------------------
-	void Module::clear( const Context& context ) const
-	{
-		Resource::clear( context );
-	}
-
-	//------------------------------------------------------------------------------
 	void Module::clear()
 	{
 		clearLocal();
@@ -144,4 +132,16 @@ namespace osgCompute
         _enabled = true;
         _clear = true;
     }
+
+	//------------------------------------------------------------------------------
+	void Module::init( const Context& context ) const
+	{
+		Resource::init( context );
+	}
+
+	//------------------------------------------------------------------------------
+	void Module::clear( const Context& context ) const
+	{
+		Resource::clear( context );
+	}
 }

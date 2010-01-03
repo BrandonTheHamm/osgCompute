@@ -39,17 +39,6 @@ namespace osgCompute
     }
 
 	//------------------------------------------------------------------------------
-	void Resource::init( const Context& context ) const
-	{
-		ContextSetCnstItr itr = _contexts.find( &context );
-		if( itr != _contexts.end() )
-			return;
-
-		_contexts.insert( &context );
-		context.registerResource( *this );
-	}
-
-	//------------------------------------------------------------------------------
 	void Resource::addHandle( const std::string& handle )
 	{
 		if( !isAddressedByHandle(handle) )
@@ -92,17 +81,6 @@ namespace osgCompute
 		return _clear; 
 	}
 
-	//------------------------------------------------------------------------------
-	void Resource::clear( const Context& context ) const
-	{
-		ContextSetItr itr = _contexts.find( &context );
-		if( itr == _contexts.end() )
-			return;
-
-		_contexts.erase( itr );
-		context.unregisterResource( *this );
-	}
-
     //------------------------------------------------------------------------------
     void Resource::clear()
     {
@@ -129,7 +107,29 @@ namespace osgCompute
 
         _clear = true;
 		_handles.clear();
-    } 
+	} 
+
+	//------------------------------------------------------------------------------
+	void Resource::init( const Context& context ) const
+	{
+		ContextSetCnstItr itr = _contexts.find( &context );
+		if( itr != _contexts.end() )
+			return;
+
+		_contexts.insert( &context );
+		context.registerResource( *this );
+	}
+
+	//------------------------------------------------------------------------------
+	void Resource::clear( const Context& context ) const
+	{
+		ContextSetItr itr = _contexts.find( &context );
+		if( itr == _contexts.end() )
+			return;
+
+		_contexts.erase( itr );
+		context.unregisterResource( *this );
+	}
 
 	//------------------------------------------------------------------------------
 	void Resource::setHandles( HandleSet& handles )
