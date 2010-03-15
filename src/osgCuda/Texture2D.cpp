@@ -9,8 +9,6 @@
 #include <osgCuda/Context>
 #include <osgCuda/Texture>
 
-#include <GL/GLU.h>
-
 namespace osgCuda
 {
     /**
