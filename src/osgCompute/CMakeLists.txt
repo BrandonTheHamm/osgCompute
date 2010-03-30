@@ -59,6 +59,7 @@ SET(TARGET_SRC
 	Module.cpp
 	Resource.cpp
 	Computation.cpp
+	Interoperability.cpp
 	ComputationBin.cpp	
 	Visitor.cpp
 )
