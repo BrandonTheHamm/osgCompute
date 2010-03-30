@@ -14,11 +14,28 @@
 */
 
 #include <osg/Notify>
-#include <osgCompute/Context>
 #include <osgCompute/Resource>
 
 namespace osgCompute
 {   
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    unsigned int			Resource::s_CurrentIdx = 0;
+
+    //------------------------------------------------------------------------------
+    void Resource::setCurrentIdx( unsigned int idx )
+    {
+        s_CurrentIdx = idx;
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int Resource::getCurrentIdx()
+    {
+        return s_CurrentIdx;
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,40 +56,46 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Resource::addHandle( const std::string& handle )
+    void Resource::addIdentifier( const std::string& handle )
     {
-        if( !isAddressedByHandle(handle) )
-            _handles.insert( handle ); 
+        if( !isAddressedByIdentifier(handle) )
+            _identifiers.insert( handle ); 
     }
 
     //------------------------------------------------------------------------------
-    void Resource::removeHandle( const std::string& handle )
+    void Resource::removeIdentifier( const std::string& handle )
     {
-        HandleSetItr itr = _handles.find( handle ); 
-        if( itr != _handles.end() )
-            _handles.erase( itr );
+        IdentifierSetItr itr = _identifiers.find( handle ); 
+        if( itr != _identifiers.end() )
+            _identifiers.erase( itr );
     }
 
     //------------------------------------------------------------------------------
-    bool Resource::isAddressedByHandle( const std::string& handle ) const
+    bool Resource::isAddressedByIdentifier( const std::string& handle ) const
     {
-        HandleSetCnstItr itr = _handles.find( handle ); 
-        if( itr == _handles.end() )
+        IdentifierSetCnstItr itr = _identifiers.find( handle ); 
+        if( itr == _identifiers.end() )
             return false;
 
         return true;
     }
 
     //------------------------------------------------------------------------------
-    HandleSet& Resource::getHandles()
+    void Resource::setIdentifiers( IdentifierSet& handles )
     {
-        return _handles;
+        _identifiers = handles;
     }
 
     //------------------------------------------------------------------------------
-    const HandleSet& Resource::getHandles() const
+    IdentifierSet& Resource::getIdentifiers()
     {
-        return _handles;
+        return _identifiers;
+    }
+
+    //------------------------------------------------------------------------------
+    const IdentifierSet& Resource::getIdentifiers() const
+    {
+        return _identifiers;
     }
 
     //------------------------------------------------------------------------------
@@ -87,6 +110,12 @@ namespace osgCompute
         clearLocal();
     }
 
+    //------------------------------------------------------------------------------
+    void Resource::clearCurrent()
+    {
+
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -99,41 +128,9 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Resource::clearLocal()
     {
-        while( !_contexts.empty() )
-        {
-            ContextSetItr itr = _contexts.begin();
-            clear( *(*itr) );
-        }
-
         _clear = true;
-        _handles.clear();
+        _identifiers.clear();
     } 
 
-    //------------------------------------------------------------------------------
-    void Resource::init( const Context& context ) const
-    {
-        ContextSetCnstItr itr = _contexts.find( &context );
-        if( itr != _contexts.end() )
-            return;
 
-        _contexts.insert( &context );
-        context.registerResource( *this );
-    }
-
-    //------------------------------------------------------------------------------
-    void Resource::clear( const Context& context ) const
-    {
-        ContextSetItr itr = _contexts.find( &context );
-        if( itr == _contexts.end() )
-            return;
-
-        _contexts.erase( itr );
-        context.unregisterResource( *this );
-    }
-
-    //------------------------------------------------------------------------------
-    void Resource::setHandles( HandleSet& handles )
-    {
-        _handles = handles;
-    }
 } 

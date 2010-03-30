@@ -16,7 +16,6 @@
 #include <osg/Notify>
 #include <osgCompute/ComputationBin>
 #include <osgCompute/Computation>
-#include <osgCompute/Context>
 
 namespace osgCompute
 {   
@@ -47,6 +46,10 @@ namespace osgCompute
     void ComputationBin::drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
     { 
         osg::State& state = *renderInfo.getState();
+        
+        // Activate Resource Entries
+        Resource::setCurrentIdx( state.getContextID() );
+
         unsigned int numToPop = (previous ? osgUtil::StateGraph::numToPop(previous->_parent) : 0);
         if (numToPop>1) --numToPop;
         unsigned int insertStateSetPosition = state.getStateSetStackSize() - numToPop;
@@ -149,7 +152,7 @@ namespace osgCompute
     bool ComputationBin::hasModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isAddressedByHandle(moduleName)  )
+            if( (*itr)->isAddressedByIdentifier(moduleName)  )
                 return true;
 
         return false;
@@ -175,7 +178,7 @@ namespace osgCompute
     Module* ComputationBin::getModule( const std::string& moduleName )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isAddressedByHandle(moduleName) && (*itr).valid() )
+            if( (*itr)->isAddressedByIdentifier(moduleName) && (*itr).valid() )
                 return (*itr).get();
 
         return NULL;
@@ -185,7 +188,7 @@ namespace osgCompute
     const Module* ComputationBin::getModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isAddressedByHandle(moduleName) && (*itr).valid() )
+            if( (*itr)->isAddressedByIdentifier(moduleName) && (*itr).valid() )
                 return (*itr).get();
 
         return NULL;
@@ -239,24 +242,6 @@ namespace osgCompute
         return _launchCallback; 
     }
 
-    //------------------------------------------------------------------------------
-    void ComputationBin::setContext( Context& context )
-    {
-        _context = &context;
-    }
-
-    //------------------------------------------------------------------------------
-    Context* ComputationBin::getContext()
-    {
-        return _context.get();
-    }
-
-    //------------------------------------------------------------------------------
-    const Context* ComputationBin::getContext() const
-    {
-        return _context.get();
-    }
-
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -265,7 +250,6 @@ namespace osgCompute
     {
         _computation = NULL;
         _computeOrder = osgCompute::Computation::RENDER_PRE_RENDER_PRE_TRAVERSAL;
-        _context = NULL;
         _clear = true;
         _launchCallback = NULL;
         _modules.clear();
@@ -276,11 +260,8 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ComputationBin::launch()
     {
-        if( _clear || !_computation || !_context.valid() )
+        if( _clear || !_computation  )
             return;
-
-        // Apply context 
-        _context->apply();
 
         // Launch modules
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )

@@ -91,7 +91,7 @@ namespace osgCompute
             osg::StateSet::AttributeList& attr = ss->getAttributeList();
             for( osg::StateSet::AttributeList::iterator itr = attr.begin(); itr != attr.end(); ++itr )
                 if( InteropObject* res = dynamic_cast<InteropObject*>( (*itr).second.first.get() ) )
-                    addResource( *res->getOrCreateBuffer() );
+                    addResource( *res->getOrCreateMemory() );
 
             osg::StateSet::TextureAttributeList& texAttrList = ss->getTextureAttributeList();
             for( osg::StateSet::TextureAttributeList::iterator itr = texAttrList.begin(); itr != texAttrList.end(); ++itr )
@@ -99,7 +99,7 @@ namespace osgCompute
                 osg::StateSet::AttributeList& texAttr = (*itr);
                 for( osg::StateSet::AttributeList::iterator texitr = texAttr.begin(); texitr != texAttr.end(); ++texitr )
                     if( InteropObject* res = dynamic_cast<InteropObject*>( (*texitr).second.first.get() ) )
-                        addResource( *res->getOrCreateBuffer() );
+                        addResource( *res->getOrCreateMemory() );
             }
         }
 
@@ -116,7 +116,7 @@ namespace osgCompute
         for( unsigned int d=0; d<geode.getNumDrawables(); ++d )
         {
             if( InteropObject* res = dynamic_cast<InteropObject*>( geode.getDrawable(d) ) )
-                addResource( *res->getOrCreateBuffer() );
+                addResource( *res->getOrCreateMemory() );
         }
 
         osg::NodeVisitor::apply( geode );
@@ -239,102 +239,6 @@ namespace osgCompute
 
         _ptrResources = &_resourcesA;
         _ptrOldResources = &_resourcesB;
-        _clear = true;
-    }
-
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    ContextVisitor::ContextVisitor()
-        : osg::NodeVisitor(osg::NodeVisitor::NODE_VISITOR,osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
-    {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    bool ContextVisitor::init()
-    {
-        if( !_context.valid() )
-        {
-            osg::notify(osg::FATAL)  
-                << " [osgCompute::ContextVisitor::init()]: no context attached."
-                << std::endl;
-
-            return false;
-        }
-
-        _clear = false;
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
-    void ContextVisitor::reset() 
-    {
-        clear();
-    }
-
-    //------------------------------------------------------------------------------
-    void ContextVisitor::apply( Computation& computation )
-    {
-        if( isClear() )
-            return;
-
-        // setup shared context
-        osg::GraphicsContext* gc = _context->getGraphicsContext();
-        if( computation.getContext( *gc->getState() ) != _context.get()  )
-            computation.acceptContext( *_context );
-
-        osg::NodeVisitor::traverse( computation );
-    }
-
-    //------------------------------------------------------------------------------
-    void ContextVisitor::apply( osg::Group& group )
-    {
-        if( Computation* comp = dynamic_cast<Computation*>( &group ) )
-            apply( *comp );
-        else
-            osg::NodeVisitor::apply( group );
-    }
-
-    //------------------------------------------------------------------------------
-    void ContextVisitor::setContext( Context* context )
-    {
-        _context = context;
-    }
-
-    //------------------------------------------------------------------------------
-    Context* ContextVisitor::getContext()
-    {
-        return _context.get();
-    }
-
-    //------------------------------------------------------------------------------
-    const Context* ContextVisitor::getContext() const
-    {
-        return _context.get();
-    }
-
-    //------------------------------------------------------------------------------
-    bool ContextVisitor::isClear() const
-    {
-        return _clear;
-    }
-
-    //------------------------------------------------------------------------------
-    void ContextVisitor::clear()
-    {
-        clearLocal();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    void ContextVisitor::clearLocal()
-    {
-        _context = NULL;
         _clear = true;
     }
 } 

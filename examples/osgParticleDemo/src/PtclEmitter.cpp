@@ -16,6 +16,7 @@
 #include <vector_types.h>
 #include <math.h>
 #include <cstdlib>
+#include <osg/Notify>
 #include "PtclEmitter"
 
 //------------------------------------------------------------------------------
@@ -81,6 +82,8 @@ namespace PtclDemo
         bbmax.y = _seedBoxMax.y();
         bbmax.z = _seedBoxMax.z();
 
+        void* mySeeds = _seeds->map();
+
         ////////////
         // RESEED //
         ////////////
@@ -98,10 +101,10 @@ namespace PtclDemo
     //------------------------------------------------------------------------------
     void PtclEmitter::acceptResource( osgCompute::Resource& resource )
     {
-        if( resource.isAddressedByHandle("PTCL_BUFFER") )
-            _ptcls = dynamic_cast<osgCompute::Buffer*>( &resource );
-        if( resource.isAddressedByHandle("PTCL_SEEDS") )
-            _seeds = dynamic_cast<osgCompute::Buffer*>( &resource );
+        if( resource.isAddressedByIdentifier("PTCL_BUFFER") )
+            _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
+        if( resource.isAddressedByIdentifier("PTCL_SEEDS") )
+            _seeds = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////

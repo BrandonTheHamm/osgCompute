@@ -15,6 +15,8 @@
 #ifndef OSGCUDA_TEXTUREBUFFER_H
 #define OSGCUDA_TEXTUREBUFFER_H 1
 
+#include <driver_types.h>
+#include <osg/Texture>
 #include <osg/Texture1D>
 #include <osg/Texture2D>
 #include <osg/Texture3D>
@@ -23,121 +25,121 @@
 
 namespace osgCuda
 {
-    class Texture1DBuffer;
-    class Texture2DBuffer;
-    class Texture3DBuffer;
-    class TextureRectangleBuffer;
-
-    /**
-    */
-    class TextureStream : public osgCompute::BufferStream
+    enum TextureSyncOp
     {
-    public:
-        void*					 _hostPtr;
-        bool                     _hostPtrAllocated;
-        bool                     _syncHost;
-        void*					 _devPtr;
-        bool                     _syncDevice;
-        GLuint                   _bo;
-        bool                     _boRegistered;
-        unsigned int             _modifyCount;
-        bool					 _syncTex;
+        SYNC_ARRAY = 0x100
+    };
 
-        TextureStream();
-        virtual ~TextureStream();
-
-    private:
-        // not allowed to call copy-constructor or copy-operator
-        TextureStream( const TextureStream& ) {}
-        TextureStream& operator=( const TextureStream& ) { return *this; }
+    enum TextureMapping
+    {
+        MAP_DEVICE_ARRAY = 0x01010000
     };
 
     /**
     */
-    class TextureBuffer : public osgCompute::InteropBuffer
+    class LIBRARY_EXPORT TextureObject : public osgCompute::MemoryObject
+    {
+    public:
+        void*						_hostPtr;
+        void*						_devPtr;
+        cudaArray*                  _graphicsArray;
+        cudaGraphicsResource*       _graphicsResource;
+        unsigned int	            _lastModifiedCount;
+
+        TextureObject();
+        virtual ~TextureObject();
+
+
+    private:
+        // not allowed to call copy-constructor or copy-operator
+        TextureObject( const TextureObject& ) {}
+        TextureObject& operator=( const TextureObject& ) { return *this; }
+    };
+
+    /**
+    */
+    class LIBRARY_EXPORT TextureBuffer : public osgCompute::InteropMemory
     {
     public:
         TextureBuffer();
 
-        virtual osg::Texture* asTexture() = 0;
-        virtual const osg::Texture* asTexture() const = 0;
+        META_Object(osgCuda,TextureBuffer)
+
+        virtual osgCompute::InteropObject* getObject(); 
 
         virtual bool init();
-
-        virtual bool getIsRenderTarget() const = 0;
-
-        virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
-        virtual void unmap( unsigned int hint = 0 );
-        virtual bool setMemory( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 );
-        virtual bool resetMemory( unsigned int hint = 0 );
-
-        virtual void clear();
-    protected:
-        virtual ~TextureBuffer();
-        void clearLocal();
-
-        virtual void clear( const osgCompute::Context& context ) const;
-
         virtual bool initDimension();
         virtual bool initElementSize();
 
-        virtual void* mapStream( TextureStream& stream, unsigned int mapping, unsigned int offset );
-        virtual void unmapStream( TextureStream& stream );
-        virtual void checkMappingWithinApply( const osgCompute::Context& context );
+        virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
+        virtual void unmap( unsigned int hint = 0 );
+        virtual bool set( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 );
+        virtual bool reset( unsigned int hint = 0 );
 
-        virtual osgCompute::BufferStream* newStream() const;
+        virtual void clear();
+    protected:
+        friend class Texture1D;
+        friend class Texture2D;
+        friend class Texture3D;
+        friend class TextureRectangle;
+        virtual ~TextureBuffer();
+        void clearLocal();
 
-        bool setupStream( unsigned int mapping, TextureStream& stream );
-        bool allocStream( unsigned int mapping, TextureStream& stream );
-        bool syncStream( unsigned int mapping, TextureStream& stream );
+        bool setup( unsigned int mapping );
+        bool alloc( unsigned int mapping );
+        bool sync( unsigned int mapping );
 
+        virtual osgCompute::MemoryObject* createObject() const;
+        virtual unsigned int computePitch() const;
 
-        virtual void syncModifiedCounter( const osgCompute::Context& context ) const = 0;
-        virtual bool allocPBO( TextureStream& stream ) = 0;
-        virtual void syncPBO( TextureStream& stream ) = 0;
-        virtual void syncTexture( TextureStream& stream ) = 0;
-
-
+        osg::ref_ptr<osg::Texture>		_texref; 
+        unsigned int                    _usage;
     private:
         // copy constructor and operator should not be called
         TextureBuffer( const TextureBuffer& , const osg::CopyOp& ) {}
         TextureBuffer& operator=(const TextureBuffer&) { return (*this); }
     };
 
-    /**
-    */
-    class LIBRARY_EXPORT Texture1D : public osg::Texture1D, public osgCompute::InteropObject
-    {
-    public:
-        Texture1D();
 
-        META_Object( osgCuda, Texture1D )
+    ///**
+    //*/
+    //class LIBRARY_EXPORT Texture1D : public osg::Texture1D, public osgCompute::InteropObject
+    //{
+    //public:
+    //    Texture1D();
 
-        virtual osgCompute::InteropBuffer* getBuffer();
-        virtual const osgCompute::InteropBuffer* getBuffer() const;
-        virtual osgCompute::InteropBuffer* getOrCreateBuffer();
+    //    META_Object( osgCuda, Texture1D )
 
-        virtual void addHandle( const std::string& handle );
-        virtual void removeHandle( const std::string& handle );
-        virtual bool isAddressedByHandle( const std::string& handle ) const;
+    //    virtual osgCompute::InteropMemory* getMemory();
+    //    virtual const osgCompute::InteropMemory* getMemory() const;
+    //    virtual osgCompute::InteropMemory* getOrCreateMemory();
 
-        virtual void apply(osg::State& state) const;
-        virtual void releaseGLObjects(osg::State* state=0) const;
+    //    virtual bool init();
 
-        virtual void clear();
-    protected:
-        friend class Texture1DBuffer;
-        virtual ~Texture1D();
-        void clearLocal();
+    //    virtual void addIdentifier( const std::string& identifier );
+    //    virtual void removeIdentifier( const std::string& identifier );
+    //    virtual bool isAddressedByIdentifier( const std::string& identifier ) const;
 
-        mutable Texture1DBuffer* 	_proxy;
-        osgCompute::HandleSet		_handles;
+    //    virtual void apply(osg::State& state) const;
+    //    virtual void releaseGLObjects(osg::State* state=0) const;
 
-    private:
-        // copy constructor and operator should not be called
-        Texture1D( const Texture1D& , const osg::CopyOp& ) {}
-        Texture1D& operator=(const Texture1D&) { return (*this); }
-    };
+    //    virtual void freeProxy();
+    //    virtual bool isClear();
+    //    virtual void clear();
+    //protected:
+    //    friend class TextureBuffer;
+    //    virtual ~Texture1D();
+    //    void clearLocal();
+
+    //    mutable TextureBuffer* 	_proxy;
+    //    bool						_clear;
+    //    osgCompute::IdentifierSet		_identifiers;
+
+    //private:
+    //    // copy constructor and operator should not be called
+    //    Texture1D( const Texture1D& , const osg::CopyOp& ) {}
+    //    Texture1D& operator=(const Texture1D&) { return (*this); }
+    //};
 
     /**
     */
@@ -148,74 +150,35 @@ namespace osgCuda
 
         META_Object( osgCuda, Texture2D )
 
-        virtual osgCompute::InteropBuffer* getBuffer();
-        virtual const osgCompute::InteropBuffer* getBuffer() const;
-        virtual osgCompute::InteropBuffer* getOrCreateBuffer();
+        virtual osgCompute::InteropMemory* getMemory();
+        virtual const osgCompute::InteropMemory* getMemory() const;
+        virtual osgCompute::InteropMemory* getOrCreateMemory();
 
-        virtual void addHandle( const std::string& handle );
-        virtual void removeHandle( const std::string& handle );
-        virtual bool isAddressedByHandle( const std::string& handle ) const;
+        virtual bool init();
+
+        virtual void addIdentifier( const std::string& identifier );
+        virtual void removeIdentifier( const std::string& identifier );
+        virtual bool isAddressedByIdentifier( const std::string& identifier ) const;
 
         virtual void apply(osg::State& state) const;
         virtual void releaseGLObjects(osg::State* state=0) const;
 
-        virtual void setIsRenderTarget( bool isRenderTarget );
-        virtual bool getIsRenderTarget() const;
-
+        virtual void freeProxy();
+        virtual bool isClear();
         virtual void clear();
     protected:
-        friend class Texture2DBuffer;
+        friend class TextureBuffer;
         virtual ~Texture2D();
         void clearLocal();
 
-        mutable Texture2DBuffer* 	_proxy;
-        bool						_isRenderTarget;
-        osgCompute::HandleSet		_handles;
+        mutable TextureBuffer* 	    _proxy;
+        bool						_clear;
+        osgCompute::IdentifierSet		_identifiers;
 
     private:
         // copy constructor and operator should not be called
         Texture2D( const Texture2D& , const osg::CopyOp& ) {}
         Texture2D& operator=(const Texture2D&) { return (*this); }
-    };
-
-    /**
-    */
-    class LIBRARY_EXPORT TextureRectangle : public osg::TextureRectangle, public osgCompute::InteropObject
-    {
-    public:
-        TextureRectangle();
-
-        META_Object( osgCuda, TextureRectangle )
-
-        virtual osgCompute::InteropBuffer* getBuffer();
-        virtual const osgCompute::InteropBuffer* getBuffer() const;
-        virtual osgCompute::InteropBuffer* getOrCreateBuffer();
-
-        virtual void addHandle( const std::string& handle );
-        virtual void removeHandle( const std::string& handle );
-        virtual bool isAddressedByHandle( const std::string& handle ) const;
-
-        virtual void apply(osg::State& state) const;
-        virtual void releaseGLObjects(osg::State* state=0) const;
-
-        virtual void setIsRenderTarget( bool isRenderTarget );
-        virtual bool getIsRenderTarget() const;
-
-        virtual void clear();
-    protected:
-        friend class TextureRectangleBuffer;
-        virtual ~TextureRectangle();
-        void clearLocal();
-
-        mutable TextureRectangleBuffer* _proxy;
-        bool							_clear;
-        bool							_isRenderTarget;
-        osgCompute::HandleSet			_handles;
-
-    private:
-        // copy constructor and operator should not be called
-        TextureRectangle( const TextureRectangle& , const osg::CopyOp& ) {}
-        TextureRectangle& operator=(const TextureRectangle&) { return (*this); }
     };
 
     /**
@@ -227,34 +190,75 @@ namespace osgCuda
 
         META_Object( osgCuda, Texture3D )
 
-        virtual osgCompute::InteropBuffer* getBuffer();
-        virtual const osgCompute::InteropBuffer* getBuffer() const;
-        virtual osgCompute::InteropBuffer* getOrCreateBuffer();
+        virtual osgCompute::InteropMemory* getMemory();
+        virtual const osgCompute::InteropMemory* getMemory() const;
+        virtual osgCompute::InteropMemory* getOrCreateMemory();
 
-        virtual void addHandle( const std::string& handle );
-        virtual void removeHandle( const std::string& handle );
-        virtual bool isAddressedByHandle( const std::string& handle ) const;
+        virtual bool init();
+
+        virtual void addIdentifier( const std::string& identifier );
+        virtual void removeIdentifier( const std::string& identifier );
+        virtual bool isAddressedByIdentifier( const std::string& identifier ) const;
 
         virtual void apply(osg::State& state) const;
         virtual void releaseGLObjects(osg::State* state=0) const;
 
-        virtual void setIsRenderTarget( bool isRenderTarget );
-        virtual bool getIsRenderTarget() const;
-
+        virtual void freeProxy();
+        virtual bool isClear();
         virtual void clear();
     protected:
-        friend class Texture3DBuffer;
+        friend class TextureBuffer;
         virtual ~Texture3D();
         void clearLocal();
 
-        mutable Texture3DBuffer* 	_proxy;
+        mutable TextureBuffer* 	    _proxy;
         bool						_clear;
-        bool						_isRenderTarget;
-        osgCompute::HandleSet		_handles;
+        osgCompute::IdentifierSet		_identifiers;
+
     private:
         // copy constructor and operator should not be called
         Texture3D( const Texture3D& , const osg::CopyOp& ) {}
         Texture3D& operator=(const Texture3D&) { return (*this); }
+    };
+
+    /**
+    */
+    class LIBRARY_EXPORT TextureRectangle : public osg::TextureRectangle, public osgCompute::InteropObject
+    {
+    public:
+        TextureRectangle();
+
+        META_Object( osgCuda, TextureRectangle )
+
+        virtual osgCompute::InteropMemory* getMemory();
+        virtual const osgCompute::InteropMemory* getMemory() const;
+        virtual osgCompute::InteropMemory* getOrCreateMemory();
+
+        virtual bool init();
+
+        virtual void addIdentifier( const std::string& identifier );
+        virtual void removeIdentifier( const std::string& identifier );
+        virtual bool isAddressedByIdentifier( const std::string& identifier ) const;
+
+        virtual void apply(osg::State& state) const;
+        virtual void releaseGLObjects(osg::State* state=0) const;
+
+        virtual void freeProxy();
+        virtual bool isClear();
+        virtual void clear();
+    protected:
+        friend class TextureBuffer;
+        virtual ~TextureRectangle();
+        void clearLocal();
+
+        mutable TextureBuffer* 	    _proxy;
+        bool						_clear;
+        osgCompute::IdentifierSet	_identifiers;
+
+    private:
+        // copy constructor and operator should not be called
+        TextureRectangle( const TextureRectangle& , const osg::CopyOp& ) {}
+        TextureRectangle& operator=(const TextureRectangle&) { return (*this); }
     };
 }
 

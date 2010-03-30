@@ -16,13 +16,23 @@
 #ifndef OSGCUDA_INTEROPERABILITY_H
 #define OSGCUDA_INTEROPERABILITY_H 1
 
-#include <osgCompute/Buffer>
+#include <osgCompute/Memory>
 #include <osgCuda/Export>
 
 namespace osgCompute
 {
     class InteropObject;
-    class InteropBuffer;
+    class InteropMemory;
+
+    enum InteropUsage
+    {
+        CUDA_TARGET           = 0x01,
+        GL_TARGET             = 0x10,
+        GL_SOURCE_CUDA_SOURCE = 0x00,
+        GL_SOURCE_CUDA_TARGET = 0x01,
+        GL_TARGET_CUDA_SOURCE = 0x10,
+        GL_TARGET_CUDA_TARGET = 0x11,
+    };
 
     /**
     Interface for all scene based objects 
@@ -30,18 +40,28 @@ namespace osgCompute
     class LIBRARY_EXPORT InteropObject
     {
     public:
-        InteropObject() {}
+        InteropObject() { clearLocal(); }
 
-        virtual InteropBuffer* getBuffer() = 0;
-        virtual const InteropBuffer* getBuffer() const= 0;
-        virtual InteropBuffer* getOrCreateBuffer() = 0;
+        virtual InteropMemory* getMemory() = 0;
+        virtual const InteropMemory* getMemory() const= 0;
+        virtual InteropMemory* getOrCreateMemory() = 0;
 
-        virtual void addHandle( const std::string& handle ) = 0;
-        virtual void removeHandle( const std::string& handle ) = 0;
-        virtual bool isAddressedByHandle( const std::string& handle ) const = 0;
+        virtual void addIdentifier( const std::string& identifier ) = 0;
+        virtual void removeIdentifier( const std::string& identifier ) = 0;
+        virtual bool isAddressedByIdentifier( const std::string& identifier ) const = 0;
+
+        virtual void setUsage( unsigned int usage );
+        virtual unsigned int getUsage();
+
+        virtual void clear();
+
+        virtual void freeProxy() = 0;
 
     protected:
-        virtual ~InteropObject() {}
+        virtual ~InteropObject() { clearLocal(); }
+        void clearLocal();
+
+        unsigned int _usage;
 
     private:
         // copy constructor and operator should not be called
@@ -51,20 +71,20 @@ namespace osgCompute
 
     /**
     */
-    class LIBRARY_EXPORT InteropBuffer : public osgCompute::Buffer
+    class LIBRARY_EXPORT InteropMemory : public osgCompute::Memory
     {
     public:
-        InteropBuffer() {}
+        InteropMemory() {}
 
         virtual InteropObject* getObject() = 0;
 
     protected:
-        virtual ~InteropBuffer() {}
+        virtual ~InteropMemory() {}
 
     private:
         // copy constructor and operator should not be called
-        InteropBuffer( const InteropBuffer& , const osg::CopyOp& ) {}
-        InteropBuffer& operator=(const InteropBuffer&) { return (*this); }
+        InteropMemory( const InteropMemory& , const osg::CopyOp& ) {}
+        InteropMemory& operator=(const InteropMemory&) { return (*this); }
     };
 }
 

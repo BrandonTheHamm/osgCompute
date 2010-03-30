@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     geometry->setTexCoordArray( 0, cowGeometry->getTexCoordArray(0) );
     geometry->setNormalArray( cowGeometry->getNormalArray() );
     geometry->setNormalBinding( cowGeometry->getNormalBinding() );
-    geometry->addHandle( "WARP_GEOMETRY");
+    geometry->addIdentifier( "WARP_GEOMETRY");
     // Remove original geometry
     bool retval = cowGeode->replaceDrawable( cowGeometry, geometry );
 
@@ -115,6 +115,8 @@ int main(int argc, char *argv[])
     osgViewer::Viewer viewer(arguments);
     viewer.setUpViewInWindow( 50, 50, 640, 480);
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
+
+    warpModule->setFrameStamp( viewer.getFrameStamp() );
 
     // You must use single threaded version since osgCompute currently
     // does only support single threaded applications. Please ask in the

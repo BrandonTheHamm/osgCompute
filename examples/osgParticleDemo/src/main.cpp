@@ -126,7 +126,7 @@ osg::Geode* getGeode( unsigned int numParticles )
 
     ptclGeom->setVertexArray(coords);
     ptclGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
-    ptclGeom->addHandle( "PTCL_BUFFER" );
+    ptclGeom->addIdentifier( "PTCL_BUFFER" );
 
     // Add particles
     geode->addDrawable( ptclGeom.get() );
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
     seedBuffer->setName( "ptclSeedBuffer" );
     seedBuffer->setDimension(0,numParticles);
     seedBuffer->setArray( seedValues );
-    seedBuffer->addHandle( "PTCL_SEEDS" );
+    seedBuffer->addIdentifier( "PTCL_SEEDS" );
 
     ///////////////////
     // SETUP MODULES //
@@ -230,6 +230,9 @@ int main(int argc, char *argv[])
     viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.setUpViewInWindow( 50, 50, 640, 480);
+
+
+    ptclMover->setFrameStamp( viewer.getFrameStamp() );
 
     // You must use the single threaded version since osgCompute currently
     // does only support single threaded applications. Please ask in the

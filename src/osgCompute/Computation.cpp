@@ -24,12 +24,29 @@
 namespace osgCompute
 {
     /////////////////////////////////////////////////////////////////////////////////////////////////
+    // STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    bool Computation::s_deviceReady = false;
+
+    //------------------------------------------------------------------------------
+    bool Computation::isDeviceReady()
+    {
+        return s_deviceReady;
+    }
+
+    //------------------------------------------------------------------------------
+    void Computation::setDeviceReady()
+    {
+        s_deviceReady = true;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------ 
     Computation::Computation() 
         :   osg::Group(),
-        _parentComputation( NULL )
+            _parentComputation( NULL )
     { 
         clearLocal(); 
     }
@@ -43,6 +60,9 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Computation::accept(osg::NodeVisitor& nv) 
     { 
+        if( !isDeviceReady() )
+            checkDevice();
+
         if( nv.validNodeMask(*this) ) 
         {  
             nv.pushOntoNodePath(this);
@@ -59,7 +79,17 @@ namespace osgCompute
             }
             else if( ov != NULL )
             {
-                getOrCreateContext( *ov->getState() );
+                addContext( *ov->getState() );
+
+                // Setup state
+                if( !isDeviceReady() ) 
+                {               
+                    osg::notify(osg::FATAL) 
+                        << getName() << " [Computation::accept(GLObjectsVisitor)]: No valid GL Device found."
+                        << std::endl;
+
+                    return;
+                }
 
                 nv.apply( *this );
             }
@@ -149,12 +179,12 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Computation::removeModule( const std::string& moduleHandle )
+    void Computation::removeModule( const std::string& moduleIdentifier )
     {
         ModuleListItr itr = _modules.begin();
         while( itr != _modules.end() )
         {
-            if( (*itr)->isAddressedByHandle( moduleHandle ) )
+            if( (*itr)->isAddressedByIdentifier( moduleIdentifier ) )
             {
                 // decrement traversal counter if necessary
                 if( (*itr)->getEventCallback() )
@@ -200,10 +230,10 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool Computation::hasModule( const std::string& moduleHandle ) const
+    bool Computation::hasModule( const std::string& moduleIdentifier ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isAddressedByHandle( moduleHandle ) )
+            if( (*itr)->isAddressedByIdentifier( moduleIdentifier ) )
                 return true;
 
         return false;
@@ -263,7 +293,7 @@ namespace osgCompute
             if( !curResource )
                 continue;
 
-            if( curResource->isAddressedByHandle(handle)  )
+            if( curResource->isAddressedByIdentifier(handle)  )
                 return true;
         }
 
@@ -295,7 +325,7 @@ namespace osgCompute
             if( !curResource )
                 continue;
 
-            if( curResource->isAddressedByHandle( handle ) )
+            if( curResource->isAddressedByIdentifier( handle ) )
             {
                 for( ModuleListItr moditr = _modules.begin(); moditr != _modules.end(); ++moditr )
                     (*moditr)->removeResource( *curResource );
@@ -460,19 +490,14 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Computation::releaseGLObjects( osg::State* state ) const
     {
-        for( ContextMapItr itr = _contextMap.begin();
-            itr != _contextMap.end();
-            ++itr )
+        if( state != NULL )
         {
-            if( (*itr).second->getGraphicsContext()->getState() == state )
-            {
-                (*itr).second->clearResources();
-                _contextMap.erase( itr );
-                break;
-            }
+            ContextSetItr itr = _contextSet.find( state->getGraphicsContext() );
+            if( itr != _contextSet.end() )
+                _contextSet.erase( state->getGraphicsContext() );
+            
+            Group::releaseGLObjects( state );
         }
-
-        Group::releaseGLObjects( state );
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -490,7 +515,7 @@ namespace osgCompute
         _autoCheckSubgraph = false;
         _parentComputation = NULL;
         _resourceVisitor = NULL;
-        _contextMap.clear();
+        _contextSet.clear();
 
         // clear node or group related members
         removeChildren(0,osg::Group::getNumChildren());
@@ -505,86 +530,36 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
+    void Computation::checkDevice()
+    {
+    }
+
+
+    //------------------------------------------------------------------------------
     void Computation::setParentComputation( Computation* parentComputation )
     {
-        // different parent so clear context map
-        if( parentComputation != _parentComputation )
-            _contextMap.clear();
-
         _parentComputation = parentComputation;
     }
 
     //------------------------------------------------------------------------------
-    bool osgCompute::Computation::setContext( Context& context )
+    void Computation::addContext( osg::State& state )
     {
-        if( !context.isConnectedWithGraphicsContext() ||
-            context.getGraphicsContext()->getState() == NULL )
-            return false;
-
-        if( _parentComputation == NULL )
+        if( !state.getGraphicsContext() )
         {
-            _contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
+            osg::notify(osg::FATAL)  << "Computation::addContext() for \""
+                << getName()<<"\": GLObjectsVisitor must provide a valid graphics context."
+                << std::endl;
 
-            // Pass on context to subgraph
-            distributeContext( context );
-        }
-        else
-        {
-            // Search for topmost computation
-            Computation* topComp = this;
-            while( NULL != topComp->getParentComputation() )
-                topComp = topComp->getParentComputation();
-
-            topComp->setContext( context );
+            return;
         }
 
-        return true;
-    }
+        // find context
+        ContextSetItr itr = _contextSet.find( state.getGraphicsContext() );
+        if( itr != _contextSet.end() )
+            return;
 
-    //------------------------------------------------------------------------------
-    Context* Computation::getContext( osg::State& state )
-    {
-        ContextMapItr itr = _contextMap.find( state.getContextID() );
-        if( itr == _contextMap.end() )
-            return NULL;
-
-        return (*itr).second.get();
-    }
-
-    //------------------------------------------------------------------------------
-    Context* Computation::getOrCreateContext( osg::State& state )
-    {
-        // find or create context
-        bool contextCreated = false;
-        Context* context = NULL;
-        ContextMapItr itr = _contextMap.find( state.getContextID() );
-        if( itr == _contextMap.end() )
-        {
-            context = newContext();
-            if( !context )
-            {
-                osg::notify(osg::FATAL)  
-                    << getName() << " [Computation::getOrCreateContext()]: cannot create context."
-                    << std::endl;
-
-                return NULL;
-            }
-
-            context->connectWithGraphicsContext( *state.getGraphicsContext() );
-            _contextMap.insert( std::make_pair< unsigned int, osg::ref_ptr<Context> >( state.getContextID(), context) );
-            context->init();
-            contextCreated = true;
-        }
-        else
-        {
-            context = (*itr).second.get();
-        }
-
-        // traverse subgraph and pass on context 
-        if( contextCreated || getAutoCheckSubgraph() )
-            distributeContext( *context );
-
-        return context;
+        // insert new context
+        _contextSet.insert( state.getGraphicsContext() );
     }
 
     //------------------------------------------------------------------------------
@@ -594,16 +569,6 @@ namespace osgCompute
         {
             osg::notify(osg::FATAL)  << "Computation::addBin() for \""
                 << getName()<<"\": CullVisitor must provide a valid state."
-                << std::endl;
-
-            return;
-        }
-
-        Context* ctx = getContext( *cv.getState() );
-        if( !ctx )
-        {
-            osg::notify(osg::FATAL)  
-                << getName() << " [Computation::addBin()]: cannot find valid context."
                 << std::endl;
 
             return;
@@ -661,7 +626,6 @@ namespace osgCompute
         }
 
         pb->init( *this );
-        pb->setContext( *ctx );
 
         //////////////
         // TRAVERSE //
@@ -681,14 +645,13 @@ namespace osgCompute
         else
         {
             // For all contexts launch modules
-            for( ContextMapItr itr = _contextMap.begin(); itr != _contextMap.end(); ++itr )
+            for( ContextSetItr itr = _contextSet.begin(); itr != _contextSet.end(); ++itr )
             {
-                Context* curCtx = itr->second.get();
-                if( curCtx->isClear() )
-                    continue;
-
-                // Apply context 
-                curCtx->apply();
+                if( (*itr)->isCurrent() )
+                    (*itr)->makeCurrent();
+            
+                // Activate Resource Entries
+                Resource::setCurrentIdx( (*itr)->getState()->getContextID() );
 
                 // Launch modules
                 for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
@@ -706,49 +669,11 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Computation::acceptContext( Context& context )
-    {
-        if( !context.isConnectedWithGraphicsContext() ||
-            context.getGraphicsContext()->getState() == NULL )
-            return;
-
-        _contextMap[ context.getGraphicsContext()->getState()->getContextID() ] = &context;
-    }
-
-    //------------------------------------------------------------------------------
-    void osgCompute::Computation::removeContext( osg::State& state )
-    {
-        ContextMapItr itr = _contextMap.find( state.getContextID() );
-        if( itr != _contextMap.end() )
-            _contextMap.erase(itr);
-    }
-
-    //------------------------------------------------------------------------------
-    void osgCompute::Computation::distributeContext( Context& context )
-    {
-        osg::ref_ptr<ContextVisitor> ctxVisitor = new ContextVisitor;
-        ctxVisitor->setContext( &context );
-        if( !ctxVisitor->init() )
-        {
-            osg::notify(osg::FATAL)  
-                << getName() << " [Computation::distributeContext()]: cannot init context visitor."
-                << std::endl;
-
-            return;
-        }
-
-        // distribute context to the subgraph
-        ctxVisitor->apply( *this );
-    }
-
-    //------------------------------------------------------------------------------
     void Computation::update( osg::NodeVisitor& uv )
     {
         if( !_resourcesCollected && getParentComputation() != NULL )
         {
-            // status changed from child node to topmost node 
-            // so clear context list
-            _contextMap.clear();
+            // status changed from child node to topmost node
             setParentComputation( NULL );
         }
 

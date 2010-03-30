@@ -19,36 +19,32 @@
 
 #include <osg/Image>
 #include <osg/Array>
-#include <osgCompute/Buffer>
+#include <osgCompute/Memory>
 #include <osgCuda/Export>
 
 namespace osgCuda
 {
     /**
     */
-    class BufferStream : public osgCompute::BufferStream
+    class BufferObject : public osgCompute::MemoryObject
     {
     public:
         void*							_devPtr;
-        bool                            _devPtrAllocated;
-        bool                            _syncDevice;
         void*							_hostPtr;
-        bool                            _hostPtrAllocated;
-        bool                            _syncHost;
         unsigned int                    _modifyCount;
 
-        BufferStream();
-        virtual ~BufferStream();
+        BufferObject();
+        virtual ~BufferObject();
 
     private:
         // not allowed to call copy-constructor or copy-operator
-        BufferStream( const BufferStream& ) {}
-        BufferStream& operator=( const BufferStream& ) { return *this; }
+        BufferObject( const BufferObject& ) {}
+        BufferObject& operator=( const BufferObject& ) { return *this; }
     };
 
     /**
     */
-    class LIBRARY_EXPORT Buffer : public osgCompute::Buffer
+    class LIBRARY_EXPORT Buffer : public osgCompute::Memory
     {
     public:
         Buffer();
@@ -60,8 +56,8 @@ namespace osgCuda
 
         virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
         virtual void unmap( unsigned int hint = 0 );
-        virtual bool setMemory( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 );
-        virtual bool resetMemory( unsigned int hint = 0 );
+        virtual bool set( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 );
+        virtual bool reset( unsigned int hint = 0 );
 
         virtual void setImage( osg::Image* image );
         virtual osg::Image* getImage();
@@ -75,12 +71,12 @@ namespace osgCuda
         virtual ~Buffer() { clearLocal(); }
         void clearLocal();
 
-        virtual void* mapStream( BufferStream& stream, unsigned int mapping, unsigned int offset );
-        virtual void unmapStream( BufferStream& stream );
-        bool setupStream( unsigned int mapping, BufferStream& stream );
-        bool allocStream( unsigned int mapping, BufferStream& stream );
-        bool syncStream( unsigned int mapping, BufferStream& stream );
-        virtual osgCompute::BufferStream* newStream() const;
+        bool setup( unsigned int mapping );
+        bool alloc( unsigned int mapping );
+        bool sync( unsigned int mapping );
+
+        virtual osgCompute::MemoryObject* createObject() const;
+        virtual unsigned int computePitch() const;
         void resetModifiedCounts() const;
 
     protected:

@@ -18,7 +18,7 @@
 
 #include <osg/ref_ptr>
 #include <osgCompute/Module>
-#include <osgCompute/Buffer>
+#include <osgCompute/Memory>
 
 namespace PtclDemo
 {
@@ -47,8 +47,8 @@ namespace PtclDemo
 
         osg::Vec3f                                        _seedBoxMin;
         osg::Vec3f                                        _seedBoxMax;
-        osg::ref_ptr<osgCompute::Buffer>                  _ptcls;
-        osg::ref_ptr<osgCompute::Buffer>                  _seeds;
+        osg::ref_ptr<osgCompute::Memory>                  _ptcls;
+        osg::ref_ptr<osgCompute::Memory>                  _seeds;
 
     private:
         PtclEmitter(const PtclEmitter&, const osg::CopyOp& ) {} 

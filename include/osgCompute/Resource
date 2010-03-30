@@ -26,23 +26,17 @@
 
 namespace osgCompute
 {
-    class Context;
+    typedef std::set< std::string >                                           	IdentifierSet;
+    typedef std::set< std::string >::iterator                                 	IdentifierSetItr;
+    typedef std::set< std::string >::const_iterator                           	IdentifierSetCnstItr;
 
-    typedef std::set< const Context* >                     						ContextSet;
-    typedef std::set< const Context* >::iterator           						ContextSetItr;
-    typedef std::set< const Context* >::const_iterator     						ContextSetCnstItr;
+    //typedef std::vector< osg::ref_ptr<Resource> >                              	ResourceList;
+    //typedef std::vector< osg::ref_ptr<Resource> >::iterator                    	ResourceListItr;
+    //typedef std::vector< osg::ref_ptr<Resource> >::const_iterator              	ResourceListCnstItr;
 
-    typedef std::set< std::string >                                           	HandleSet;
-    typedef std::set< std::string >::iterator                                 	HandleSetItr;
-    typedef std::set< std::string >::const_iterator                           	HandleSetCnstItr;
-
-    typedef std::vector< osg::ref_ptr<Resource> >                              	ResourceList;
-    typedef std::vector< osg::ref_ptr<Resource> >::iterator                    	ResourceListItr;
-    typedef std::vector< osg::ref_ptr<Resource> >::const_iterator              	ResourceListCnstItr;
-
-    typedef std::set< const Resource* >											ResourcePtrSet;
-    typedef std::set< const Resource* >::iterator								ResourcePtrSetItr;
-    typedef std::set< const Resource* >::const_iterator							ResourcePtrSetCnstItr;
+    //typedef std::set< const Resource* >											ResourcePtrSet;
+    //typedef std::set< const Resource* >::iterator								ResourcePtrSetItr;
+    //typedef std::set< const Resource* >::const_iterator							ResourcePtrSetCnstItr;
 
     typedef std::set< osg::ref_ptr<Resource> >                                  ResourceSet;
     typedef std::set< osg::ref_ptr<Resource> >::iterator                        ResourceSetItr;
@@ -61,28 +55,29 @@ namespace osgCompute
 
         virtual bool init();
 
-        virtual void addHandle( const std::string& handle );
-        virtual void removeHandle( const std::string& handle );
-        virtual bool isAddressedByHandle( const std::string& handle ) const;
-        virtual HandleSet& getHandles();
-        virtual const HandleSet& getHandles() const;
+        virtual void addIdentifier( const std::string& handle );
+        virtual void removeIdentifier( const std::string& handle );
+        virtual bool isAddressedByIdentifier( const std::string& handle ) const;
+        virtual void setIdentifiers( IdentifierSet& handles );
+        virtual IdentifierSet& getIdentifiers();
+        virtual const IdentifierSet& getIdentifiers() const;
 
         virtual bool isClear() const;
         virtual void clear();
+        virtual void clearCurrent();
+
+        static void setCurrentIdx( unsigned int idx );
+        static unsigned int getCurrentIdx();
 
     protected:
         virtual ~Resource();
 
-        virtual void init( const Context& context ) const;
-        virtual void clear( const Context& context ) const;
-        virtual void setHandles( HandleSet& handles );
-
         void clearLocal();
 
-        mutable ContextSet					_contexts;
-        HandleSet                           _handles;
+        IdentifierSet                       _identifiers;
         bool                                _clear;
 
+        static unsigned int                 s_CurrentIdx;
     private:
         friend class Context;
         // copy constructor and operator should not be called

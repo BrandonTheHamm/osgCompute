@@ -46,7 +46,6 @@ SET(HEADER_PATH ${osgCompute_SOURCE_DIR}/include/${LIB_NAME})
 SET(TARGET_H
 	${HEADER_PATH}/Array
 	${HEADER_PATH}/Buffer
-	${HEADER_PATH}/Context
 	${HEADER_PATH}/Export
 	${HEADER_PATH}/Geometry
 	${HEADER_PATH}/Computation
@@ -56,7 +55,6 @@ SET(TARGET_H
 
 # collect the sources
 SET(TARGET_SRC
-	Context.cpp
 	Array.cpp
 	Buffer.cpp
 	Geometry.cpp

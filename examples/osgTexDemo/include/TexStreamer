@@ -19,7 +19,7 @@
 #include <osg/ref_ptr>
 #include <vector_types.h>
 #include <osgCompute/Module>
-#include <osgCompute/Buffer>
+#include <osgCompute/Memory>
 
 namespace TexDemo
 {
@@ -43,9 +43,9 @@ namespace TexDemo
 
         dim3											_blocks;
         dim3											_threads;
-        osg::ref_ptr<osgCompute::Buffer>				_srcArray;
-        osg::ref_ptr<osgCompute::Buffer>                _tmpBuffer;
-        osg::ref_ptr<osgCompute::Buffer>                _trgBuffer;
+        osg::ref_ptr<osgCompute::Memory>				_srcArray;
+        osg::ref_ptr<osgCompute::Memory>                _tmpBuffer;
+        osg::ref_ptr<osgCompute::Memory>                _trgBuffer;
 
     private:
         TexStreamer(const TexStreamer&, const osg::CopyOp& ) {} 

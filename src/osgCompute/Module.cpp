@@ -14,7 +14,6 @@
 */
 
 #include <osgCompute/Module>
-#include <osgCompute/Context>
 
 namespace osgCompute
 {   
@@ -131,17 +130,5 @@ namespace osgCompute
         _updateCallback = NULL;
         _enabled = true;
         _clear = true;
-    }
-
-    //------------------------------------------------------------------------------
-    void Module::init( const Context& context ) const
-    {
-        Resource::init( context );
-    }
-
-    //------------------------------------------------------------------------------
-    void Module::clear( const Context& context ) const
-    {
-        Resource::clear( context );
     }
 }

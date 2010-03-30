@@ -66,9 +66,6 @@ namespace osgCompute
         virtual ~Module() { clearLocal(); }
         void clearLocal();
 
-        virtual void init( const Context& context ) const;
-        virtual void clear( const Context& context ) const;
-
         osg::ref_ptr<ModuleCallback>   _updateCallback;
         osg::ref_ptr<ModuleCallback>   _eventCallback;
         bool                           _enabled;

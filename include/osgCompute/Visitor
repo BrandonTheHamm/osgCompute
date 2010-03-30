@@ -18,7 +18,7 @@
 
 #include <osg/NodeVisitor>
 #include <osgCompute/Export>
-#include <osgCompute/Context>
+#include <osgCompute/Resource>
 
 namespace osgCompute
 {
@@ -33,7 +33,7 @@ namespace osgCompute
 
         META_NodeVisitor( osgCompute, ResourceVisitor )
 
-            virtual bool init();
+        virtual bool init();
         virtual void setupForTraversal();
         virtual void updateComputation();
 
@@ -74,42 +74,6 @@ namespace osgCompute
         // copy constructor and operator should not be called
         ResourceVisitor( const ResourceVisitor&, const osg::CopyOp& ) {}
         ResourceVisitor& operator=( const ResourceVisitor& copy ) { return (*this); }
-    };
-
-    /**
-    */
-    class LIBRARY_EXPORT ContextVisitor : public osg::NodeVisitor
-    {
-    public:
-        ContextVisitor();
-
-        META_NodeVisitor( osgCompute, ContextVisitor )
-
-        virtual bool init();
-        virtual void reset();
-
-        virtual void apply( osg::Group& group );
-        virtual void apply( Computation& computation );
-
-        virtual Context* getContext();
-        virtual const Context* getContext() const;
-        virtual bool isClear() const;
-
-        virtual void clear();
-    protected:
-        friend class Computation;
-        virtual ~ContextVisitor() { clearLocal(); }
-        void clearLocal();
-
-        virtual void setContext( Context* context );
-
-        osg::ref_ptr<osgCompute::Context>   _context;
-        bool                                _clear;
-
-    private:
-        // copy constructor and operator should not be called
-        ContextVisitor( const ContextVisitor&, const osg::CopyOp& ) {}
-        ContextVisitor& operator=( const ContextVisitor& copy ) { return (*this); }
     };
 }
 

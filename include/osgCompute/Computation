@@ -39,19 +39,23 @@ namespace osgUtil
     class CullVisitor;
 }
 
-#define META_Computation( libraryname, classname, binlibrary, binclass, ctxlibrary, ctxclass, visitorlibrary, visitorclass )  \
+#define META_Computation( libraryname, classname, binlibrary, binclass, visitorlibrary, visitorclass )  \
     META_Object( libraryname, classname )                                                       		\
     virtual std::string                  binLibraryName() const { return #binlibrary; }          		\
     virtual std::string                  binClassName() const { return #binclass; }              		\
-    virtual std::string                  contextLibraryName() const { return #ctxlibrary; }      		\
-    virtual std::string                  contextClassName() const { return #ctxclass; }          		\
-    virtual osgCompute::Context*         newContext() const { return new ctxlibrary::ctxclass; } 		\
     virtual std::string                  visitorLibraryName() const { return #visitorlibrary; }      	\
     virtual std::string                  visitorClassName() const { return #visitorclass; }          	\
     virtual osgCompute::ResourceVisitor* newVisitor() const { return new visitorlibrary::visitorclass; }
 
+
 namespace osgCompute
 {
+
+    typedef std::set< osg::GraphicsContext* >						ContextSet;
+    typedef std::set< osg::GraphicsContext* >::iterator			    ContextSetItr;
+    typedef std::set< osg::GraphicsContext* >::const_iterator		ContextSetCnstItr;
+
+
     //! Abstract base node of any computation
     /**
     * A computation node allows you to execute your own parallel code during the rendering within                   <br>
@@ -61,7 +65,7 @@ namespace osgCompute
     * a computation in order to define your own computations.                                                       <br>
     * Please note that the rendering of the computation's sub graph is enabled by default.                          <br> 
     * ( see xxx to disable the traversal of the sub-graph in order to remove the sub-graph from rendering ).        <br>
-    * Parameters that should be shared throughout modules can be added via addParamHandle(). Please note            <br>
+    * Parameters that should be shared throughout modules can be added via addModule(). Please note            <br>
     * that each param is referenced by a handle and modules comparing these handles in order to accept parameters.  <br>
     **/                                                                                                         
     class LIBRARY_EXPORT Computation : public osg::Group
@@ -89,13 +93,6 @@ namespace osgCompute
         */
         virtual void accept( osg::NodeVisitor& nv );
 
-        /** The derived class must provide a valid library name of the required context. */
-        virtual std::string contextLibraryName() const = 0;
-        /** The derived class must provide a valid class name of the required context. */
-        virtual std::string contextClassName() const = 0;
-        /** The derived class must provide a method which allows to create new contexts*/
-        virtual osgCompute::Context* newContext() const = 0;
-
         /** The derived class must provide a valid library name of the required computation bin. */
         virtual std::string binLibraryName() const = 0;
         /** The derived class must provide a valid class name of the required computation bin. */
@@ -118,10 +115,10 @@ namespace osgCompute
         virtual void removeModule( Module& module );
 
         /** Remove the module by providing the module's name. */
-        virtual void removeModule( const std::string& moduleHandle );
+        virtual void removeModule( const std::string& moduleIdentifier );
 
         /** Returns true if the computation uses a module of module name. */
-        virtual bool hasModule( const std::string& moduleHandle ) const;
+        virtual bool hasModule( const std::string& moduleIdentifier ) const;
 
         /** Returns true if the computation uses the module. */
         virtual bool hasModule( Module& module ) const;
@@ -182,10 +179,6 @@ namespace osgCompute
         /** Restore object to default state. Calls clearLocal(). */
         virtual void clear();
 
-        virtual bool setContext( Context& context );
-        virtual Context* getOrCreateContext( osg::State& state );
-        virtual Context* getContext( osg::State& state );
-
         virtual void releaseGLObjects( osg::State* state ) const;
 
     protected:
@@ -196,12 +189,10 @@ namespace osgCompute
 
         void clearLocal();
 
-        virtual void acceptContext(  Context& context );
-        virtual void removeContext( osg::State& state );
-        virtual void distributeContext( Context& context );
+        virtual void checkDevice();
+        virtual void addContext( osg::State& state );
         virtual void update( osg::NodeVisitor& uv );
         virtual void collectResources();
-
         virtual void launch();
         virtual void addBin( osgUtil::CullVisitor& cv );
         virtual void handleevent( osg::NodeVisitor& ev );
@@ -219,7 +210,11 @@ namespace osgCompute
         bool                                	_resourcesCollected;
         bool                                	_autoCheckSubgraph;
 
-        mutable ContextMap                  	_contextMap;
+        mutable ContextSet                  	_contextSet;
+
+        static bool isDeviceReady();
+        static void setDeviceReady();
+        static bool                             s_deviceReady;
 
     private:
 

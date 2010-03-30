@@ -12,7 +12,10 @@
 *
 * The full license is in LICENSE file included with this distribution.
 */
+#include <cuda_runtime.h>
+#include <osg/Notify>
 #include <osgCuda/Buffer>
+#include <osgCuda/Texture>
 #include "TexStreamer"
 
 // Declare CUDA-kernel functions
@@ -23,7 +26,7 @@ extern "C"
 void sobel( const dim3& numBlocks, const dim3& numThreads, void* trgBuffer, void* srcBuffer, unsigned int byteSize );
 
 extern "C"
-void swap( const dim3& numBlocks, const dim3& numThreads, void* trgBuffer, void* srcArray );
+void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcArray, unsigned int trgPitch, unsigned int imageWidth, unsigned int imageHeight );
 
 namespace TexDemo
 {
@@ -55,15 +58,24 @@ namespace TexDemo
             return false;
         }
 
-
         /////////////////////////
         // COMPUTE KERNEL SIZE //
         /////////////////////////
-        // In this case we restrict our texture size to a multiple of 16 for
-        // each dimension
+        // In this case we restrict our thread grid to 256 threads per block
         _threads = dim3( 16, 16, 1 );
-        _blocks = dim3( _trgBuffer->getDimension(0)/16, 
-            _trgBuffer->getDimension(1)/16, 1 );
+
+        unsigned int numReqBlocksWidth = 0, numReqBlocksHeight = 0;
+        if( _trgBuffer->getDimension(0) % 16 == 0) 
+            numReqBlocksWidth = _trgBuffer->getDimension(0) / 16;
+        else
+            numReqBlocksWidth = _trgBuffer->getDimension(1) / 16 + 1;
+
+        if( _trgBuffer->getDimension(1) % 16 == 0) 
+            numReqBlocksHeight = _trgBuffer->getDimension(1) / 16;
+        else
+            numReqBlocksHeight = _trgBuffer->getDimension(1) / 16 + 1;
+        
+        _blocks = dim3( numReqBlocksWidth, numReqBlocksHeight, 1 );
 
         // Do not forget to call osgCompute::Module::init()!!!
         return osgCompute::Module::init();
@@ -76,17 +88,17 @@ namespace TexDemo
             return;
 
         // Swap RGB channels 
-        swap(  _blocks, 
-            _threads,
-            _tmpBuffer->map(),
-            _srcArray->map( osgCompute::MAP_DEVICE_SOURCE ) );
+        //swap(  _blocks, 
+        //       _threads,
+        //       _tmpBuffer->map(),
+        //       _srcArray->map() );
 
-        // Run a 3x3 sobel filter 
-        sobel(_blocks, 
-            _threads, 
-            _trgBuffer->map(), 
-            _tmpBuffer->map(),
-            _tmpBuffer->getByteSize() );
+        //// Run a 3x3 sobel filter 
+        //sobel(_blocks, 
+        //    _threads, 
+        //    _trgBuffer->map(), 
+        //    _tmpBuffer->map(),
+        //    _tmpBuffer->getByteSize() );
 
         // ... or a 5x5 gauss filter
         //gauss( _blocks, 
@@ -96,16 +108,34 @@ namespace TexDemo
         //	_tmpBuffer->getByteSize() );
 
 
+
+        swap(  _blocks, 
+            _threads,
+            _trgBuffer->map(),
+            _srcArray->map(),
+            _trgBuffer->getPitch(),
+            _trgBuffer->getDimension(0),
+            _trgBuffer->getDimension(1) );
+
         // You can also use the map function at any time 
         // in order to copy memory from GPU to CPU and vice versa.
         // To do so use the MAPPING flags (e.g. MAP_HOST_SOURCE).
         // Each time map() is called the buffer intern checks whether
         // he has to synchronize the memory.
         // Uncomment the following line if you want to observe the
-        // generated memory of the swap() kernel.
-
-
+        // generated memory of the kernel.
         // unsigned char* data = static_cast<unsigned char*>( _trgBuffer->map( osgCompute::MAP_HOST_SOURCE ) );
+
+        // Uncomment the following line if you want to change the
+        // generated memory of the kernel on the CPU. 
+        //float* data = static_cast<float*>( _trgBuffer->map( osgCompute::MAP_HOST_TARGET ) );
+        //for( unsigned int t=0; t<_trgBuffer->getNumElements()*4; t+=4 )
+        //{
+        //    data[t] = 0;
+        //    data[t+1] = 255.0f;
+        //    data[t+2] = 0;
+        //    data[t+3] = 0;
+        //}
     }
 
     //------------------------------------------------------------------------------
@@ -113,10 +143,10 @@ namespace TexDemo
     {
         // Search for your handles. This Method is called for each resource
         // located in the subgraph of this module.
-        if( resource.isAddressedByHandle( "TRG_BUFFER" ) )
-            _trgBuffer = dynamic_cast<osgCompute::Buffer*>( &resource );
-        if( resource.isAddressedByHandle( "SRC_ARRAY" ) )
-            _srcArray = dynamic_cast<osgCompute::Buffer*>( &resource );
+        if( resource.isAddressedByIdentifier( "TRG_BUFFER" ) )
+            _trgBuffer = dynamic_cast<osgCompute::Memory*>( &resource );
+        if( resource.isAddressedByIdentifier( "SRC_ARRAY" ) )
+            _srcArray = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////

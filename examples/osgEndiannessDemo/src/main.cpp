@@ -15,7 +15,6 @@
 #include <memory.h>
 #include <osg/Notify>
 #include <osgCuda/Buffer>
-#include <osgCuda/Context>
 #include <osgCompute/Module>
 
 //------------------------------------------------------------------------------
@@ -34,7 +33,7 @@ public:
         virtual bool init();
     virtual void launch();
 
-    inline void setBuffer( osgCompute::Buffer* buffer ) { _buffer = buffer; }
+    inline void setBuffer( osgCompute::Memory* buffer ) { _buffer = buffer; }
 
     virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
 protected:
@@ -43,7 +42,7 @@ protected:
 
     unsigned int                                     _numThreads;
     unsigned int                                     _numBlocks;
-    osg::ref_ptr<osgCompute::Buffer>                 _buffer;
+    osg::ref_ptr<osgCompute::Memory>                 _buffer;
 
 private:
     SwapModule(const SwapModule&, const osg::CopyOp& ) {}
@@ -87,22 +86,7 @@ int main(int argc, char *argv[])
     for( unsigned int v=0; v<numEndians; ++v )
         osg::notify(osg::INFO)<<std::hex<< bigEndians[v] <<std::endl;
 
-    ////////////////////
-    // CREATE CONTEXT //
-    ////////////////////
-    // You have to provide a context to run on. If this module
-    // is attached to the scene graph then you do not need to
-    // prepare a context, the computation node will take care of it.
-    osg::ref_ptr<osgCompute::Context> context = new osgCuda::Context;
-    if( !context.valid() )
-        return -1;
-    // The context must have a device id.
-    // The default is set to device 0. Change
-    // it with the following command.
-    // context->setDevice( 0 );
 
-    // activate context.
-    context->apply();
 
     // create a buffer
     osg::ref_ptr<osgCuda::Buffer> buffer = new osgCuda::Buffer;

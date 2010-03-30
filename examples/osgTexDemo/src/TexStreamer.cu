@@ -232,29 +232,31 @@ void sobelKernel( uchar4* trg )
 
 //-------------------------------------------------------------------------
 __global__ 
-void swapKernel( uchar4* trg ) 
+void swapKernel( uchar4* trg, unsigned int trgPitch, unsigned int imageWidth, unsigned int imageHeight ) 
 {
+
     // compute thread dimension
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-    unsigned int width = gridDim.x * blockDim.x;
-    unsigned int height = gridDim.y * blockDim.y;
+    if( x < imageWidth && y < imageHeight )
+    {
+        // compute texture coordinates
+        float2 texCoord = make_float2( ((float) x / (float) imageWidth) ,
+            ((float) y / (float) imageHeight) );
+        
+        // sample value
+        float4 src = tex2D( swapTex, texCoord.x, texCoord.y );
+       
+        // compute target address 
+        uchar4* target = (uchar4*)(((char*) trg) + trgPitch * y ) + x;
 
-    // compute target idx
-    unsigned int trgIdx = y*width + x;
-
-    // compute texture coordinates
-    float2 texCoord = make_float2( ((float) x / (float) width) ,
-        ((float) y / (float) height) );
-
-    // sample value
-    float4 src = tex2D( swapTex, texCoord.x, texCoord.y );
-    // swap channels
-    trg[trgIdx] = make_uchar4( 
-        (unsigned char)(src.z*255.0f), 
-        (unsigned char)(src.x*255.0f),
-        (unsigned char)(src.y*255.0f),
-        (unsigned char)(src.w*255.0f));
+        // swap channels
+        (*target) = make_uchar4( 
+            (unsigned char)(src.z*255.0f), 
+            (unsigned char)(src.x*255.0f),
+            (unsigned char)(src.y*255.0f),
+            (unsigned char)(src.w*255.0f));
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -283,7 +285,7 @@ void sobel( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcB
 
 //-------------------------------------------------------------------------
 extern "C"
-void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcArray )
+void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcArray, unsigned int trgPitch, unsigned int imageWidth, unsigned int imageHeight )
 {
     // set texture parameters
     swapTex.normalized = true;                      // normalized texture coordinates (element of [0:1])
@@ -295,7 +297,7 @@ void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcAr
     cudaError res = cudaBindTextureToArray( swapTex, reinterpret_cast<cudaArray*>(srcArray) );
 
     // call kernel
-    swapKernel<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trgBuffer) );
+    swapKernel<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trgBuffer), trgPitch, imageWidth, imageHeight );
 }
 
 #endif // TEXDEMO_TEXSTREAMER_KERNEL_H

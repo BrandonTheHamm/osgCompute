@@ -12,6 +12,7 @@
 *
 * The full license is in LICENSE file included with this distribution.
 */
+#include <osg/Notify>
 #include "PtclMover"
 
 //------------------------------------------------------------------------------
@@ -55,24 +56,16 @@ namespace PtclDemo
         if( isClear() )
             return;
 
-        const osgCompute::Context* ctx = osgCompute::Context::getAppliedContext();
-        if( !ctx->isConnectedWithGraphicsContext() )
-            return;
-        const osg::State* state = ctx->getGraphicsContext()->getState();
-        const osg::FrameStamp* fs = state->getFrameStamp();
-        if( fs == NULL )
-            return;
-
         /////////////
         // ADVANCE //
         /////////////
         if( _firstFrame )
         {
-            _lastTime = fs->getSimulationTime();
+            _lastTime = _frameStamp->getSimulationTime();
             _firstFrame = false;
         }
-        float elapsedtime = static_cast<float>(fs->getSimulationTime() - _lastTime);
-        _lastTime = fs->getSimulationTime();
+        float elapsedtime = static_cast<float>(_frameStamp->getSimulationTime() - _lastTime);
+        _lastTime = _frameStamp->getSimulationTime();
 
         ////////////////////
         // MOVE PARTICLES //
@@ -87,8 +80,8 @@ namespace PtclDemo
     void PtclMover::acceptResource( osgCompute::Resource& resource )
     {
         // Search for the particle buffer
-        if( resource.isAddressedByHandle("PTCL_BUFFER") )
-            _ptcls = dynamic_cast<osgCompute::Buffer*>( &resource );
+        if( resource.isAddressedByIdentifier("PTCL_BUFFER") )
+            _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -101,6 +94,7 @@ namespace PtclDemo
         _numThreads = 1;
 
         _ptcls = NULL;
+        _frameStamp = NULL;
 
         _lastTime = 0.0;
         _firstFrame = true;

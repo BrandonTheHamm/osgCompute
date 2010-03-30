@@ -15,6 +15,7 @@
 #ifndef OSGCUDA_GEOMETRYBUFFER_H
 #define OSGCUDA_GEOMETRYBUFFER_H 1
 
+#include <driver_types.h>
 #include <osg/Geometry>
 #include <osgCompute/Interoperability>
 
@@ -24,31 +25,27 @@ namespace osgCuda
 
     /**
     */
-    class LIBRARY_EXPORT GeometryStream : public osgCompute::BufferStream
+    class LIBRARY_EXPORT GeometryObject : public osgCompute::MemoryObject
     {
     public:
         void*						_hostPtr;
-        bool						_hostPtrAllocated;
-        bool						_syncHost;
         void*						_devPtr;
-        bool						_syncDevice;
-        GLuint						_bo;
-        bool						_boRegistered;
+        cudaGraphicsResource*       _graphicsResource;
         std::vector<unsigned int>	_lastModifiedCount;
 
-        GeometryStream();
-        virtual ~GeometryStream();
+        GeometryObject();
+        virtual ~GeometryObject();
 
 
     private:
         // not allowed to call copy-constructor or copy-operator
-        GeometryStream( const GeometryStream& ) {}
-        GeometryStream& operator=( const GeometryStream& ) { return *this; }
+        GeometryObject( const GeometryObject& ) {}
+        GeometryObject& operator=( const GeometryObject& ) { return *this; }
     };
 
     /**
     */
-    class LIBRARY_EXPORT GeometryBuffer : public osgCompute::InteropBuffer
+    class LIBRARY_EXPORT GeometryBuffer : public osgCompute::InteropMemory
     {
     public:
         GeometryBuffer();
@@ -61,8 +58,8 @@ namespace osgCuda
 
         virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
         virtual void unmap( unsigned int hint = 0 );
-        virtual bool setMemory( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 );
-        virtual bool resetMemory( unsigned int hint = 0 );
+        virtual bool set( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 );
+        virtual bool reset( unsigned int hint = 0 );
 
         virtual void clear();
     protected:
@@ -70,16 +67,12 @@ namespace osgCuda
         virtual ~GeometryBuffer();
         void clearLocal();
 
-        virtual void clear( const osgCompute::Context& context ) const;
-        virtual void checkMappingWithinDraw( const osgCompute::Context& context );
-        virtual void* mapStream( GeometryStream& stream, unsigned int mapping, unsigned int offset );
-        virtual void unmapStream( GeometryStream& stream );
+        bool setup( unsigned int mapping );
+        bool alloc( unsigned int mapping );
+        bool sync( unsigned int mapping );
 
-        bool setupStream( unsigned int mapping, GeometryStream& stream );
-        bool allocStream( unsigned int mapping, GeometryStream& stream );
-        bool syncStream( unsigned int mapping, GeometryStream& stream );
-
-        virtual osgCompute::BufferStream* newStream() const;
+        virtual osgCompute::MemoryObject* createObject() const;
+        virtual unsigned int computePitch() const;
 
         osg::ref_ptr<osgCuda::Geometry>		_geomref;
     private:
@@ -97,19 +90,21 @@ namespace osgCuda
 
         META_Object( osgCuda, Geometry )
 
-        virtual osgCompute::InteropBuffer* getBuffer();
-        virtual const osgCompute::InteropBuffer* getBuffer() const;
-        virtual osgCompute::InteropBuffer* getOrCreateBuffer();
+        virtual osgCompute::InteropMemory* getMemory();
+        virtual const osgCompute::InteropMemory* getMemory() const;
+        virtual osgCompute::InteropMemory* getOrCreateMemory();
 
-        virtual void addHandle( const std::string& handle );
-        virtual void removeHandle( const std::string& handle );
-        virtual bool isAddressedByHandle( const std::string& handle ) const;
+        virtual void addIdentifier( const std::string& identifier );
+        virtual void removeIdentifier( const std::string& identifier );
+        virtual bool isAddressedByIdentifier( const std::string& identifier ) const;
 
         virtual bool init();
 
         virtual void drawImplementation(osg::RenderInfo& renderInfo) const;
         virtual void releaseGLObjects(osg::State* state=0) const;
 
+
+        virtual void freeProxy();
         virtual bool isClear();
         virtual void clear();
 
@@ -120,7 +115,7 @@ namespace osgCuda
 
         mutable GeometryBuffer* 	_proxy;
         bool						_clear;
-        osgCompute::HandleSet		_handles;
+        osgCompute::IdentifierSet	_identifiers;
 
     private:
         // copy constructor and operator should not be called

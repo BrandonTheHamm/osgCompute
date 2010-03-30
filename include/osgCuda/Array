@@ -20,37 +20,32 @@
 #include <driver_types.h>
 #include <osg/Image>
 #include <osg/Array>
-#include <osgCompute/Buffer>
+#include <osgCompute/Memory>
 #include <osgCuda/Export>
 
 namespace osgCuda
 {
     /**
     */
-    class ArrayStream : public osgCompute::BufferStream
+    class ArrayObject : public osgCompute::MemoryObject
     {
     public:
         cudaArray*                      _devArray;
-        bool                            _devArrayAllocated;
-        bool                            _syncDevice;
         void*							_hostPtr;
-        bool                            _hostPtrAllocated;
-        bool                            _syncHost;
-        unsigned int                    _allocHint;
         unsigned int                    _modifyCount;
 
-        ArrayStream();
-        virtual ~ArrayStream();
+        ArrayObject();
+        virtual ~ArrayObject();
 
     private:
         // not allowed to call copy-constructor or copy-operator
-        ArrayStream( const ArrayStream& ) {}
-        ArrayStream& operator=( const ArrayStream& ) { return *this; }
+        ArrayObject( const ArrayObject& ) {}
+        ArrayObject& operator=( const ArrayObject& ) { return *this; }
     };
 
     /**
     */
-    class LIBRARY_EXPORT Array : public osgCompute::Buffer
+    class LIBRARY_EXPORT Array : public osgCompute::Memory
     {
     public:
         Array();
@@ -60,11 +55,10 @@ namespace osgCuda
         virtual bool init();
         virtual void clear();
 
-        virtual cudaArray* mapArray( unsigned int mapping = osgCompute::MAP_DEVICE_SOURCE );
-        virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE_SOURCE, unsigned int offset = 0, unsigned int hint = 0 );
+        virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
         virtual void unmap( unsigned int hint = 0 );	
-        virtual bool setMemory( int value, unsigned int mapping = osgCompute::MAP_DEVICE_SOURCE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0);
-        virtual bool resetMemory( unsigned int hint = 0 );
+        virtual bool set( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0);
+        virtual bool reset( unsigned int hint = 0 );
 
         virtual void setImage( osg::Image* image );
         virtual osg::Image* getImage();
@@ -82,15 +76,12 @@ namespace osgCuda
         virtual ~Array() { clearLocal(); }
         void clearLocal();
 
-        void* mapStream( ArrayStream& stream, unsigned int mapping, unsigned int offset );
-        cudaArray* mapArrayStream( ArrayStream& stream, unsigned int mapping );
-        void unmapStream( ArrayStream& stream );
+        bool setup( unsigned int mapping );
+        bool alloc( unsigned int mapping );
+        bool sync( unsigned int mapping );
 
-        bool setupStream( unsigned int mapping, ArrayStream& stream );
-        bool allocStream( unsigned int mapping, ArrayStream& stream );
-        bool syncStream( unsigned int mapping, ArrayStream& stream );
-
-        virtual osgCompute::BufferStream* newStream() const;
+        virtual osgCompute::MemoryObject* createObject() const;
+        virtual unsigned int computePitch() const;
         void resetModifiedCounts() const;
 
         osg::ref_ptr<osg::Array>     _array;

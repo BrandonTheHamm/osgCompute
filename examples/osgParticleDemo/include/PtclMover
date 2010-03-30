@@ -17,7 +17,7 @@
 
 #include <osg/ref_ptr>
 #include <osgCompute/Module>
-#include <osgCompute/Buffer>
+#include <osgCompute/Memory>
 
 namespace PtclDemo
 {
@@ -34,18 +34,22 @@ namespace PtclDemo
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
+        void setFrameStamp( osg::FrameStamp* frameStamp ) { _frameStamp = frameStamp; }
+
         virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
     protected:
         virtual ~PtclMover();
         void clearLocal();
 
-        double                      _lastTime;
-        bool						_firstFrame;
+        double                              _lastTime;
+        bool						        _firstFrame;
 
-        unsigned int                _numBlocks;
-        unsigned int                _numThreads;
+        unsigned int                        _numBlocks;
+        unsigned int                        _numThreads;
 
-        osg::ref_ptr<osgCompute::Buffer>    _ptcls;
+        osg::ref_ptr<osg::FrameStamp>       _frameStamp;
+
+        osg::ref_ptr<osgCompute::Memory>    _ptcls;
 
     private:
         PtclMover(const PtclMover&, const osg::CopyOp& ) {} 

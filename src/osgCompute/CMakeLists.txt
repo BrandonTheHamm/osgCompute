@@ -41,9 +41,8 @@ SET(HEADER_PATH ${osgCompute_SOURCE_DIR}/include/${LIB_NAME})
 
 # collect all headers
 SET(TARGET_H
-	${HEADER_PATH}/Buffer	
+	${HEADER_PATH}/Memory	
 	${HEADER_PATH}/Callback
-	${HEADER_PATH}/Context
 	${HEADER_PATH}/Export	
 	${HEADER_PATH}/Module
 	${HEADER_PATH}/Interoperability
@@ -56,10 +55,9 @@ SET(TARGET_H
 
 # collect the sources
 SET(TARGET_SRC
-	Buffer.cpp
+	Memory.cpp
 	Module.cpp
 	Resource.cpp
-	Context.cpp
 	Computation.cpp
 	ComputationBin.cpp	
 	Visitor.cpp

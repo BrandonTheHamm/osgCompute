@@ -45,7 +45,7 @@ namespace GeometryDemo
         }
 
         // We need to read the geometry information.
-        osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::InteropBuffer*)_vertices.get())->getObject() );
+        osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::InteropMemory*)_vertices.get())->getObject() );
         if( !geometry )
             return false;
 
@@ -96,10 +96,7 @@ namespace GeometryDemo
         if( isClear() )
             return;
 
-
-        const osgCompute::Context* ctx = osgCompute::Context::getAppliedContext();
-        const osg::FrameStamp* framestamp = ctx->getGraphicsContext()->getState()->getFrameStamp();
-        float time = (float)framestamp->getSimulationTime();
+        float time = (float)_frameStamp->getSimulationTime();
 
 
         ///////////////////
@@ -123,8 +120,8 @@ namespace GeometryDemo
     {
         // Search for your handles. This Method is called for each resource
         // located in the subgraph of this module.
-        if( resource.isAddressedByHandle( "WARP_GEOMETRY" ) )
-            _vertices = dynamic_cast<osgCompute::Buffer*>( &resource );
+        if( resource.isAddressedByIdentifier( "WARP_GEOMETRY" ) )
+            _vertices = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -138,5 +135,6 @@ namespace GeometryDemo
         _vertices = NULL;
         _initNormals = NULL;
         _initPos = NULL;
+        _frameStamp = NULL;
     }
 }
