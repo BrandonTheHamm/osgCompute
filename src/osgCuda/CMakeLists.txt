@@ -58,10 +58,6 @@ SET(TARGET_SRC
 	Array.cpp
 	Buffer.cpp
 	Geometry.cpp
-	Texture1D.cpp
-	Texture2D.cpp
-	Texture3D.cpp
-	TextureRectangle.cpp
 	Texture.cpp
 	Computation.cpp
 )
