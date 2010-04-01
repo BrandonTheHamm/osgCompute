@@ -17,8 +17,24 @@
 #include <osgCompute/ComputationBin>
 #include <osgCompute/Computation>
 
+
+
 namespace osgCompute
-{   
+{
+	class RegisterBinProxy
+	{
+	public:
+		RegisterBinProxy( const std::string& binName, osgUtil::RenderBin* proto )
+		{
+			_rb = proto;
+			osgUtil::RenderBin::addRenderBinPrototype( binName, _rb.get() );
+		}
+	protected:
+		osg::ref_ptr<osgUtil::RenderBin> _rb;
+	};
+
+    RegisterBinProxy registerComputationBinProxy("osgCompute::ComputationBin", new osgCompute::ComputationBin );
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -307,5 +323,4 @@ namespace osgCompute
         }
     }
 
-    osgUtil::RegisterRenderBinProxy registerComputationBinProxy("osgCompute::ComputationBin", new osgCompute::ComputationBin );
 }

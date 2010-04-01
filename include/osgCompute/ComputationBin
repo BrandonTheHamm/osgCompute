@@ -39,7 +39,6 @@ namespace osgCompute
     class Computation;
 
     /**
-    mist
     */
     class LIBRARY_EXPORT ComputationBin : public osgUtil::RenderBin 
     {
