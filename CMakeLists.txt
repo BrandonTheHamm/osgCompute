@@ -18,6 +18,10 @@ SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModule
 # set custom .cmake CUDA scripts also to the module path
 SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModules/cuda")
 
+# set custom .cmake CUDAEMU scripts also to the module path
+SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModules/cudaemu")
+
+
 
 
 ################################################################################
@@ -67,6 +71,7 @@ ENDIF(WIN32)
 # check for some libs and scrips.
 INCLUDE(Findosg)    # sets OSG_FOUND
 INCLUDE(FindCuda)   # sets CUDA_FOUND
+INCLUDE(FindCudaEmu)# sets CUDA_EMU_FOUND
 
 
 
@@ -165,6 +170,17 @@ IF   (BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
 ENDIF(BUILD_EXAMPLES)
 
+
+############################
+# Build Emulation Mode Examples
+############################
+IF (CUDA_EMU_FOUND)
+OPTION(BUILD_EMU_EXAMPLES "Enable to build Examples in emulation mode" OFF)
+ENDIF(CUDA_EMU_FOUND)
+
+IF (CUDA_NSIGHT_FOUND)
+OPTION(BUILD_NSIGHT_EXAMPLES "Enable to build Examples in nvidia nsight host mode" ON)
+ENDIF(CUDA_NSIGHT_FOUND)
 
 
 ################################################################################

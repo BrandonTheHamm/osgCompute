@@ -50,10 +50,11 @@ FIND_PATH (CUDA_INCLUDE_PATH cuda_runtime.h
 	${CUDA_COMPILER_SUPER_DIR}/include
 	DOC "The directory where CUDA headers reside")
 
-FIND_PATH (CUTIL_INCLUDE_PATH cutil.h
-	"$ENV{NVSDKCUDA_ROOT}/common/inc"
-	"$ENV{PROGRAMFILES}/NVIDIA Corporation/NVIDIA CUDA SDK/common/inc"
-	DOC "The directory where the CUTIL headers reside")
+#cutil not needed yet - svt group
+#FIND_PATH (CUTIL_INCLUDE_PATH cutil.h
+#	"$ENV{NVSDKCUDA_ROOT}/common/inc"
+#	"$ENV{PROGRAMFILES}/NVIDIA Corporation/NVIDIA CUDA SDK/common/inc"
+#	DOC "The directory where the CUTIL headers reside")
 
 FIND_LIBRARY (CUDA_RUNTIME_LIBRARY
 	NAMES cudart
@@ -63,24 +64,25 @@ FIND_LIBRARY (CUDA_RUNTIME_LIBRARY
 	${CUDA_COMPILER_DIR}
 	DOC "The CUDA runtime library")
 
-    
+
+#cutil not needed yet - svt group
 # CUDA_CUT_LIBRARIES
 
 # cutil library is called cutil64 for 64 bit builds on windows.  We don't want
 # to get these confused, so we are setting the name based on the word size of
 # the build.
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(cuda_cutil_name cutil64)
-else(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(cuda_cutil_name cutil32)
-endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+#if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+#  set(cuda_cutil_name cutil64)
+#else(CMAKE_SIZEOF_VOID_P EQUAL 8)
+#  set(cuda_cutil_name cutil32)
+#endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
 
-FIND_LIBRARY (CUTIL_LIBRARY
-	NAMES ${cuda_cutil_name}
-	PATHS
-	"$ENV{NVSDKCUDA_ROOT}/common/lib"
-	"$ENV{PROGRAMFILES}/NVIDIA Corporation/NVIDIA CUDA SDK/common/lib"
-	DOC "The CUTIL library")
+#FIND_LIBRARY (CUTIL_LIBRARY
+#	NAMES ${cuda_cutil_name}
+#	PATHS
+#	"$ENV{NVSDKCUDA_ROOT}/common/lib"
+#	"$ENV{PROGRAMFILES}/NVIDIA Corporation/NVIDIA CUDA SDK/common/lib"
+#	DOC "The CUTIL library")
 
 IF (CUDA_INCLUDE_PATH AND CUDA_RUNTIME_LIBRARY)
 	SET (CUDA_FOUND TRUE)
@@ -92,16 +94,16 @@ SET (CUDA_LIBRARIES ${CUDA_RUNTIME_LIBRARY})
 
 MARK_AS_ADVANCED (CUDA_FOUND CUDA_COMPILER CUDA_RUNTIME_LIBRARY)
 
+#cutil not needed yet - svt group
+#IF (CUTIL_INCLUDE_PATH AND CUTIL_LIBRARY)
+#	SET (CUTIL_FOUND 1 CACHE STRING "Set to 1 if CUDA is found, 0 otherwise")
+#ELSE (CUTIL_INCLUDE_PATH AND CUTIL_LIBRARY)
+#	SET (CUTIL_FOUND 0 CACHE STRING "Set to 1 if CUDA is found, 0 otherwise")
+#ENDIF (CUTIL_INCLUDE_PATH AND CUTIL_LIBRARY)
 
-IF (CUTIL_INCLUDE_PATH AND CUTIL_LIBRARY)
-	SET (CUTIL_FOUND 1 CACHE STRING "Set to 1 if CUDA is found, 0 otherwise")
-ELSE (CUTIL_INCLUDE_PATH AND CUTIL_LIBRARY)
-	SET (CUTIL_FOUND 0 CACHE STRING "Set to 1 if CUDA is found, 0 otherwise")
-ENDIF (CUTIL_INCLUDE_PATH AND CUTIL_LIBRARY)
+#SET (CUTIL_LIBRARIES ${CUTIL_LIBRARY})
 
-SET (CUTIL_LIBRARIES ${CUTIL_LIBRARY})
-
-MARK_AS_ADVANCED (CUTIL_FOUND)
+#MARK_AS_ADVANCED (CUTIL_FOUND)
 
 
 # copied from current nvidia texture-tools (FindCUDA.cmake)
@@ -111,20 +113,22 @@ else()
     set(CUDA_OPTIONS -m32)
 endif()
 
+# in Cuda 3.0 not needed anymore - svt group
 # You may use this option for proper debugging in emulation mode.
-option(CUDA_HOST_COMPILATION_C "Generated file extension. You may use this option for proper debugging in emulation mode." OFF)
-IF (CUDA_HOST_COMPILATION_C)
-	SET(CUDA_OPTIONS ${CUDA_OPTIONS} --host-compilation=C)
-ENDIF (CUDA_HOST_COMPILATION_C)
+#option(CUDA_HOST_COMPILATION_C "Generated file extension. You may use this option for proper debugging in emulation mode." OFF)
+#IF (CUDA_HOST_COMPILATION_C)
+#	SET(CUDA_OPTIONS ${CUDA_OPTIONS} --host-compilation=C)
+#ENDIF (CUDA_HOST_COMPILATION_C)
 
 
-OPTION(CUDA_EMULATION "Use CUDA emulation mode. Attention: this enables debugging of CUDA kernels on the CPU." OFF)
-IF (CUDA_EMULATION)
-	SET (CUDA_OPTIONS ${CUDA_OPTIONS} --device-emulation --define-macro=_DEVICEEMU --debug)
-ENDIF (CUDA_EMULATION)
+# we use a separate application / exmaple for emulation - therefore: not needed anymore - svt group
+#OPTION(CUDA_EMULATION "Use CUDA emulation mode. Attention: this enables debugging of CUDA kernels on the CPU." OFF)
+#IF (CUDA_EMULATION)
+#	SET (CUDA_OPTIONS ${CUDA_OPTIONS} --device-emulation --define-macro=_DEVICEEMU --debug)
+#ENDIF (CUDA_EMULATION)
 
-
-OPTION(CUDA_USE_GEN_C_FILE_EXTENSION "Generated files will have the extension .gen.c instead of .gen.cpp" OFF)
+# in Cuda 3.0 not needed anymore - svt group
+#OPTION(CUDA_USE_GEN_C_FILE_EXTENSION "Generated files will have the extension .gen.c instead of .gen.cpp" OFF)
 
 
 
@@ -186,19 +190,20 @@ MACRO (WRAP_CUDA outfiles)
 	GET_CUDA_INC_DIRS(cuda_includes)
 	#MESSAGE(${cuda_includes})
 
+    # in Cuda 3.0 not needed anymore - svt group
     #check for c-file extension
     # this may be important when using emulation mode with CUDA_HOST_COMPILATION_C
-    if(CUDA_USE_GEN_C_FILE_EXTENSION)
-        set(CUDA_GEN_FILE_EXTENSION c)
-    else()
-        set(CUDA_GEN_FILE_EXTENSION cpp)
-    endif()
+    #if(CUDA_USE_GEN_C_FILE_EXTENSION)
+    #    set(CUDA_GEN_FILE_EXTENSION c)
+    #else()
+    #    set(CUDA_GEN_FILE_EXTENSION cpp)
+    #endif()
     
 	FOREACH (CUFILE ${ARGN})
 		GET_FILENAME_COMPONENT (CUFILE ${CUFILE} ABSOLUTE)
 		GET_FILENAME_COMPONENT (CPPFILE ${CUFILE} NAME_WE)
-		#SET (CPPFILE ${CMAKE_CURRENT_BINARY_DIR}/${CPPFILE}.gen.cpp)
-        SET (CPPFILE ${CMAKE_CURRENT_BINARY_DIR}/${CPPFILE}.gen.${CUDA_GEN_FILE_EXTENSION})
+		SET (CPPFILE ${CMAKE_CURRENT_BINARY_DIR}/${CPPFILE}.gen.cpp)
+        #SET (CPPFILE ${CMAKE_CURRENT_BINARY_DIR}/${CPPFILE}.gen.${CUDA_GEN_FILE_EXTENSION})
 
 		GET_CUFILE_DEPENDENCIES(CUDEPS ${CUFILE})
 		#MESSAGE("${CUDEPS}")
