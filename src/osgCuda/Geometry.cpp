@@ -421,6 +421,15 @@ namespace osgCuda
             return NULL;
         GeometryObject& memory = *memoryPtr;
 
+        ////////////////////////
+        // CLEAR MEMORY FIRST //
+        ////////////////////////
+        if( memory._graphicsResource != NULL )
+            set(0x0, osgCompute::MAP_DEVICE);
+
+        if( memory._hostPtr != NULL )
+            set(0x0, osgCompute::MAP_HOST);
+
         ///////////////////////
         // UNREGISTER BUFFER //
         ///////////////////////
@@ -470,6 +479,8 @@ namespace osgCuda
 
             return false;
         }
+
+        vbo->dirty();
 
         // Compile vertex buffer
         osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getCurrentIdx() );
