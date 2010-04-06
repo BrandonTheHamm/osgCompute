@@ -128,11 +128,11 @@ namespace TexDemo
 
         // Uncomment the following line if you want to change the
         // generated memory of the kernel on the CPU. 
-        //float* data = static_cast<float*>( _trgBuffer->map( osgCompute::MAP_HOST_TARGET ) );
+        //unsigned char* data = static_cast<unsigned char*>( _trgBuffer->map( osgCompute::MAP_HOST_TARGET ) );
         //for( unsigned int t=0; t<_trgBuffer->getNumElements()*4; t+=4 )
         //{
         //    data[t] = 0;
-        //    data[t+1] = 255.0f;
+        //    data[t+1] = 255;
         //    data[t+2] = 0;
         //    data[t+3] = 0;
         //}

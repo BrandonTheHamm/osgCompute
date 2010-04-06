@@ -1150,7 +1150,7 @@ namespace osgCuda
                         memory._pitch,
                         memory._graphicsArray,
                         0, 0,
-                        getDimension(0),
+                        getDimension(0)* getElementSize(),
                         getDimension(1),
                         cudaMemcpyDeviceToDevice );
                     if( cudaSuccess != res )
@@ -1278,7 +1278,7 @@ namespace osgCuda
                         getDimension(0) * getElementSize(),
                         memory._graphicsArray,
                         0, 0,
-                        getDimension(0),
+                        getDimension(0)*getElementSize(),
                         getDimension(1),
                         cudaMemcpyDeviceToHost );
                     if( cudaSuccess != res )
@@ -1325,16 +1325,68 @@ namespace osgCuda
             }
             else
             {
-                // Copy from array
-                res = cudaMemcpy( memory._hostPtr, memory._devPtr, getByteSize(), cudaMemcpyDeviceToHost );
-                if( cudaSuccess != res )
+                // Copy from device ptr
+                if( getNumDimensions() == 3 )
                 {
-                    osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy() to device from host. "
-                        << cudaGetErrorString( res ) <<"."
-                        << std::endl;
+                    cudaPitchedPtr pitchDstPtr = {0};
+                    pitchDstPtr.pitch = getDimension(0)*getElementSize();
+                    pitchDstPtr.ptr = memory._hostPtr;
+                    pitchDstPtr.xsize = getDimension(0);
+                    pitchDstPtr.ysize = getDimension(1);
 
-                    return false;
+                    cudaPitchedPtr pitchSrcPtr = {0};
+                    pitchSrcPtr.pitch = memory._pitch;
+                    pitchSrcPtr.ptr = memory._devPtr;
+                    pitchSrcPtr.xsize = getDimension(0);
+                    pitchSrcPtr.ysize = getDimension(1);
+
+                    cudaExtent extent = {0};
+                    extent.width = getDimension(0)*getElementSize();
+                    extent.height = getDimension(1);
+                    extent.depth = getDimension(2);
+
+                    cudaMemcpy3DParms copyParams = {0};
+                    copyParams.srcPtr = pitchSrcPtr;
+                    copyParams.dstPtr = pitchDstPtr;
+                    copyParams.extent = extent;
+                    copyParams.kind = cudaMemcpyDeviceToHost;
+
+                    res = cudaMemcpy3D( &copyParams );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy() to device from host. "
+                            << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else if( getNumDimensions() == 2 )
+                {
+                    res = cudaMemcpy2D( memory._hostPtr, getDimension(0)*getElementSize(), memory._devPtr, memory._pitch, getDimension(0), getDimension(1), cudaMemcpyDeviceToHost );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy() to device from host. "
+                            << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else
+                {
+                    res = cudaMemcpy( memory._hostPtr, memory._devPtr, getByteSize(), cudaMemcpyDeviceToHost );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy() to device from host. "
+                            << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
                 }
             }
 

@@ -338,16 +338,50 @@ namespace osgCuda
         // clear device memory
         if( memory._devPtr != NULL )
         {
-            cudaError res = cudaMemset( memory._devPtr, 0x0, getByteSize() );
-            if( res != cudaSuccess )
+            cudaError res;
+            if( getNumDimensions() == 3 )
             {
-                osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset() for device memory."
-                    << cudaGetErrorString( res )  <<"."
-                    << std::endl;
+                cudaPitchedPtr pitchedPtr = make_cudaPitchedPtr( memory._devPtr, memory._pitch, getDimension(0), getDimension(1) );
+                cudaExtent extent = make_cudaExtent( getPitch(), getDimension(1), getDimension(2) );
+                res = cudaMemset3D( pitchedPtr, 0x0, extent );
+                if( res != cudaSuccess )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset3D() for device memory."
+                        << cudaGetErrorString( res )  <<"."
+                        << std::endl;
 
-                unmap();
-                return false;
+                    unmap();
+                    return false;
+                }
+            }
+            else if( getNumDimensions() == 2 )
+            {
+                res = cudaMemset2D( memory._devPtr, memory._pitch, 0x0, getDimension(0), getDimension(1) );
+                if( res != cudaSuccess )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset2D() for device memory."
+                        << cudaGetErrorString( res )  <<"."
+                        << std::endl;
+
+                    unmap();
+                    return false;
+                }
+            }
+            else
+            {
+                res = cudaMemset( memory._devPtr, 0x0, getByteSize() );
+                if( res != cudaSuccess )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset() for device memory."
+                        << cudaGetErrorString( res )  <<"."
+                        << std::endl;
+
+                    unmap();
+                    return false;
+                }
             }
         }
 
@@ -372,7 +406,7 @@ namespace osgCuda
         //////////////////
         if( mapping & osgCompute::MAP_DEVICE )
         {
-            const void* data = NULL;
+            void* data = NULL;
             if( _image.valid() )
             {
                 data = _image->data();
@@ -380,7 +414,7 @@ namespace osgCuda
 
             if( _array.valid() )
             {
-                data = reinterpret_cast<const void*>( _array->getDataPointer() );
+                data = const_cast<GLvoid*>( _array->getDataPointer() );
             }
 
             if( data == NULL )
@@ -392,15 +426,51 @@ namespace osgCuda
                 return false;
             }
 
-            res = cudaMemcpy( memory._devPtr,  data, getByteSize(), cudaMemcpyHostToDevice );
-            if( cudaSuccess != res )
-            {
-                osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": error during cudaMemcpy()."
-                    << " " << cudaGetErrorString( res ) <<"."
-                    << std::endl;
 
-                return false;
+            if( getNumDimensions() == 3 )
+            {
+                cudaMemcpy3DParms memcpyParams = {0};
+                memcpyParams.dstPtr = make_cudaPitchedPtr( memory._devPtr, memory._pitch, getDimension(0), getDimension(1) );
+                memcpyParams.srcPtr = make_cudaPitchedPtr( data, getDimension(0) * getElementSize(), getDimension(0), getDimension(1) );
+                memcpyParams.extent = make_cudaExtent( getDimension(0) * getElementSize(), getDimension(1), getDimension(2) );
+                memcpyParams.kind = cudaMemcpyHostToDevice;
+
+                res = cudaMemcpy3D( &memcpyParams );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": error during cudaMemcpy3D()."
+                        << " " << cudaGetErrorString( res ) <<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else if( getNumDimensions() == 2 )
+            {
+                res = cudaMemcpy2D( memory._devPtr, memory._pitch, data, getDimension(0) * getElementSize(), getDimension(0), getDimension(1), cudaMemcpyHostToDevice );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": error during cudaMemcpy2D()."
+                        << " " << cudaGetErrorString( res ) <<"."
+                        << std::endl;
+
+                    return false;
+                } 
+            }
+            else
+            {
+                res = cudaMemcpy( memory._devPtr,  data, getByteSize(), cudaMemcpyHostToDevice );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": error during cudaMemcpy()."
+                        << " " << cudaGetErrorString( res ) <<"."
+                        << std::endl;
+
+                    return false;
+                }
             }
 
             // host must be synchronized
@@ -479,7 +549,7 @@ namespace osgCuda
             if( NULL == memory._hostPtr )
             {
                 osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Buffer::alloc()] \""<<getName()<<"\": error during mallocDeviceHost()."
+                    << getName() << " [osgCuda::Buffer::alloc()] \""<<getName()<<"\": error during malloc()."
                     << std::endl;
 
                 return false;
