@@ -38,6 +38,19 @@ namespace osgCuda
             }
         }
 
+        if( _graphicsArray != NULL )
+        {
+            cudaError res = cudaGraphicsUnmapResources( 1, &_graphicsResource );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::WARN)
+                    << "[TextureObject::~TextureObject()]: error during cudaGLUnmapBufferObject(). "
+                    << cudaGetErrorString( res ) <<"."
+                    << std::endl;
+                return;
+            }
+        }
+
 
         if( _graphicsResource != NULL )
         {
@@ -468,6 +481,15 @@ namespace osgCuda
             }
         }
 
+        if( memory._mapping == osgCompute::UNMAPPED && 
+            _texref->getImage(0) != NULL &&
+            _texref->getImage(0)->getModifiedCount() != memory._lastModifiedCount )
+        {
+            // Array is initialized during rendering. Sync others.
+            memory._syncOp = osgCompute::SYNC_DEVICE | osgCompute::SYNC_HOST;
+            memory._lastModifiedCount = _texref->getImage(0)->getModifiedCount();
+        }
+
         // Change current context to render context
         if( memory._graphicsArray != NULL )
         {
@@ -484,55 +506,6 @@ namespace osgCuda
         }
 
         memory._mapping = osgCompute::UNMAPPED;
-    }
-
-    //------------------------------------------------------------------------------
-    bool TextureBuffer::set( int value, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int count/* = UINT_MAX*/, unsigned int )
-    {
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return false;
-
-        unsigned char* data = static_cast<unsigned char*>( map( mapping ) );
-        if( NULL == data )
-            return false;
-
-        if( mapping & osgCompute::MAP_HOST_TARGET )
-        {
-            if( NULL == memset( &data[offset], value, (count == UINT_MAX)? getByteSize() : count ) )
-            {
-                osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::TextureBuffer::set()] \""<<getName()<<"\": error during memset() for host memory."
-                    << std::endl;
-
-                unmap();
-                return false;
-            }
-        }
-        else if( (mapping & MAP_DEVICE_ARRAY) == MAP_DEVICE_ARRAY )
-        {
-            osg::notify(osg::WARN)
-                << getName() << "[osgCuda::TextureBuffer::set(MAP_DEVICE_ARRAY)] \""<<getName()<<"\": function is not implemented yet."
-                << std::endl;
-
-            return false;
-        }
-        else if( mapping & osgCompute::MAP_DEVICE_TARGET )
-        {
-            cudaError res = cudaMemset( &data[offset], value, (count == UINT_MAX)? getByteSize() : count );
-            if( res != cudaSuccess )
-            {
-                osg::notify(osg::WARN)
-                    << getName() << "[osgCuda::TextureBuffer::set()] \""<<getName()<<"\": error during cudaMemset() for device memory."
-                    << cudaGetErrorString( res )  <<"."
-                    << std::endl;
-
-                unmap();
-                return false;
-            }
-        }
-
-        return true;
     }
 
     //------------------------------------------------------------------------------
@@ -573,16 +546,50 @@ namespace osgCuda
         // clear shadow-copy memory
         if( memory._devPtr != NULL && _texref->getImage(0) == NULL )
         {
-            cudaError res = cudaMemset( memory._devPtr, 0x0, getByteSize() );
-            if( res != cudaSuccess )
+            cudaError res;
+            if( getNumDimensions() == 3 )
             {
-                osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::TextureBuffer::reset()] \"" << getName() << "\": error during cudaMemset() for device memory."
-                    << cudaGetErrorString( res )  <<"."
-                    << std::endl;
+                cudaPitchedPtr pitchedPtr = make_cudaPitchedPtr( memory._devPtr, memory._pitch, getDimension(0)*getElementSize(), getDimension(1) );
+                cudaExtent extent = make_cudaExtent( getPitch(), getDimension(1), getDimension(2) );
+                res = cudaMemset3D( pitchedPtr, 0x0, extent );
+                if( res != cudaSuccess )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset3D() for device memory."
+                        << cudaGetErrorString( res )  <<"."
+                        << std::endl;
 
-                unmap();
-                return false;
+                    unmap();
+                    return false;
+                }
+            }
+            else if( getNumDimensions() == 2 )
+            {
+                res = cudaMemset2D( memory._devPtr, memory._pitch, 0x0, getDimension(0)*getElementSize(), getDimension(1) );
+                if( res != cudaSuccess )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset2D() for device memory."
+                        << cudaGetErrorString( res )  <<"."
+                        << std::endl;
+
+                    unmap();
+                    return false;
+                }
+            }
+            else
+            {
+                res = cudaMemset( memory._devPtr, 0x0, getByteSize() );
+                if( res != cudaSuccess )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset() for device memory."
+                        << cudaGetErrorString( res )  <<"."
+                        << std::endl;
+
+                    unmap();
+                    return false;
+                }
             }
         }
 
@@ -638,6 +645,22 @@ namespace osgCuda
             ////////////////////
             // UNREGISTER TEX //
             ////////////////////
+            if( memory._graphicsArray != NULL )
+            {
+                cudaError res = cudaGraphicsUnmapResources( 1, &memory._graphicsResource );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::WARN)
+                        << "[osgCuda::TextureBuffer::setup()]: error during cudaGraphicsUnmapResources(). "
+                        << cudaGetErrorString( res ) <<"."
+                        << std::endl;
+                    return false;
+                }
+
+                memory._graphicsArray = NULL;
+            }
+
+
             if( memory._graphicsResource != NULL )
             {
                 cudaError res = cudaGraphicsUnregisterResource( memory._graphicsResource );
@@ -1091,7 +1114,6 @@ namespace osgCuda
                 return true;
 
             if( ((memory._syncOp & SYNC_ARRAY) && memory._hostPtr == NULL) ||
-                ((memory._syncOp & osgCompute::SYNC_HOST) && memory._graphicsResource == NULL) ||
                 ((memory._syncOp & SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_HOST)) )
             {
                 osg::notify(osg::FATAL)
@@ -1103,6 +1125,31 @@ namespace osgCuda
 
             if( (memory._syncOp & osgCompute::SYNC_HOST) )
             {
+                if( memory._graphicsResource == NULL )
+                {
+                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getCurrentIdx() );
+                    if( !tex )
+                    {
+                        osg::notify(osg::WARN)
+                            << getName() << " [osgCuda::TextureBuffer::sync()]: no current memory found. "
+                            << std::endl;
+
+                        return false;
+                    }
+
+                    // Register vertex buffer object for Cuda
+                    cudaError res = cudaGraphicsGLRegisterImage( &memory._graphicsResource, tex->id(), tex->_profile._target, cudaGraphicsMapFlagsNone );
+                    if( res != cudaSuccess )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::TextureBuffer::sync()]: unable to register image object (cudaGraphicsGLRegisterImage())."
+                            << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+
                 if( memory._graphicsArray == NULL )
                 {
                     // map array first
@@ -1219,7 +1266,6 @@ namespace osgCuda
                 return true;
 
             if( ((memory._syncOp & SYNC_ARRAY) && memory._devPtr == NULL) ||
-                ((memory._syncOp & osgCompute::SYNC_DEVICE) && memory._graphicsResource == NULL) ||
                 ((memory._syncOp & SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_DEVICE)) )
             {
                 osg::notify(osg::FATAL)
@@ -1231,6 +1277,31 @@ namespace osgCuda
 
             if( (memory._syncOp & osgCompute::SYNC_DEVICE) )
             {
+                if( memory._graphicsResource == NULL )
+                {
+                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getCurrentIdx() );
+                    if( !tex )
+                    {
+                        osg::notify(osg::WARN)
+                            << getName() << " [osgCuda::TextureBuffer::sync()]: no current memory found. "
+                            << std::endl;
+
+                        return false;
+                    }
+
+                    // Register vertex buffer object for Cuda
+                    cudaError res = cudaGraphicsGLRegisterImage( &memory._graphicsResource, tex->id(), tex->_profile._target, cudaGraphicsMapFlagsNone );
+                    if( res != cudaSuccess )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::TextureBuffer::sync()]: unable to register image object (cudaGraphicsGLRegisterImage())."
+                            << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+
                 if( memory._graphicsArray == NULL )
                 {
                     // map array first

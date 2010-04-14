@@ -96,6 +96,16 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
+    void Module::getResources( ResourceList& resourceList, const std::string& handle ) 
+    { 
+    }
+
+    //------------------------------------------------------------------------------
+    void Module::getAllResources( ResourceList& resourceList ) 
+    { 
+    }
+
+    //------------------------------------------------------------------------------
     void Module::enable() 
     { 
         _enabled = true; 

@@ -48,6 +48,8 @@ namespace osgCompute
         virtual void removeResource( const std::string& handle );
         virtual Resource* getResource( const std::string& handle );
         virtual const Resource* getResource( const std::string& handle ) const;
+        virtual void getResources( ResourceList& resourceList, const std::string& handle );
+        virtual void getAllResources( ResourceList& resourceList );
 
         virtual void setUpdateCallback( ModuleCallback* uc );
         virtual ModuleCallback* getUpdateCallback();

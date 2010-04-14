@@ -102,7 +102,6 @@ namespace osgCompute
         /***/
         virtual void* map( unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) = 0;
         virtual void unmap( unsigned int hint = 0 ) = 0;
-        virtual bool set( int value, unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 ) = 0;
         virtual bool reset( unsigned int hint = 0  ) = 0;
         virtual unsigned int getMapping( unsigned int hint = 0 ) const;
         virtual unsigned int getPitch( unsigned int hint = 0 ) const;

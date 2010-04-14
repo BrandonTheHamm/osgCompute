@@ -30,13 +30,9 @@ namespace osgCompute
     typedef std::set< std::string >::iterator                                 	IdentifierSetItr;
     typedef std::set< std::string >::const_iterator                           	IdentifierSetCnstItr;
 
-    //typedef std::vector< osg::ref_ptr<Resource> >                              	ResourceList;
-    //typedef std::vector< osg::ref_ptr<Resource> >::iterator                    	ResourceListItr;
-    //typedef std::vector< osg::ref_ptr<Resource> >::const_iterator              	ResourceListCnstItr;
-
-    //typedef std::set< const Resource* >											ResourcePtrSet;
-    //typedef std::set< const Resource* >::iterator								ResourcePtrSetItr;
-    //typedef std::set< const Resource* >::const_iterator							ResourcePtrSetCnstItr;
+    typedef std::vector< osg::ref_ptr<Resource> >                              	ResourceList;
+    typedef std::vector< osg::ref_ptr<Resource> >::iterator                    	ResourceListItr;
+    typedef std::vector< osg::ref_ptr<Resource> >::const_iterator              	ResourceListCnstItr;
 
     typedef std::set< osg::ref_ptr<Resource> >                                  ResourceSet;
     typedef std::set< osg::ref_ptr<Resource> >::iterator                        ResourceSetItr;

@@ -56,7 +56,6 @@ namespace osgCuda
 
         virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
         virtual void unmap( unsigned int hint = 0 );
-        virtual bool set( int value, unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int count = UINT_MAX, unsigned int hint = 0 );
         virtual bool reset( unsigned int hint = 0 );
 
         virtual void setImage( osg::Image* image );

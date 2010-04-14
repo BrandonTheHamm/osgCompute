@@ -366,47 +366,6 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool osgCuda::GeometryBuffer::set( int value, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int count/* = UINT_MAX*/, unsigned int )
-    {
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return false;
-
-        // A call to map will setup correct sync flags
-        unsigned char* data = static_cast<unsigned char*>( map( mapping ) );
-        if( NULL == data )
-            return false;
-
-        if( mapping & osgCompute::MAP_HOST_TARGET )
-        {
-            if( NULL == memset( &data[offset], value, (count == UINT_MAX)? getByteSize() : count ) )
-            {
-                osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::GeometryBuffer::setMemory()]: error during memset() for host."
-                    << std::endl;
-
-                unmap();
-                return false;
-            }
-        }
-        else if( mapping & osgCompute::MAP_DEVICE_TARGET )
-        {
-            cudaError res = cudaMemset( &data[offset], value, (count == UINT_MAX)? getByteSize() : count );
-            if( res != cudaSuccess )
-            {
-                osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::GeometryBuffer::setMemory()]: error during cudaMemset() for device data."
-                    << std::endl;
-
-                unmap();
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
     bool GeometryBuffer::reset( unsigned int  )
     {
         if( osgCompute::Resource::isClear() )
@@ -424,11 +383,58 @@ namespace osgCuda
         ////////////////////////
         // CLEAR MEMORY FIRST //
         ////////////////////////
-        if( memory._graphicsResource != NULL )
-            set(0x0, osgCompute::MAP_DEVICE);
-
         if( memory._hostPtr != NULL )
-            set(0x0, osgCompute::MAP_HOST);
+        {
+            if( !memset( memory._hostPtr, 0x0, getByteSize() ) )
+            {
+                osg::notify(osg::WARN)
+                    << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during memset() for host memory."
+                    << std::endl;
+
+                return false;
+            }
+        }
+
+        // clear device memory
+        if( memory._graphicsResource != NULL )
+        {
+            if( memory._devPtr == NULL )
+            {
+                cudaError res = cudaGraphicsMapResources(1, &memory._graphicsResource);
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::GeometryBuffer::reset()]: error during cudaGraphicsMapResources(). "
+                        << cudaGetErrorString( res )  <<"."
+                        << std::endl;
+
+                    return NULL;
+                }
+
+                size_t memSize = 0;
+                res = cudaGraphicsResourceGetMappedPointer(&memory._devPtr, &memSize, memory._graphicsResource);
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::WARN)
+                        << getName() << " [osgCuda::GeometryBuffer::reset()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << cudaGetErrorString( res )  <<"."
+                        << std::endl;
+
+                    return NULL;
+                }
+            }
+
+            cudaError res = cudaMemset( memory._devPtr, 0x0, getByteSize() );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::WARN)
+                    << getName() << " [osgCuda::GeometryBuffer::reset()]: error during cudaMemset(). "
+                    << cudaGetErrorString( res )  <<"."
+                    << std::endl;
+
+                return NULL;
+            }
+        }
 
         ///////////////////////
         // UNREGISTER BUFFER //
@@ -494,7 +500,6 @@ namespace osgCuda
         }
 
         glBO->dirty();
-
 
         return true;
     }

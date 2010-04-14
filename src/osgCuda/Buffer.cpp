@@ -260,48 +260,6 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool osgCuda::Buffer::set( int value, unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int count/* = UINT_MAX*/, unsigned int )
-    {
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return false;
-
-        // Map will setup correct synchronization flags
-        unsigned char* data = static_cast<unsigned char*>( map( mapping ) );
-        if( NULL == data )
-            return false;
-
-        if( mapping & osgCompute::MAP_HOST_TARGET )
-        {
-            if( NULL == memset( &data[offset], value, (count == UINT_MAX)? getByteSize() : count ) )
-            {
-                osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Buffer::set()] \""<<getName()<<"\": error during memset() for host memory."
-                    << std::endl;
-
-                unmap();
-                return false;
-            }
-        }
-        else if( mapping & osgCompute::MAP_DEVICE_TARGET )
-        {
-            cudaError res = cudaMemset( &data[offset], value, (count == UINT_MAX)? getByteSize() : count );
-            if( res != cudaSuccess )
-            {
-                osg::notify(osg::WARN)
-                    << getName() << "[osgCuda::Buffer::set()] \""<<getName()<<"\": error during cudaMemset() for device memory."
-                    << cudaGetErrorString( res )  <<"."
-                    << std::endl;
-
-                unmap();
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
     bool Buffer::reset( unsigned int )
     {
         if( osgCompute::Resource::isClear() )
@@ -330,7 +288,6 @@ namespace osgCuda
                     << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during memset() for host memory."
                     << std::endl;
 
-                unmap();
                 return false;
             }
         }
@@ -341,7 +298,7 @@ namespace osgCuda
             cudaError res;
             if( getNumDimensions() == 3 )
             {
-                cudaPitchedPtr pitchedPtr = make_cudaPitchedPtr( memory._devPtr, memory._pitch, getDimension(0), getDimension(1) );
+                cudaPitchedPtr pitchedPtr = make_cudaPitchedPtr( memory._devPtr, memory._pitch, getDimension(0)*getElementSize(), getDimension(1) );
                 cudaExtent extent = make_cudaExtent( getPitch(), getDimension(1), getDimension(2) );
                 res = cudaMemset3D( pitchedPtr, 0x0, extent );
                 if( res != cudaSuccess )
@@ -357,7 +314,7 @@ namespace osgCuda
             }
             else if( getNumDimensions() == 2 )
             {
-                res = cudaMemset2D( memory._devPtr, memory._pitch, 0x0, getDimension(0), getDimension(1) );
+                res = cudaMemset2D( memory._devPtr, memory._pitch, 0x0, getDimension(0)*getElementSize(), getDimension(1) );
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::WARN)
