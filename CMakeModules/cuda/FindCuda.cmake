@@ -131,6 +131,20 @@ endif()
 #OPTION(CUDA_USE_GEN_C_FILE_EXTENSION "Generated files will have the extension .gen.c instead of .gen.cpp" OFF)
 
 
+#specify additional/system specific CUDA options by user
+SET (CUDA_NVCC_USER_OPTIONS
+    ""
+	CACHE
+	STRING
+	"Set additional user specific compiler options to Cuda nvcc" 
+)
+
+# put CUDA_NVCC_USER_OPTIONS into a cmake list for further processing (otherwise problems with quotation marks)
+SEPARATE_ARGUMENTS(CUDA_NVCC_USER_OPTIONS_CONVERTED WINDOWS_COMMAND ${CUDA_NVCC_USER_OPTIONS})
+
+#copy user options to nsight options
+SET (CUDA_OPTIONS ${CUDA_OPTIONS} ${CUDA_NVCC_USER_OPTIONS_CONVERTED} )
+
 
 IF(WIN32)
     SET (CUDA_OPTIONS ${CUDA_OPTIONS} --define-macro=WIN32)
