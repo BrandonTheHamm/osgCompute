@@ -647,7 +647,7 @@ namespace osgCompute
             // For all contexts launch modules
             for( ContextSetItr itr = _contextSet.begin(); itr != _contextSet.end(); ++itr )
             {
-                if( (*itr)->isCurrent() )
+                if( !(*itr)->isCurrent() )
                     (*itr)->makeCurrent();
             
                 // Activate Resource Entries

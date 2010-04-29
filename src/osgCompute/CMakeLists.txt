@@ -61,7 +61,6 @@ SET(TARGET_SRC
 	Computation.cpp
 	Interoperability.cpp
 	ComputationBin.cpp	
-	Interoperability.cpp
 	Visitor.cpp
 )
 

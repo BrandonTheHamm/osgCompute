@@ -894,6 +894,7 @@ namespace osgCuda
         if( _proxy == NULL )
         {
             _proxy = new GeometryBuffer;
+            _proxy->setName( getName() );
             _proxy->_geomref = this;
             _proxy->setIdentifiers( _identifiers );
             _identifiers.clear();

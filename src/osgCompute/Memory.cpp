@@ -219,7 +219,7 @@ namespace osgCompute
     unsigned int Memory::getSwapCount() const
     {
         // Function should be implemented by swap buffers.
-        return 0;
+        return 1;
     }
 
     //------------------------------------------------------------------------------

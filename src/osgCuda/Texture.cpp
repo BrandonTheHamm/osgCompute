@@ -1524,6 +1524,7 @@ namespace osgCuda
     //    if( _proxy == NULL )
     //    {
     //        _proxy = new TextureBuffer;
+    //        _proxy->setName( getName() );
     //        _proxy->_texref = this;
     //        _proxy->_usage = getUsage();
     //        _proxy->setIdentifiers( _identifiers );
@@ -1694,6 +1695,7 @@ namespace osgCuda
         if( _proxy == NULL )
         {
             _proxy = new TextureBuffer;
+            _proxy->setName( getName() );
             _proxy->_texref = this;
             _proxy->_usage = getUsage();
             _proxy->setIdentifiers( _identifiers );
@@ -1869,6 +1871,7 @@ namespace osgCuda
         if( _proxy == NULL )
         {
             _proxy = new TextureBuffer;
+            _proxy->setName( getName() );
             _proxy->_texref = this;
             _proxy->_usage = getUsage();
             _proxy->setIdentifiers( _identifiers );
@@ -2044,6 +2047,7 @@ namespace osgCuda
         if( _proxy == NULL )
         {
             _proxy = new TextureBuffer;
+            _proxy->setName( getName() );
             _proxy->_texref = this;
             _proxy->_usage = getUsage();
             _proxy->setIdentifiers( _identifiers );
