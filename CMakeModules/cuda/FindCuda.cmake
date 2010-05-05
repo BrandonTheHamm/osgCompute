@@ -140,11 +140,13 @@ SET (CUDA_NVCC_USER_OPTIONS
 )
 
 # put CUDA_NVCC_USER_OPTIONS into a cmake list for further processing (otherwise problems with quotation marks)
-SEPARATE_ARGUMENTS(CUDA_NVCC_USER_OPTIONS_CONVERTED WINDOWS_COMMAND ${CUDA_NVCC_USER_OPTIONS})
+#SEPARATE_ARGUMENTS(CUDA_NVCC_USER_OPTIONS_CONVERTED WINDOWS_COMMAND ${CUDA_NVCC_USER_OPTIONS}) # works only since cmake 2.8
+# therefore use the follwing line
+# Convert the value of CUDA_NVCC_USER_OPTIONS to a semi-colon separated list. All spaces are replaced with ';'.
+SEPARATE_ARGUMENTS(CUDA_NVCC_USER_OPTIONS)
 
 #copy user options to nsight options
-SET (CUDA_OPTIONS ${CUDA_OPTIONS} ${CUDA_NVCC_USER_OPTIONS_CONVERTED} )
-
+SET (CUDA_OPTIONS ${CUDA_OPTIONS} ${CUDA_NVCC_USER_OPTIONS} )
 
 IF(WIN32)
     SET (CUDA_OPTIONS ${CUDA_OPTIONS} --define-macro=WIN32)
@@ -194,6 +196,13 @@ MACRO (GET_CUFILE_DEPENDENCIES dependencies file)
 			SET(${dependencies} ${${dependencies}} ${PATH_OF_${DEP}}/${DEP})
 		ENDIF(NOT ${PATH_OF_${DEP}} STREQUAL PATH_OF_${DEP}-NOTFOUND)
 		
+	ENDFOREACH(DEP)
+    
+    # Set additional dependencies, therefore read CUDA_PROJECT_DEPENDENCIES
+    #MESSAGE("${CUDA_PROJECT_DEPENDENCIES}")
+	FOREACH(DEP ${CUDA_PROJECT_DEPENDENCIES})
+		SET(${dependencies} ${${dependencies}} ${DEP})
+		#MESSAGE("${DEP} added")
 	ENDFOREACH(DEP)
 
 ENDMACRO (GET_CUFILE_DEPENDENCIES)

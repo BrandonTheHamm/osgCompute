@@ -1,0 +1,95 @@
+Nexus Command for simpleStreams.cu:
+===================================
+ 
+ "C:\Program Files\NVIDIA Nexus 1.0\CUDA Toolkit\\v3.0\Win32\CUDA\bin\nvcc.exe" 
+ -G0
+ -arch sm_11
+ --machine 32
+ -ccbin "c:\Program Files\Microsoft Visual Studio 9.0\VC\bin"
+ -D_NEXUS_DEBUG
+ -g
+ -Xcompiler "/EHsc /W3 /nologo /Od /Zi   /MTd  "
+ -I"C:\Program Files\NVIDIA Nexus 1.0\CUDA Toolkit\\v3.0\Win32\CUDA\include"
+ -I"."
+ -maxrregcount=32
+ --compile
+ -o "c:\ProgramData\NVIDIA Nexus 1.0\Samples\CUDA\Debugging\Simple StreamsTest\bin\Win32.Debug/simpleStreams.obj"
+ "c:\ProgramData\NVIDIA Nexus 1.0\Samples\CUDA\Debugging\Simple StreamsTest\simpleStreams.cu" 
+ 
+ 
+ 
+ OSG Compute Command for Warp.cu (osgGeometryDemo):
+ ======================================================
+ 
+D:\SDK\CUDA\bin\nvcc.exe
+-cuda
+-I D:/SDK/SimVisToolkit/SVT-src/osgCompute/build/include
+-I D:/SDK/SimVisToolkit/SVT-src/osgCompute/include
+-I D:/SDK/SimVisToolkit/SVT-src/osgCompute/examples/osgGeometryDemo/include
+-I D:/SDK/OpenSceneGraph/OSG/include -I D:/SDK/CUDA/include
+-I D:/SDK/CUDA/include
+-m32
+--define-macro=WIN32
+-o D:/SDK/SimVisToolkit/SVT-src/osgCompute/build/examples/osgGeometryDemo/src/Warp.gen.cpp
+D:/SDK/SimVisToolkit/SVT-src/osgCompute/examples/osgGeometryDemo/src/Warp.cu
+
+
+osgCompute projects: osgGeometry.vcproj / osgCompute Linker (command line)
+----------------------------------------------------------------------
+
+/OUT:"D:\SDK\SimVisToolkit\SVT-src\osgCompute\build\bin\Debug\..\osgGeometryDemod.exe"
+/VERSION:0.0
+/INCREMENTAL
+/NOLOGO
+/MANIFEST
+/MANIFESTFILE:"example_osgGeometryDemo.dir\Debug\osgGeometryDemod.exe.intermediate.manifest"
+/MANIFESTUAC:"level='asInvoker' uiAccess='false'"
+/DEBUG
+/PDB:"D:\SDK\SimVisToolkit\SVT-src\osgCompute\build\bin\Debug/../osgGeometryDemod.pdb"
+/SUBSYSTEM:CONSOLE
+/DYNAMICBASE /NXCOMPAT
+/IMPLIB:"D:\SDK\SimVisToolkit\SVT-src\osgCompute\build\lib\Debug\osgGeometryDemod.lib"
+/ERRORREPORT:PROMPT kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib  ..\..\..\lib\Debug\osgComputed.lib ..\..\..\lib\Debug\osgCudad.lib D:\SDK\OpenSceneGraph\OSG\lib\OpenThreadsd.lib D:\SDK\OpenSceneGraph\OSG\lib\osgd.lib D:\SDK\OpenSceneGraph\OSG\lib\osgUtild.lib D:\SDK\OpenSceneGraph\OSG\lib\osgViewerd.lib D:\SDK\OpenSceneGraph\OSG\lib\osgGAd.lib D:\SDK\OpenSceneGraph\OSG\lib\osgDBd.lib D:\SDK\CUDA\lib\cudart.lib glu32.lib opengl32.lib ..\..\..\lib\Debug\osgComputed.lib D:\SDK\OpenSceneGraph\OSG\lib\osgUtild.lib D:\SDK\OpenSceneGraph\OSG\lib\OpenThreadsd.lib D:\SDK\OpenSceneGraph\OSG\lib\osgd.lib D:\SDK\OpenSceneGraph\OSG\lib\osgDBd.lib
+
+
+NEXUS Projects:
+==============
+
+Inherited project property sheets (simpleStreams.vcproj):
+-------------------------------------------------------------
+$(ProjectDir)\..\..\NexusCudaToolkit32.v30.vsprops
+$(ProjectDir)\..\..\NexusCudaDefaultProject.Debug32.v30.vsprops
+
+Command line (linker):
+-------------------------
+/OUT:"C:\ProgramData\NVIDIA Nexus 1.0\Samples\CUDA\Debugging\Simple StreamsTest\Debug\simpleStreams.exe"
+/INCREMENTAL:NO
+/NOLOGO
+/LIBPATH:"C:\Program Files\NVIDIA Nexus 1.0\CUDA Toolkit\\v3.0\Win32\CUDA\lib"
+/MANIFEST
+/MANIFESTFILE:"Debug\simpleStreams.exe.intermediate.manifest"
+/MANIFESTUAC:"level='asInvoker' uiAccess='false'"
+/DEBUG
+/PDB:"C:\ProgramData\NVIDIA Nexus 1.0\Samples\CUDA\Debugging\Simple StreamsTest\Debug\simpleStreams.pdb"
+/SUBSYSTEM:CONSOLE
+/OPT:REF
+/OPT:NOICF
+/DYNAMICBASE:NO
+/MACHINE:X86
+/ERRORREPORT:PROMPT
+cuda.lib cudart.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib
+
+
+Inherited Sheets removed - results in the following command line (linker)
+----------------------------------------------------------------------------
+/OUT:"C:\ProgramData\NVIDIA Nexus 1.0\Samples\CUDA\Debugging\Simple StreamsTest\Debug\simpleStreams.exe"
+/NOLOGO
+/MANIFEST
+/MANIFESTFILE:"Debug\simpleStreams.exe.intermediate.manifest"
+/MANIFESTUAC:"level='asInvoker' uiAccess='false'"
+/DYNAMICBASE
+/NXCOMPAT
+/ERRORREPORT:PROMPT
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib 
+
+
