@@ -1498,7 +1498,7 @@ namespace osgCuda
     //{
     //    if( NULL != _proxy )
     //    {
-    //        _proxy->setIsRenderTarget( _isRenderTarget );
+    //        _proxy->_usage = getUsage();
     //        _proxy->init();
     //    }
     //    _clear = false;

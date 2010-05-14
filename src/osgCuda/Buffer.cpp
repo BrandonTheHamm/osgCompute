@@ -638,10 +638,10 @@ namespace osgCuda
                 cudaMemcpy3DParms memCpyParams = {0};
                 memCpyParams.dstPtr = make_cudaPitchedPtr(memory._devPtr,memory._pitch, getDimension(0), getDimension(1));
                 memCpyParams.kind = cudaMemcpyHostToDevice;
-                memCpyParams.srcPtr = make_cudaPitchedPtr(memory._hostPtr,memory._pitch, getDimension(0), getDimension(1));
+                memCpyParams.srcPtr = make_cudaPitchedPtr(memory._hostPtr,getElementSize()*getDimension(0), getDimension(0), getDimension(1));
 
                 cudaExtent arrayExtent = {0};
-                arrayExtent.width = getDimension(0);
+                arrayExtent.width = getElementSize()*getDimension(0);
                 arrayExtent.height = getDimension(1);
                 arrayExtent.depth = getDimension(2);
 
@@ -660,7 +660,7 @@ namespace osgCuda
             }
             else if( getNumDimensions() == 2 )
             {
-                res = cudaMemcpy2D( memory._devPtr, memory._pitch, memory._hostPtr, memory._pitch, 
+                res = cudaMemcpy2D( memory._devPtr, memory._pitch, memory._hostPtr, getElementSize()*getDimension(0), 
                     getDimension(0), getDimension(1), cudaMemcpyHostToDevice );
                 if( cudaSuccess != res )
                 {
@@ -697,12 +697,12 @@ namespace osgCuda
             if( getNumDimensions() == 3 )
             {
                 cudaMemcpy3DParms memCpyParams = {0};
-                memCpyParams.dstPtr = make_cudaPitchedPtr(memory._hostPtr,memory._pitch, getDimension(0), getDimension(1));
+                memCpyParams.dstPtr = make_cudaPitchedPtr(memory._hostPtr,getElementSize()*getDimension(0), getDimension(0), getDimension(1));
                 memCpyParams.kind = cudaMemcpyDeviceToHost;
                 memCpyParams.srcPtr = make_cudaPitchedPtr(memory._devPtr,memory._pitch, getDimension(0), getDimension(1));
 
                 cudaExtent arrayExtent = {0};
-                arrayExtent.width = getDimension(0);
+                arrayExtent.width = getElementSize()*getDimension(0);
                 arrayExtent.height = getDimension(1);
                 arrayExtent.depth = getDimension(2);
 
@@ -721,7 +721,7 @@ namespace osgCuda
             }
             else if( getNumDimensions() == 2 )
             {
-                res = cudaMemcpy2D( memory._hostPtr, memory._pitch, memory._devPtr, memory._pitch, 
+                res = cudaMemcpy2D( memory._hostPtr, getElementSize()*getDimension(0), memory._devPtr, memory._pitch, 
                     getDimension(0), getDimension(1), cudaMemcpyDeviceToHost );
                 if( cudaSuccess != res )
                 {
