@@ -24,7 +24,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     MemoryObject::MemoryObject() 
         :   Referenced(),
-            _mapping( UNMAPPED ),
+            _mapping( UNMAP ),
             _allocHint(0),
             _pitch(0),
             _syncOp(NO_SYNC)
@@ -185,15 +185,15 @@ namespace osgCompute
     unsigned int Memory::getMapping( unsigned int ) const
     {
         if( isClear() )
-            return osgCompute::UNMAPPED;
+            return osgCompute::UNMAP;
 
         if( Resource::getCurrentIdx() > _objects.size() )
-            return osgCompute::UNMAPPED;
+            return osgCompute::UNMAP;
 
         if( _objects[ Resource::getCurrentIdx() ].valid() )
             return _objects[ Resource::getCurrentIdx() ]->_mapping;
         else 
-            return osgCompute::UNMAPPED;
+            return osgCompute::UNMAP;
     }
 
     //------------------------------------------------------------------------------
@@ -272,7 +272,7 @@ namespace osgCompute
                     << std::endl;
                 return NULL;
             }
-            newObject->_mapping = osgCompute::UNMAPPED;
+            newObject->_mapping = osgCompute::UNMAP;
             newObject->_allocHint = getAllocHint();
             _objects[Resource::getCurrentIdx()] = newObject;
         }
@@ -301,7 +301,7 @@ namespace osgCompute
                     << std::endl;
                 return NULL;
             }
-            newObject->_mapping = osgCompute::UNMAPPED;
+            newObject->_mapping = osgCompute::UNMAP;
             newObject->_allocHint = getAllocHint();
             _objects[Resource::getCurrentIdx()] = newObject;
         }

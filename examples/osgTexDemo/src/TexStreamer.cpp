@@ -112,7 +112,7 @@ namespace TexDemo
         swap(  _blocks, 
             _threads,
             _trgBuffer->map(),
-            _srcArray->map(),
+            _srcArray->map( osgCompute::MAP_DEVICE_ARRAY ),
             _trgBuffer->getPitch(),
             _trgBuffer->getDimension(0),
             _trgBuffer->getDimension(1) );

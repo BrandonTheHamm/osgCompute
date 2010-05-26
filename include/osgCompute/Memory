@@ -24,21 +24,22 @@ namespace osgCompute
 
     enum SyncOperation
     {
-        NO_SYNC     = 0x00,
-        SYNC_DEVICE = 0x10,
-        SYNC_HOST   = 0x01
-
+        NO_SYNC     = 0x000,
+        SYNC_DEVICE = 0x010,
+        SYNC_HOST   = 0x001,
+        SYNC_ARRAY  = 0x100,
     };
 
     enum Mapping
     {
-        UNMAPPED                       = 0x00000000,
-        MAP_HOST                       = 0x00000011,
-        MAP_HOST_SOURCE                = 0x00000001,
-        MAP_HOST_TARGET                = 0x00000010,
-        MAP_DEVICE                     = 0x00110000,
-        MAP_DEVICE_SOURCE              = 0x00010000,
-        MAP_DEVICE_TARGET              = 0x00100000,
+        UNMAP                       = 0x00000000,
+        MAP_HOST                    = 0x00000011,
+        MAP_HOST_SOURCE             = 0x00000001,
+        MAP_HOST_TARGET             = 0x00000010,
+        MAP_DEVICE                  = 0x00110000,
+        MAP_DEVICE_SOURCE           = 0x00010000,
+        MAP_DEVICE_TARGET           = 0x00100000,
+        MAP_DEVICE_ARRAY            = 0x00001000,
     }; 
 
     //! A MemoryObject provides internal information about the memory resources of a memory area on the device.
@@ -67,7 +68,7 @@ namespace osgCompute
 
     private:
         //! Its not allowed to call copy-operator
-        MemoryObject( const MemoryObject& ) : Referenced(), _mapping(UNMAPPED), _allocHint(0), _syncOp(NO_SYNC) {}
+        MemoryObject( const MemoryObject& ) : Referenced(), _mapping(UNMAP), _allocHint(0), _syncOp(NO_SYNC) {}
         //! Its not allowed to call copy-constructor
         MemoryObject& operator=( const MemoryObject& ) { return *this; }
     };
@@ -103,6 +104,7 @@ namespace osgCompute
         virtual void* map( unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) = 0;
         virtual void unmap( unsigned int hint = 0 ) = 0;
         virtual bool reset( unsigned int hint = 0  ) = 0;
+        virtual bool isMappingAllowed( unsigned int mapping, unsigned int hint = 0 ) const = 0;
         virtual unsigned int getMapping( unsigned int hint = 0 ) const;
         virtual unsigned int getPitch( unsigned int hint = 0 ) const;
 

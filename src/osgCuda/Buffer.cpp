@@ -119,7 +119,7 @@ namespace osgCuda
             if( !init() )
                 return NULL;
 
-        if( mapping == osgCompute::UNMAPPED )
+        if( mapping == osgCompute::UNMAP )
         {
             unmap( hint );
             return NULL;
@@ -256,7 +256,7 @@ namespace osgCuda
         ////////////////
         // SETUP FLAG //
         ////////////////
-        memory._mapping = osgCompute::UNMAPPED;
+        memory._mapping = osgCompute::UNMAP;
     }
 
     //------------------------------------------------------------------------------
@@ -343,6 +343,24 @@ namespace osgCuda
         }
 
         return true;
+    }
+
+    //------------------------------------------------------------------------------
+    bool Buffer::isMappingAllowed( unsigned int mapping, unsigned int ) const
+    {
+        switch( mapping )
+        {
+        case osgCompute::UNMAP:
+        case osgCompute::MAP_HOST:
+        case osgCompute::MAP_HOST_SOURCE:
+        case osgCompute::MAP_HOST_TARGET:
+        case osgCompute::MAP_DEVICE:
+        case osgCompute::MAP_DEVICE_SOURCE:
+        case osgCompute::MAP_DEVICE_TARGET:
+            return true;
+        default:
+            return false;
+        }
     }
 
     //------------------------------------------------------------------------------

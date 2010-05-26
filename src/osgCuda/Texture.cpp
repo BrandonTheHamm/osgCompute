@@ -211,7 +211,7 @@ namespace osgCuda
             if( !init() )
                 return NULL;
 
-        if( mapping == osgCompute::UNMAPPED )
+        if( mapping == osgCompute::UNMAP )
         {
             unmap( hint );
             return NULL;
@@ -319,7 +319,7 @@ namespace osgCuda
 
             ptr = memory._hostPtr;
         }
-        else if( (mapping & MAP_DEVICE_ARRAY) == MAP_DEVICE_ARRAY )
+        else if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
         {
             //////////////////////
             // MAP ARRAY-MEMORY //
@@ -372,7 +372,7 @@ namespace osgCuda
             /////////////////
             // SYNC STREAM //
             /////////////////
-            if( memory._syncOp & SYNC_ARRAY )
+            if( memory._syncOp & osgCompute::SYNC_ARRAY )
                 if( !sync( mapping ) )
                     return NULL;
 
@@ -438,12 +438,12 @@ namespace osgCuda
 
         if( (mapping & osgCompute::MAP_DEVICE_TARGET) == osgCompute::MAP_DEVICE_TARGET )
         {
-            memory._syncOp |= SYNC_ARRAY;
+            memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._syncOp |= osgCompute::SYNC_HOST;
         }
         else if( (mapping & osgCompute::MAP_HOST_TARGET) == osgCompute::MAP_HOST_TARGET )
         {
-            memory._syncOp |= SYNC_ARRAY;
+            memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._syncOp |= osgCompute::SYNC_DEVICE;
         }
 
@@ -469,9 +469,9 @@ namespace osgCuda
         // UNMAP MEMORY //
         //////////////////
         // Copy current memory to texture memory
-        if( memory._syncOp & SYNC_ARRAY )
+        if( memory._syncOp & osgCompute::SYNC_ARRAY )
         {
-            if( NULL == map( MAP_DEVICE_ARRAY, 0 ) )
+            if( NULL == map( osgCompute::MAP_DEVICE_ARRAY, 0 ) )
             {
                 osg::notify(osg::FATAL)
                     << getName() << " [osgCuda::TextureBuffer::unmap()]: error during device memory synchronization (map())."
@@ -481,7 +481,7 @@ namespace osgCuda
             }
         }
 
-        if( memory._mapping == osgCompute::UNMAPPED && 
+        if( memory._mapping == osgCompute::UNMAP && 
             _texref->getImage(0) != NULL &&
             _texref->getImage(0)->getModifiedCount() != memory._lastModifiedCount )
         {
@@ -505,7 +505,7 @@ namespace osgCuda
             memory._graphicsArray = NULL;
         }
 
-        memory._mapping = osgCompute::UNMAPPED;
+        memory._mapping = osgCompute::UNMAP;
     }
 
     //------------------------------------------------------------------------------
@@ -596,6 +596,25 @@ namespace osgCuda
         return true;
     }
 
+    //------------------------------------------------------------------------------
+    bool TextureBuffer::isMappingAllowed( unsigned int mapping, unsigned int ) const
+    {
+        switch( mapping )
+        {
+        case osgCompute::UNMAP:
+        case osgCompute::MAP_HOST:
+        case osgCompute::MAP_HOST_SOURCE:
+        case osgCompute::MAP_HOST_TARGET:
+        case osgCompute::MAP_DEVICE:
+        case osgCompute::MAP_DEVICE_SOURCE:
+        case osgCompute::MAP_DEVICE_TARGET:
+        case osgCompute::MAP_DEVICE_ARRAY:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -640,7 +659,7 @@ namespace osgCuda
         //////////////////
         // SETUP MEMORY //
         //////////////////
-        if( (mapping & MAP_DEVICE_ARRAY) == MAP_DEVICE_ARRAY )
+        if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
         {
             ////////////////////
             // UNREGISTER TEX //
@@ -765,7 +784,7 @@ namespace osgCuda
 
             // device must be synchronized
             memory._syncOp |= osgCompute::SYNC_HOST;
-            memory._syncOp |= SYNC_ARRAY;
+            memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._lastModifiedCount = _texref->getImage(0)->getModifiedCount();
         }
         else if( mapping & osgCompute::MAP_HOST )
@@ -794,7 +813,7 @@ namespace osgCuda
 
             // device must be synchronized
             memory._syncOp |= osgCompute::SYNC_DEVICE;
-            memory._syncOp |= SYNC_ARRAY;
+            memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._lastModifiedCount = _texref->getImage(0)->getModifiedCount();
         }
 
@@ -832,7 +851,7 @@ namespace osgCuda
 
             return true;
         }
-        else if( (mapping & MAP_DEVICE_ARRAY) == MAP_DEVICE_ARRAY )
+        else if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
         {
             if( memory._graphicsResource != NULL )
                 return true;
@@ -974,9 +993,9 @@ namespace osgCuda
         /////////////////
         // SYNC MEMORY //
         /////////////////
-        if( (mapping & MAP_DEVICE_ARRAY) == MAP_DEVICE_ARRAY )
+        if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
         {
-            if( !(memory._syncOp & SYNC_ARRAY) )
+            if( !(memory._syncOp & osgCompute::SYNC_ARRAY) )
                 return true;
 
             if( ((memory._syncOp & osgCompute::SYNC_DEVICE) && memory._hostPtr == NULL) ||
@@ -1105,7 +1124,7 @@ namespace osgCuda
                 }
             }
 
-            memory._syncOp = memory._syncOp ^ SYNC_ARRAY;
+            memory._syncOp = memory._syncOp ^ osgCompute::SYNC_ARRAY;
             return true;
         }
         else if( mapping & osgCompute::MAP_DEVICE )
@@ -1113,8 +1132,8 @@ namespace osgCuda
             if( !(memory._syncOp & osgCompute::SYNC_DEVICE) )
                 return true;
 
-            if( ((memory._syncOp & SYNC_ARRAY) && memory._hostPtr == NULL) ||
-                ((memory._syncOp & SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_HOST)) )
+            if( ((memory._syncOp & osgCompute::SYNC_ARRAY) && memory._hostPtr == NULL) ||
+                ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_HOST)) )
             {
                 osg::notify(osg::FATAL)
                     << getName() << " [osgCuda::TextureBuffer::sync()]: no current memory found."
@@ -1265,8 +1284,8 @@ namespace osgCuda
             if( !(memory._syncOp & osgCompute::SYNC_HOST) )
                 return true;
 
-            if( ((memory._syncOp & SYNC_ARRAY) && memory._devPtr == NULL) ||
-                ((memory._syncOp & SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_DEVICE)) )
+            if( ((memory._syncOp & osgCompute::SYNC_ARRAY) && memory._devPtr == NULL) ||
+                ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_DEVICE)) )
             {
                 osg::notify(osg::FATAL)
                     << getName() << " [osgCuda::TextureBuffer::sync()]: no current memory found."

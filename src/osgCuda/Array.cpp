@@ -126,18 +126,17 @@ namespace osgCuda
             if( !init() )
                 return NULL;
 
-        if( (mapping & osgCompute::MAP_DEVICE) == osgCompute::MAP_DEVICE_TARGET )
+        if( (mapping & osgCompute::MAP_DEVICE) )
         {
 
             osg::notify(osg::WARN)
-                << getName() << " [osgCuda::Array::map()] \""<<getName()<<"\": you cannot write into an array on the device. Use one of the following: "
-                << "DEVICE_SOURCE, DEVICE."
+                << getName() << " [osgCuda::Array::map()] \""<<getName()<<"\": you cannot acces an array via pointers. Use MAP_DEVICE_ARRAY."
                 << std::endl;
 
             return NULL;
         }
 
-        if( mapping == osgCompute::UNMAPPED )
+        if( mapping == osgCompute::UNMAP )
         {
             unmap( hint );
             return NULL;
@@ -189,7 +188,7 @@ namespace osgCuda
 
             ptr = memory._hostPtr;
         }
-        else if( (memory._mapping & osgCompute::MAP_DEVICE) )
+        else if( (memory._mapping & osgCompute::MAP_DEVICE_ARRAY) )
         {
             if( NULL == memory._devArray )
             {
@@ -206,7 +205,7 @@ namespace osgCuda
                     return NULL;
 
             // sync stream 
-            if( (memory._syncOp & osgCompute::SYNC_DEVICE ) && NULL != memory._hostPtr )
+            if( (memory._syncOp & osgCompute::SYNC_ARRAY ) && NULL != memory._hostPtr )
                 if( !sync( mapping ) )
                     return NULL;
 
@@ -216,7 +215,7 @@ namespace osgCuda
         {
             osg::notify(osg::WARN)
                 << getName() << " [osgCuda::Array::map()]: Wrong mapping type specified. Use one of the following types: "
-                << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE."
+                << "MAP_HOST_SOURCE, MAP_HOST_TARGET, MAP_HOST, MAP_DEVICE_ARRAY."
                 << std::endl;
 
             return NULL;
@@ -242,7 +241,7 @@ namespace osgCuda
         }
 
         if( (mapping & osgCompute::MAP_HOST_TARGET) == osgCompute::MAP_HOST_TARGET )
-            memory._syncOp = osgCompute::SYNC_DEVICE;
+            memory._syncOp = osgCompute::SYNC_ARRAY;
 
         return &static_cast<char*>(ptr)[offset];
     }
@@ -265,7 +264,7 @@ namespace osgCuda
         ////////////////
         // SETUP FLAG //
         ////////////////
-        memory._mapping = osgCompute::UNMAPPED;
+        memory._mapping = osgCompute::UNMAP;
     }
 
     //------------------------------------------------------------------------------
@@ -390,6 +389,22 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
+    bool Array::isMappingAllowed( unsigned int mapping, unsigned int ) const
+    {
+        switch( mapping )
+        {
+            case osgCompute::UNMAP:
+            case osgCompute::MAP_HOST:
+            case osgCompute::MAP_HOST_SOURCE:
+            case osgCompute::MAP_HOST_TARGET:
+            case osgCompute::MAP_DEVICE_ARRAY:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    //------------------------------------------------------------------------------
     bool Array::setup( unsigned int mapping )
     {
         cudaError res;
@@ -405,7 +420,7 @@ namespace osgCuda
         //////////////////
         // SETUP MEMORY //
         //////////////////
-        if( mapping & osgCompute::MAP_DEVICE )
+        if( mapping & osgCompute::MAP_DEVICE_ARRAY )
         {
             const void* data = NULL;
             if( _image.valid() )
@@ -521,7 +536,7 @@ namespace osgCuda
 
             // device must be synchronized
             // because host memory has been modified
-            memory._syncOp = osgCompute::SYNC_DEVICE;
+            memory._syncOp = osgCompute::SYNC_ARRAY;
             memory._modifyCount = _image.valid()? _image->getModifiedCount() : _array->getModifiedCount();
             return true;
         }
@@ -564,7 +579,7 @@ namespace osgCuda
 
             return true;
         }
-        else if( mapping & osgCompute::MAP_DEVICE )
+        else if( mapping & osgCompute::MAP_DEVICE_ARRAY )
         {
             if( memory._devArray != NULL )
                 return true;
@@ -632,7 +647,7 @@ namespace osgCuda
             }
 
             if( memory._hostPtr != NULL )
-                memory._syncOp |= osgCompute::SYNC_DEVICE;
+                memory._syncOp |= osgCompute::SYNC_ARRAY;
 
             return true;
         }
@@ -656,9 +671,9 @@ namespace osgCuda
         //////////////////
         // ALLOC MEMORY //
         //////////////////
-        if( mapping & osgCompute::MAP_DEVICE )
+        if( mapping & osgCompute::MAP_DEVICE_ARRAY )
         {
-            if( !(memory._syncOp & osgCompute::SYNC_DEVICE) )
+            if( !(memory._syncOp & osgCompute::SYNC_ARRAY) )
                 return true;
 
             if( getNumDimensions() == 1 )
@@ -723,7 +738,7 @@ namespace osgCuda
                 }
             }
 
-            memory._syncOp = memory._syncOp ^ osgCompute::SYNC_DEVICE;
+            memory._syncOp = memory._syncOp ^ osgCompute::SYNC_ARRAY;
             return true;
         }
         else if( mapping & osgCompute::MAP_HOST )
