@@ -1240,7 +1240,7 @@ namespace osgCuda
         ////////////////////////
         if( memory._hostIdxPtr != NULL )
         {
-            if( !memset( memory._hostIdxPtr, 0x0, getByteSize() ) )
+            if( !memset( memory._hostIdxPtr, 0x0, getIndicesByteSize() ) )
             {
                 osg::notify(osg::WARN)
                     << getName() << " [osgCuda::IndexedGeometryBuffer::resetIndices()] \"" << getName() << "\": error during memset() for host memory."
@@ -1279,8 +1279,7 @@ namespace osgCuda
                 }
             }
 
-            // TODO here
-            cudaError res = cudaMemset( memory._devIdxPtr, 0x0, getByteSize() );
+            cudaError res = cudaMemset( memory._devIdxPtr, 0x0, getIndicesByteSize() );
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
@@ -1290,7 +1289,6 @@ namespace osgCuda
 
                 return NULL;
             }
-            // TODO end
         }
 
         ///////////////////////
