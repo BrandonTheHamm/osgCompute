@@ -120,7 +120,7 @@ namespace GeometryDemo
     {
         // Search for your handles. This Method is called for each resource
         // located in the subgraph of this module.
-        if( resource.isAddressedByIdentifier( "WARP_GEOMETRY" ) )
+        if( resource.isIdentifiedBy( "WARP_GEOMETRY" ) )
             _vertices = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 

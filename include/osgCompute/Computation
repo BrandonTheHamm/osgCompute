@@ -50,11 +50,19 @@ namespace osgUtil
 
 namespace osgCompute
 {
+	struct ResourceHandle
+	{
+		osg::ref_ptr<Resource>		_resource;
+		bool						_attached;
+	};
 
     typedef std::set< osg::GraphicsContext* >						ContextSet;
-    typedef std::set< osg::GraphicsContext* >::iterator			    ContextSetItr;
+    typedef std::set< osg::GraphicsContext* >::iterator				ContextSetItr;
     typedef std::set< osg::GraphicsContext* >::const_iterator		ContextSetCnstItr;
 
+	typedef std::list< ResourceHandle >								ResourceHandleList;
+	typedef std::list< ResourceHandle >::iterator					ResourceHandleListItr;
+	typedef std::list< ResourceHandle >::const_iterator				ResourceHandleListCnstItr;
 
     //! Abstract base node of any computation
     /**
@@ -71,7 +79,6 @@ namespace osgCompute
     class LIBRARY_EXPORT Computation : public osg::Group
     {
     public: 
-
         enum ComputeOrder
         {
             RENDER_PRE_RENDER_POST_TRAVERSAL = OSGCOMPUTE_RENDER | OSGCOMPUTE_PRE_RENDER | OSGCOMPUTE_POST_TRAVERSAL,
@@ -136,13 +143,14 @@ namespace osgCompute
         virtual void removeModules();
 
         /** Add a resource to the computation. */
-        virtual void addResource( Resource& resource );
+		virtual void addResource( Resource& resource, bool attach = true );
         virtual void removeResource( const std::string& handle );
         virtual void removeResource( Resource& resource );
         virtual bool hasResource( const std::string& handle ) const;
-        virtual bool hasResource( Resource& resource ) const;
-        virtual ResourceMap& getResources();
-        virtual const ResourceMap& getResources() const;
+		virtual bool hasResource( Resource& resource ) const;
+		virtual bool isResourceAttached( Resource& resource ) const;
+        virtual ResourceHandleList& getResources();
+        virtual const ResourceHandleList& getResources() const;
 
         virtual void removeResources();
 
@@ -161,7 +169,7 @@ namespace osgCompute
         virtual void setComputeOrder( ComputeOrder co );
 
         /** Returns the compute order */
-        virtual ComputeOrder getComputeOrder();
+        virtual ComputeOrder getComputeOrder() const;
 
 
         virtual void setAutoCheckSubgraph( bool autoCheckSubgraph );
@@ -182,8 +190,9 @@ namespace osgCompute
         virtual void releaseGLObjects( osg::State* state ) const;
 
     protected:
-        friend class ContextVisitor;
-        friend class ResourceVisitor;
+		friend class ResourceVisitor;
+
+
         /** Destructor. Release the memory by calling clearLocal(). */
         virtual ~Computation() { clearLocal(); }
 
@@ -202,7 +211,7 @@ namespace osgCompute
         bool                                	_enabled;
         LaunchCallback*                     	_launchCallback; 
         ModuleList                          	_modules;
-        ResourceMap                         	_resources;
+        ResourceHandleList                      _resources;
         ComputeOrder                        	_computeOrder;
         bool                                	_subgraphChanged;
         osg::ref_ptr<ResourceVisitor>       	_resourceVisitor;

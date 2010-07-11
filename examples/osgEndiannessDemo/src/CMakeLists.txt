@@ -16,7 +16,7 @@ INCLUDE(FindosgUtil)
 INCLUDE(FindOpenThreads)
 # check for cuda
 INCLUDE(FindCuda)
-
+SET(CUDA_OPTIONS ${CUDA_OPTIONS} -arch sm_12)
 
 #########################################################################
 # Set basic include directories

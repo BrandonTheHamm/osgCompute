@@ -1567,7 +1567,7 @@ namespace osgCuda
     //    }
     //    else
     //    {
-    //        if( !isAddressedByIdentifier(identifier) )
+    //        if( !isIdentifiedBy(identifier) )
     //            _identifiers.insert( identifier );
     //    }
     //}
@@ -1589,11 +1589,11 @@ namespace osgCuda
     //}
 
     ////------------------------------------------------------------------------------
-    //bool Texture1D::isAddressedByIdentifier( const std::string& identifier ) const
+    //bool Texture1D::isIdentifiedBy( const std::string& identifier ) const
     //{
     //    if( _proxy != NULL )
     //    {
-    //        return _proxy->isAddressedByIdentifier( identifier );
+    //        return _proxy->isIdentifiedBy( identifier );
     //    }
     //    else
     //    {
@@ -1738,7 +1738,7 @@ namespace osgCuda
         }
         else
         {
-            if( !isAddressedByIdentifier(identifier) )
+            if( !isIdentifiedBy(identifier) )
                 _identifiers.insert( identifier );
         }
     }
@@ -1760,11 +1760,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool Texture2D::isAddressedByIdentifier( const std::string& identifier ) const
+    bool Texture2D::isIdentifiedBy( const std::string& identifier ) const
     {
         if( _proxy != NULL )
         {
-            return _proxy->isAddressedByIdentifier( identifier );
+            return _proxy->isIdentifiedBy( identifier );
         }
         else
         {
@@ -1914,7 +1914,7 @@ namespace osgCuda
         }
         else
         {
-            if( !isAddressedByIdentifier(identifier) )
+            if( !isIdentifiedBy(identifier) )
                 _identifiers.insert( identifier );
         }
     }
@@ -1936,11 +1936,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool Texture3D::isAddressedByIdentifier( const std::string& identifier ) const
+    bool Texture3D::isIdentifiedBy( const std::string& identifier ) const
     {
         if( _proxy != NULL )
         {
-            return _proxy->isAddressedByIdentifier( identifier );
+            return _proxy->isIdentifiedBy( identifier );
         }
         else
         {
@@ -2090,7 +2090,7 @@ namespace osgCuda
         }
         else
         {
-            if( !isAddressedByIdentifier(identifier) )
+            if( !isIdentifiedBy(identifier) )
                 _identifiers.insert( identifier );
         }
     }
@@ -2112,11 +2112,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool TextureRectangle::isAddressedByIdentifier( const std::string& identifier ) const
+    bool TextureRectangle::isIdentifiedBy( const std::string& identifier ) const
     {
         if( _proxy != NULL )
         {
-            return _proxy->isAddressedByIdentifier( identifier );
+            return _proxy->isIdentifiedBy( identifier );
         }
         else
         {

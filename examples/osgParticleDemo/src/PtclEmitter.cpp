@@ -101,9 +101,9 @@ namespace PtclDemo
     //------------------------------------------------------------------------------
     void PtclEmitter::acceptResource( osgCompute::Resource& resource )
     {
-        if( resource.isAddressedByIdentifier("PTCL_BUFFER") )
+        if( resource.isIdentifiedBy("PTCL_BUFFER") )
             _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
-        if( resource.isAddressedByIdentifier("PTCL_SEEDS") )
+        if( resource.isIdentifiedBy("PTCL_SEEDS") )
             _seeds = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 

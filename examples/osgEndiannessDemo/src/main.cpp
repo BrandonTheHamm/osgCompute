@@ -18,9 +18,7 @@
 #include <osgCompute/Module>
 
 //------------------------------------------------------------------------------
-extern "C"
-void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* bytes );
-
+extern "C" void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* bytes );
 
 /**
 */

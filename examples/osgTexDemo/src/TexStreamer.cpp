@@ -143,9 +143,9 @@ namespace TexDemo
     {
         // Search for your handles. This Method is called for each resource
         // located in the subgraph of this module.
-        if( resource.isAddressedByIdentifier( "TRG_BUFFER" ) )
+        if( resource.isIdentifiedBy( "TRG_BUFFER" ) )
             _trgBuffer = dynamic_cast<osgCompute::Memory*>( &resource );
-        if( resource.isAddressedByIdentifier( "SRC_ARRAY" ) )
+        if( resource.isIdentifiedBy( "SRC_ARRAY" ) )
             _srcArray = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 

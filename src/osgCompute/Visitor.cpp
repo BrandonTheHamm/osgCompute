@@ -73,7 +73,7 @@ namespace osgCompute
             if( searchRes == _ptrOldResources->end() )
             {
                 // add this resource to the computation
-                getComputation()->addResource( *(*itr) );
+                getComputation()->addResource( *(*itr), false );
             }
         }
     }
@@ -143,10 +143,10 @@ namespace osgCompute
 
         // computation has started its own traversal 
 
-        ResourceMap& resources = computation.getResources();
-        for( ResourceMapItr itr = resources.begin(); itr != resources.end(); ++itr )
-            if( (*itr).first != NULL )
-                addResource( *((*itr).first) );
+        ResourceHandleList& resources = computation.getResources();
+        for( ResourceHandleListItr itr = resources.begin(); itr != resources.end(); ++itr )
+            if( (*itr)._resource.valid() )
+                addResource( *((*itr)._resource) );
 
         // mark computation as child computation
         computation.setParentComputation( getComputation() );

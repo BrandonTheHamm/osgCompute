@@ -38,10 +38,6 @@ namespace osgCompute
     typedef std::set< osg::ref_ptr<Resource> >::iterator                        ResourceSetItr;
     typedef std::set< osg::ref_ptr<Resource> >::const_iterator                  ResourceSetCnstItr;
 
-    typedef std::map< Resource*, osg::ref_ptr<Resource> >						ResourceMap;
-    typedef std::map< Resource*, osg::ref_ptr<Resource> >::iterator				ResourceMapItr;
-    typedef std::map< Resource*, osg::ref_ptr<Resource> >::const_iterator		ResourceMapCnstItr;
-
     /**
     */
     class LIBRARY_EXPORT Resource : public osg::Object
@@ -53,7 +49,7 @@ namespace osgCompute
 
         virtual void addIdentifier( const std::string& handle );
         virtual void removeIdentifier( const std::string& handle );
-        virtual bool isAddressedByIdentifier( const std::string& handle ) const;
+        virtual bool isIdentifiedBy( const std::string& handle ) const;
         virtual void setIdentifiers( IdentifierSet& handles );
         virtual IdentifierSet& getIdentifiers();
         virtual const IdentifierSet& getIdentifiers() const;

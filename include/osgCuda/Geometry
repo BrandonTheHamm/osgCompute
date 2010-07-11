@@ -176,7 +176,7 @@ namespace osgCuda
 
         virtual void addIdentifier( const std::string& identifier );
         virtual void removeIdentifier( const std::string& identifier );
-        virtual bool isAddressedByIdentifier( const std::string& identifier ) const;
+        virtual bool isIdentifiedBy( const std::string& identifier ) const;
 
         virtual bool init();
 

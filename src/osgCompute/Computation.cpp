@@ -136,9 +136,9 @@ namespace osgCompute
     void Computation::addModule( Module& module )
     {
         Resource* curResource = NULL;
-        for( ResourceMapItr itr = _resources.begin(); itr != _resources.end(); ++itr )
+        for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
         {
-            curResource = (*itr).first;
+            curResource = (*itr)._resource.get();
             if( !curResource )
                 continue;
 
@@ -184,7 +184,7 @@ namespace osgCompute
         ModuleListItr itr = _modules.begin();
         while( itr != _modules.end() )
         {
-            if( (*itr)->isAddressedByIdentifier( moduleIdentifier ) )
+            if( (*itr)->isIdentifiedBy( moduleIdentifier ) )
             {
                 // decrement traversal counter if necessary
                 if( (*itr)->getEventCallback() )
@@ -233,7 +233,7 @@ namespace osgCompute
     bool Computation::hasModule( const std::string& moduleIdentifier ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isAddressedByIdentifier( moduleIdentifier ) )
+            if( (*itr)->isIdentifiedBy( moduleIdentifier ) )
                 return true;
 
         return false;
@@ -276,9 +276,13 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     bool osgCompute::Computation::hasResource( Resource& resource ) const
     {
-        ResourceMapCnstItr itr = _resources.find( &resource );
-        if( itr != _resources.end() )
-            return true;
+		for( ResourceHandleListCnstItr itr = _resources.begin();
+			itr != _resources.end();
+			++itr )
+		{
+			if( (*itr)._resource == &resource )
+				return true;
+		}
 
         return false;
     }
@@ -287,13 +291,9 @@ namespace osgCompute
     bool osgCompute::Computation::hasResource( const std::string& handle ) const
     {
         Resource* curResource = NULL;
-        for( ResourceMapCnstItr itr = _resources.begin(); itr != _resources.end(); ++itr )
+        for( ResourceHandleListCnstItr itr = _resources.begin(); itr != _resources.end(); ++itr )
         {
-            curResource = (*itr).first;
-            if( !curResource )
-                continue;
-
-            if( curResource->isAddressedByIdentifier(handle)  )
+            if(	(*itr)._resource.valid() && (*itr)._resource->isIdentifiedBy(handle)  )
                 return true;
         }
 
@@ -301,7 +301,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void osgCompute::Computation::addResource( Resource& resource )
+    void osgCompute::Computation::addResource( Resource& resource, bool attach )
     {
         if( hasResource(resource) )
             return;
@@ -309,7 +309,10 @@ namespace osgCompute
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             (*itr)->acceptResource( resource );
 
-        _resources.insert( std::make_pair< Resource*, osg::ref_ptr<Resource> > ( &resource, &resource ) );
+		ResourceHandle newHandle;
+		newHandle._resource = &resource;
+		newHandle._attached = attach;
+		_resources.push_back( newHandle );
         subgraphChanged();
     }
 
@@ -318,14 +321,14 @@ namespace osgCompute
     {
         Resource* curResource = NULL;
 
-        ResourceMapItr itr = _resources.begin();
+        ResourceHandleListItr itr = _resources.begin();
         while( itr != _resources.end() )
         {
-            curResource = (*itr).first;
+            curResource = (*itr)._resource.get();
             if( !curResource )
                 continue;
 
-            if( curResource->isAddressedByIdentifier( handle ) )
+            if( curResource->isIdentifiedBy( handle ) )
             {
                 for( ModuleListItr moditr = _modules.begin(); moditr != _modules.end(); ++moditr )
                     (*moditr)->removeResource( *curResource );
@@ -344,24 +347,30 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Computation::removeResource( Resource& resource )
     {
-        ResourceMapItr itr = _resources.find( &resource );
-        if( itr != _resources.end() )
-        {
-            for( ModuleListItr moditr = _modules.begin(); moditr != _modules.end(); ++moditr )
-                (*moditr)->removeResource( resource );
+		for( ResourceHandleListItr itr = _resources.begin();
+			itr != _resources.end();
+			++itr )
+		{
+			if( (*itr)._resource == &resource )
+			{
+				for( ModuleListItr moditr = _modules.begin(); moditr != _modules.end(); ++moditr )
+					(*moditr)->removeResource( resource );
 
-            _resources.erase( itr );
-            subgraphChanged();
-        }
+				_resources.erase( itr );
+				subgraphChanged();
+				return;
+			}
+		}
+
     }
 
     //------------------------------------------------------------------------------
     void Computation::removeResources()
     {
-        ResourceMapItr itr = _resources.begin();
+        ResourceHandleListItr itr = _resources.begin();
         while( itr != _resources.end() )
         {
-            Resource* curResource = (*itr).first;
+            Resource* curResource = (*itr)._resource.get();
             if( curResource != NULL )
             {
                 for( ModuleListItr moditr = _modules.begin(); moditr != _modules.end(); ++moditr )
@@ -375,16 +384,31 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    ResourceMap& osgCompute::Computation::getResources()
+    ResourceHandleList& Computation::getResources()
     {
         return _resources;
     }
 
     //------------------------------------------------------------------------------
-    const ResourceMap& osgCompute::Computation::getResources() const
+    const ResourceHandleList& Computation::getResources() const
     {
         return _resources;
     }
+
+	//------------------------------------------------------------------------------
+	bool Computation::isResourceAttached( Resource& resource ) const
+	{
+		for( ResourceHandleListCnstItr itr = _resources.begin();
+			itr != _resources.end();
+			++itr )
+		{
+			if( (*itr)._resource == &resource )
+				return (*itr)._attached;
+		}
+
+		return false;
+	}
+
 
     //------------------------------------------------------------------------------
     void Computation::subgraphChanged()
@@ -446,7 +470,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    Computation::ComputeOrder Computation::getComputeOrder()
+    Computation::ComputeOrder Computation::getComputeOrder() const
     {
         return _computeOrder;
     }
@@ -685,15 +709,13 @@ namespace osgCompute
                 collectResources();
 
             // init params if not done so far 
-            Resource* curResource = NULL;
-            for( ResourceMapItr itr = _resources.begin(); itr != _resources.end(); ++itr )
+            for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
             {
-                curResource = (*itr).first;
-                if( !curResource || dynamic_cast<Module*>( curResource ) != NULL )
+                if( !(*itr)._resource.valid() || dynamic_cast<Module*>( (*itr)._resource.get() ) != NULL )
                     continue;
 
-                if( curResource->isClear() )
-                    curResource->init();
+                if( (*itr)._resource->isClear() )
+                    (*itr)._resource->init();
             }
 
             // decrement update counter when all resources have been initialized

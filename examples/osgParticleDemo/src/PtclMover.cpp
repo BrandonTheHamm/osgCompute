@@ -80,7 +80,7 @@ namespace PtclDemo
     void PtclMover::acceptResource( osgCompute::Resource& resource )
     {
         // Search for the particle buffer
-        if( resource.isAddressedByIdentifier("PTCL_BUFFER") )
+        if( resource.isIdentifiedBy("PTCL_BUFFER") )
             _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 

@@ -48,7 +48,7 @@ namespace osgCompute
 
         virtual void addIdentifier( const std::string& identifier ) = 0;
         virtual void removeIdentifier( const std::string& identifier ) = 0;
-        virtual bool isAddressedByIdentifier( const std::string& identifier ) const = 0;
+        virtual bool isIdentifiedBy( const std::string& identifier ) const = 0;
 
         virtual void setUsage( unsigned int usage );
         virtual unsigned int getUsage();

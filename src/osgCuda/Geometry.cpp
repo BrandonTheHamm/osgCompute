@@ -1807,7 +1807,7 @@ namespace osgCuda
         }
         else
         {
-            if( !isAddressedByIdentifier(identifier) )
+            if( !isIdentifiedBy(identifier) )
                 _identifiers.insert( identifier );
         }
     }
@@ -1829,11 +1829,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool Geometry::isAddressedByIdentifier( const std::string& identifier ) const
+    bool Geometry::isIdentifiedBy( const std::string& identifier ) const
     {
         if( _proxy != NULL )
         {
-            return _proxy->isAddressedByIdentifier( identifier );
+            return _proxy->isIdentifiedBy( identifier );
         }
         else
         {

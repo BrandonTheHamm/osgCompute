@@ -168,7 +168,7 @@ namespace osgCompute
     bool ComputationBin::hasModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isAddressedByIdentifier(moduleName)  )
+            if( (*itr)->isIdentifiedBy(moduleName)  )
                 return true;
 
         return false;
@@ -194,7 +194,7 @@ namespace osgCompute
     Module* ComputationBin::getModule( const std::string& moduleName )
     {
         for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isAddressedByIdentifier(moduleName) && (*itr).valid() )
+            if( (*itr)->isIdentifiedBy(moduleName) && (*itr).valid() )
                 return (*itr).get();
 
         return NULL;
@@ -204,7 +204,7 @@ namespace osgCompute
     const Module* ComputationBin::getModule( const std::string& moduleName ) const
     {
         for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isAddressedByIdentifier(moduleName) && (*itr).valid() )
+            if( (*itr)->isIdentifiedBy(moduleName) && (*itr).valid() )
                 return (*itr).get();
 
         return NULL;

@@ -58,7 +58,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Resource::addIdentifier( const std::string& handle )
     {
-        if( !isAddressedByIdentifier(handle) )
+        if( !isIdentifiedBy(handle) )
             _identifiers.insert( handle ); 
     }
 
@@ -71,7 +71,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool Resource::isAddressedByIdentifier( const std::string& handle ) const
+    bool Resource::isIdentifiedBy( const std::string& handle ) const
     {
         IdentifierSetCnstItr itr = _identifiers.find( handle ); 
         if( itr == _identifiers.end() )

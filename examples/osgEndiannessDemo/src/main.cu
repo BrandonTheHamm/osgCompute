@@ -71,4 +71,5 @@ void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* byte
     k_swapEndianness<<< blocks, threads >>>( reinterpret_cast<unsigned int*>(bytes) );
 }
 
+
 #endif // ENDIANNESS_KERNEL_H
