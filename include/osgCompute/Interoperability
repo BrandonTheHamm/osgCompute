@@ -42,16 +42,18 @@ namespace osgCompute
     public:
         InteropObject() { clearLocal(); }
 
-        virtual InteropMemory* getMemory() = 0;
-        virtual const InteropMemory* getMemory() const= 0;
-        virtual InteropMemory* getOrCreateMemory() = 0;
+        virtual InteropMemory* getInteropMemory() = 0;
+        virtual const InteropMemory* getInteropMemory() const= 0;
+        virtual InteropMemory* getOrCreateInteropMemory() = 0;
 
         virtual void addIdentifier( const std::string& identifier ) = 0;
         virtual void removeIdentifier( const std::string& identifier ) = 0;
-        virtual bool isIdentifiedBy( const std::string& identifier ) const = 0;
+		virtual bool isIdentifiedBy( const std::string& identifier ) const = 0;
+		virtual IdentifierSet& getIdentifiers() = 0;
+		virtual const IdentifierSet& getIdentifiers() const = 0;
 
         virtual void setUsage( unsigned int usage );
-        virtual unsigned int getUsage();
+        virtual unsigned int getUsage() const;
 
         virtual void clear();
 
@@ -76,7 +78,8 @@ namespace osgCompute
     public:
         InteropMemory() {}
 
-        virtual InteropObject* getObject() = 0;
+		virtual InteropObject* getInteropObject() = 0;
+		virtual const InteropObject* getInteropObject() const = 0;
 
     protected:
         virtual ~InteropMemory() {}

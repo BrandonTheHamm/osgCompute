@@ -85,7 +85,7 @@ namespace osgCuda
         clearLocal();
 
         // free this proxy object
-        getObject()->freeProxy();
+        getInteropObject()->freeProxy();
         // decrease the reference count of the geometry reference
         _texref = NULL;
     }
@@ -97,11 +97,17 @@ namespace osgCuda
         clearLocal();
     }
 
-    //------------------------------------------------------------------------------
-    osgCompute::InteropObject* osgCuda::TextureBuffer::getObject()
-    {
-        return dynamic_cast< osgCompute::InteropObject* > ( _texref.get() );
-    }
+	//------------------------------------------------------------------------------
+	osgCompute::InteropObject* TextureBuffer::getInteropObject()
+	{ 
+		return dynamic_cast<osgCompute::InteropObject*>( _texref.get() );
+	}
+
+	//------------------------------------------------------------------------------
+	const osgCompute::InteropObject* TextureBuffer::getInteropObject() const
+	{ 
+		return dynamic_cast<const osgCompute::InteropObject*>( _texref.get() );
+	}
 
     //------------------------------------------------------------------------------
     bool TextureBuffer::init()
@@ -1605,6 +1611,32 @@ namespace osgCuda
     //    }
     //}
 
+	////------------------------------------------------------------------------------
+	//osgCompute::IdentifierSet& Texture1D::getIdentifiers()
+	//{
+	//	if( _proxy != NULL )
+	//	{
+	//		return _proxy->getIdentifiers();
+	//	}
+	//	else
+	//	{
+	//		return _identifiers;
+	//	}
+	//}
+
+	////------------------------------------------------------------------------------
+	//const osgCompute::IdentifierSet& Texture1D::getIdentifiers() const
+	//{
+	//	if( _proxy != NULL )
+	//	{
+	//		return _proxy->getIdentifiers();
+	//	}
+	//	else
+	//	{
+	//		return _identifiers;
+	//	}
+	//}
+
     ////------------------------------------------------------------------------------
     //void Texture1D::releaseGLObjects( osg::State* state/*=0*/ ) const
     //{
@@ -1696,19 +1728,19 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Texture2D::getMemory()
+    osgCompute::InteropMemory* Texture2D::getInteropMemory()
     {
         return _proxy;
     }
 
     //------------------------------------------------------------------------------
-    const osgCompute::InteropMemory* Texture2D::getMemory() const
+    const osgCompute::InteropMemory* Texture2D::getInteropMemory() const
     {
         return _proxy;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Texture2D::getOrCreateMemory()
+    osgCompute::InteropMemory* Texture2D::getOrCreateInteropMemory()
     {
         // create proxy buffer on demand
         if( _proxy == NULL )
@@ -1775,6 +1807,32 @@ namespace osgCuda
             return true;
         }
     }
+
+	//------------------------------------------------------------------------------
+	osgCompute::IdentifierSet& Texture2D::getIdentifiers()
+	{
+		if( _proxy != NULL )
+		{
+			return _proxy->getIdentifiers();
+		}
+		else
+		{
+			return _identifiers;
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	const osgCompute::IdentifierSet& Texture2D::getIdentifiers() const
+	{
+		if( _proxy != NULL )
+		{
+			return _proxy->getIdentifiers();
+		}
+		else
+		{
+			return _identifiers;
+		}
+	}
 
     //------------------------------------------------------------------------------
     void Texture2D::releaseGLObjects( osg::State* state/*=0*/ ) const
@@ -1872,19 +1930,19 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Texture3D::getMemory()
+    osgCompute::InteropMemory* Texture3D::getInteropMemory()
     {
         return _proxy;
     }
 
     //------------------------------------------------------------------------------
-    const osgCompute::InteropMemory* Texture3D::getMemory() const
+    const osgCompute::InteropMemory* Texture3D::getInteropMemory() const
     {
         return _proxy;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Texture3D::getOrCreateMemory()
+    osgCompute::InteropMemory* Texture3D::getOrCreateInteropMemory()
     {
         // create proxy buffer on demand
         if( _proxy == NULL )
@@ -1951,6 +2009,32 @@ namespace osgCuda
             return true;
         }
     }
+
+	//------------------------------------------------------------------------------
+	osgCompute::IdentifierSet& Texture3D::getIdentifiers()
+	{
+		if( _proxy != NULL )
+		{
+			return _proxy->getIdentifiers();
+		}
+		else
+		{
+			return _identifiers;
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	const osgCompute::IdentifierSet& Texture3D::getIdentifiers() const
+	{
+		if( _proxy != NULL )
+		{
+			return _proxy->getIdentifiers();
+		}
+		else
+		{
+			return _identifiers;
+		}
+	}
 
     //------------------------------------------------------------------------------
     void Texture3D::releaseGLObjects( osg::State* state/*=0*/ ) const
@@ -2048,19 +2132,19 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* TextureRectangle::getMemory()
+    osgCompute::InteropMemory* TextureRectangle::getInteropMemory()
     {
         return _proxy;
     }
 
     //------------------------------------------------------------------------------
-    const osgCompute::InteropMemory* TextureRectangle::getMemory() const
+    const osgCompute::InteropMemory* TextureRectangle::getInteropMemory() const
     {
         return _proxy;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* TextureRectangle::getOrCreateMemory()
+    osgCompute::InteropMemory* TextureRectangle::getOrCreateInteropMemory()
     {
         // create proxy buffer on demand
         if( _proxy == NULL )
@@ -2127,6 +2211,32 @@ namespace osgCuda
             return true;
         }
     }
+
+	//------------------------------------------------------------------------------
+	osgCompute::IdentifierSet& TextureRectangle::getIdentifiers()
+	{
+		if( _proxy != NULL )
+		{
+			return _proxy->getIdentifiers();
+		}
+		else
+		{
+			return _identifiers;
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	const osgCompute::IdentifierSet& TextureRectangle::getIdentifiers() const
+	{
+		if( _proxy != NULL )
+		{
+			return _proxy->getIdentifiers();
+		}
+		else
+		{
+			return _identifiers;
+		}
+	}
 
     //------------------------------------------------------------------------------
     void TextureRectangle::releaseGLObjects( osg::State* state/*=0*/ ) const

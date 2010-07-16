@@ -89,7 +89,8 @@ namespace osgCuda
 
         META_Object(osgCuda,GeometryBuffer)
 
-        virtual osgCompute::InteropObject* getObject(); 
+		virtual osgCompute::InteropObject* getInteropObject(); 
+		virtual const osgCompute::InteropObject* getInteropObject() const; 
 
         virtual bool init();
 
@@ -170,13 +171,15 @@ namespace osgCuda
 
         META_Object( osgCuda, Geometry )
 
-        virtual osgCompute::InteropMemory* getMemory();
-        virtual const osgCompute::InteropMemory* getMemory() const;
-        virtual osgCompute::InteropMemory* getOrCreateMemory();
+        virtual osgCompute::InteropMemory* getInteropMemory();
+        virtual const osgCompute::InteropMemory* getInteropMemory() const;
+        virtual osgCompute::InteropMemory* getOrCreateInteropMemory();
 
         virtual void addIdentifier( const std::string& identifier );
         virtual void removeIdentifier( const std::string& identifier );
-        virtual bool isIdentifiedBy( const std::string& identifier ) const;
+		virtual bool isIdentifiedBy( const std::string& identifier ) const;
+		virtual osgCompute::IdentifierSet& getIdentifiers();
+		virtual const osgCompute::IdentifierSet& getIdentifiers() const;
 
         virtual bool init();
 

@@ -91,7 +91,7 @@ namespace osgCompute
             osg::StateSet::AttributeList& attr = ss->getAttributeList();
             for( osg::StateSet::AttributeList::iterator itr = attr.begin(); itr != attr.end(); ++itr )
                 if( InteropObject* res = dynamic_cast<InteropObject*>( (*itr).second.first.get() ) )
-                    addResource( *res->getOrCreateMemory() );
+                    addResource( *res->getOrCreateInteropMemory() );
 
             osg::StateSet::TextureAttributeList& texAttrList = ss->getTextureAttributeList();
             for( osg::StateSet::TextureAttributeList::iterator itr = texAttrList.begin(); itr != texAttrList.end(); ++itr )
@@ -99,7 +99,7 @@ namespace osgCompute
                 osg::StateSet::AttributeList& texAttr = (*itr);
                 for( osg::StateSet::AttributeList::iterator texitr = texAttr.begin(); texitr != texAttr.end(); ++texitr )
                     if( InteropObject* res = dynamic_cast<InteropObject*>( (*texitr).second.first.get() ) )
-                        addResource( *res->getOrCreateMemory() );
+                        addResource( *res->getOrCreateInteropMemory() );
             }
         }
 
@@ -116,7 +116,7 @@ namespace osgCompute
         for( unsigned int d=0; d<geode.getNumDrawables(); ++d )
         {
             if( InteropObject* res = dynamic_cast<InteropObject*>( geode.getDrawable(d) ) )
-                addResource( *res->getOrCreateMemory() );
+                addResource( *res->getOrCreateInteropMemory() );
         }
 
         osg::NodeVisitor::apply( geode );

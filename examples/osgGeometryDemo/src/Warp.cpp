@@ -45,7 +45,7 @@ namespace GeometryDemo
         }
 
         // We need to read the geometry information.
-        osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::InteropMemory*)_vertices.get())->getObject() );
+        osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::InteropMemory*)_vertices.get())->getInteropObject() );
         if( !geometry )
             return false;
 

@@ -27,7 +27,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    unsigned int InteropObject::getUsage()
+    unsigned int InteropObject::getUsage() const
     {
         return _usage;
     }

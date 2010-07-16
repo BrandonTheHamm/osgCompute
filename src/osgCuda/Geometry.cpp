@@ -117,16 +117,22 @@ namespace osgCuda
         clearLocal();
 
         // free this proxy object
-        getObject()->freeProxy();
+        getInteropObject()->freeProxy();
         // decrease reference count of geometry reference
         _geomref = NULL;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropObject* GeometryBuffer::getObject()
+    osgCompute::InteropObject* GeometryBuffer::getInteropObject()
     { 
         return _geomref.get(); 
     }
+
+	//------------------------------------------------------------------------------
+	const osgCompute::InteropObject* GeometryBuffer::getInteropObject() const
+	{ 
+		return _geomref.get(); 
+	}
 
     //------------------------------------------------------------------------------
     void GeometryBuffer::clear()
@@ -1756,19 +1762,19 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Geometry::getMemory()
+    osgCompute::InteropMemory* Geometry::getInteropMemory()
     {
         return _proxy;
     }
 
     //------------------------------------------------------------------------------
-    const osgCompute::InteropMemory* Geometry::getMemory() const
+    const osgCompute::InteropMemory* Geometry::getInteropMemory() const
     {
         return _proxy;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Geometry::getOrCreateMemory()
+    osgCompute::InteropMemory* Geometry::getOrCreateInteropMemory()
     {
         // create proxy buffer on demand
         if( _proxy == NULL )
@@ -1844,6 +1850,32 @@ namespace osgCuda
             return true;
         }
     }
+
+	//------------------------------------------------------------------------------
+	osgCompute::IdentifierSet& Geometry::getIdentifiers()
+	{
+		if( _proxy != NULL )
+		{
+			return _proxy->getIdentifiers();
+		}
+		else
+		{
+			return _identifiers;
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	const osgCompute::IdentifierSet& Geometry::getIdentifiers() const
+	{
+		if( _proxy != NULL )
+		{
+			return _proxy->getIdentifiers();
+		}
+		else
+		{
+			return _identifiers;
+		}
+	}
 
     //------------------------------------------------------------------------------
     void Geometry::releaseGLObjects( osg::State* state/*=0*/ ) const
