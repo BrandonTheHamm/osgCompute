@@ -127,12 +127,6 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Computation::loadModule( const std::string& modName )
-    {
-        // not implemented yet
-    }
-
-    //------------------------------------------------------------------------------
     void Computation::addModule( Module& module )
     {
         Resource* curResource = NULL;
@@ -488,7 +482,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool Computation::getAutoCheckSubgraph()
+    bool Computation::getAutoCheckSubgraph() const
     {
         return _autoCheckSubgraph;
     }

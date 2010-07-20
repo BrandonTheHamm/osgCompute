@@ -123,6 +123,24 @@ namespace osgCompute
         return _enabled;
     }
 
+	//------------------------------------------------------------------------------
+	const std::string& Module::getLibraryName() const
+	{
+		return _libraryName;
+	}
+
+	//------------------------------------------------------------------------------
+	std::string& Module::getLibraryName()
+	{
+		return _libraryName;
+	}
+
+	//------------------------------------------------------------------------------
+	void Module::setLibraryName( const std::string& libraryName )
+	{
+		_libraryName = libraryName;
+	}
+
     //------------------------------------------------------------------------------
     void Module::clear()
     {

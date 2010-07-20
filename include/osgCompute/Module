@@ -62,6 +62,10 @@ namespace osgCompute
         virtual void disable();
         virtual bool isEnabled() const;
 
+		virtual const std::string& getLibraryName() const;
+		virtual std::string& getLibraryName();
+		virtual void setLibraryName( const std::string& libraryName );
+
         virtual void clear();
 
     protected:
@@ -71,6 +75,7 @@ namespace osgCompute
         osg::ref_ptr<ModuleCallback>   _updateCallback;
         osg::ref_ptr<ModuleCallback>   _eventCallback;
         bool                           _enabled;
+		std::string					   _libraryName;
 
     private:
         // copy constructor and operator should not be called

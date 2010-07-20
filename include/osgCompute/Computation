@@ -112,9 +112,6 @@ namespace osgCompute
         /** The derived class must provide a method which allows to create new bins*/
         virtual osgCompute::ResourceVisitor* newVisitor() const = 0;
 
-        /** Load a module dynamically (not implemented yet) */
-        virtual void loadModule( const std::string& modName );
-
         /** Add a module to the computation. */
         virtual void addModule( Module& module );
 
@@ -173,7 +170,7 @@ namespace osgCompute
 
 
         virtual void setAutoCheckSubgraph( bool autoCheckSubgraph );
-        virtual bool getAutoCheckSubgraph();
+        virtual bool getAutoCheckSubgraph() const;
 
         /** Activates the computation (a computation is enabled by default) */
         virtual void enable();

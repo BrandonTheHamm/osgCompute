@@ -22,6 +22,7 @@
 #include <osg/Geometry>
 #include <osg/MatrixTransform>
 #include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
 #include <osgDB/FileUtils>
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
@@ -80,6 +81,7 @@ int main(int argc, char *argv[])
 
     // Configure cuda geometry object
     osgCuda::Geometry* geometry = new osgCuda::Geometry;
+	geometry->setName("dynamic cow geometry");
     geometry->setVertexArray( cowGeometry->getVertexArray() );
     geometry->addPrimitiveSet( cowGeometry->getPrimitiveSet(0) );
     geometry->setStateSet( cowGeometry->getOrCreateStateSet() );
@@ -92,6 +94,9 @@ int main(int argc, char *argv[])
 
     // Cow geometry can now be deleted
     cowGeometry = NULL;
+
+	osgDB::writeObjectFile( *geometry, "cowgeom.osgCuda" );
+	osgCuda::Geometry* curLoadObject = (osgCuda::Geometry*)osgDB::readObjectFile("cowgeom.osgCuda");
 
     //////////////////
     // MODULE SETUP //
