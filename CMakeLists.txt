@@ -22,7 +22,7 @@ SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModule
 SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModules/cudaemu")
 
 # set custom .cmake CUDANSIGHT scripts also to the module path
-SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModules/cudansight")
+#SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModules/cudansight")
 
 
 
@@ -75,7 +75,7 @@ ENDIF(WIN32)
 INCLUDE(Findosg)    # sets OSG_FOUND
 INCLUDE(FindCuda)   # sets CUDA_FOUND
 #INCLUDE(FindCudaEmu)# sets CUDA_EMU_FOUND
-INCLUDE(FindCudaNsight)# sets CUDA_NSIGHT_FOUND
+#INCLUDE(FindCudaNsight)# sets CUDA_NSIGHT_FOUND
 
 
 

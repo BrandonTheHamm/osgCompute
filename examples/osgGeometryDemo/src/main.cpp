@@ -95,9 +95,6 @@ int main(int argc, char *argv[])
     // Cow geometry can now be deleted
     cowGeometry = NULL;
 
-	osgDB::writeObjectFile( *geometry, "cowgeom.osgCuda" );
-	osgCuda::Geometry* curLoadObject = (osgCuda::Geometry*)osgDB::readObjectFile("cowgeom.osgCuda");
-
     //////////////////
     // MODULE SETUP //
     //////////////////
