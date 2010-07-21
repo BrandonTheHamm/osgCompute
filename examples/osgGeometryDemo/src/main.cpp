@@ -31,85 +31,92 @@
 #include <osgCuda/Geometry>
 #include "Warp"
 
-// find a geometry object within the subgraph
-osg::ref_ptr<osg::Geode> findCowGeode()
+//------------------------------------------------------------------------------
+osg::ref_ptr<osgCompute::Computation> setupComputation()
 {
-    osg::ref_ptr<osg::Geode> cowGeode;
+	osg::ref_ptr<osgCompute::Computation> computationNode = new osgCuda::Computation;
 
-    osg::ref_ptr<osg::Node> cow = osgDB::readNodeFile("cow.osg");
-    if( !cow.valid() )
-        return cowGeode;
+	//////////////////
+	// COW OSG FILE //
+	//////////////////
+    osg::ref_ptr<osg::Group> cowModel = dynamic_cast<osg::Group*>( osgDB::readNodeFile("cow.osg") );
+    if( !cowModel.valid() ) return computationNode;
 
-    // get hard coded cow geode
-    osg::ref_ptr<osg::Group> group = dynamic_cast<osg::Group*>(cow.get());
-    if(group)
-        cowGeode = dynamic_cast<osg::Geode*>( group->getChild(0) );
+	///////////////////////////////////
+	// TRANFORM TO OSGCUDA::GEOMETRY //
+	///////////////////////////////////
+	osg::ref_ptr<osg::Geode> cowGeode = dynamic_cast<osg::Geode*>( cowModel->getChild(0) );
+	osg::ref_ptr<osg::Geometry> cowGeometry = dynamic_cast<osg::Geometry*>( cowGeode->getDrawable(0) );
+	// Configure osgCuda::Geometry
+	osgCuda::Geometry* geometry = new osgCuda::Geometry;
+	geometry->setName("dynamic cow geometry");
+	geometry->setVertexArray( cowGeometry->getVertexArray() );
+	geometry->addPrimitiveSet( cowGeometry->getPrimitiveSet(0) );
+	geometry->setStateSet( cowGeometry->getOrCreateStateSet() );
+	geometry->setTexCoordArray( 0, cowGeometry->getTexCoordArray(0) );
+	geometry->setNormalArray( cowGeometry->getNormalArray() );
+	geometry->setNormalBinding( cowGeometry->getNormalBinding() );
+	geometry->addIdentifier( "WARP_GEOMETRY");
+	// Remove original osg::Geometry
+	bool retval = cowGeode->replaceDrawable( cowGeometry, geometry );
+	cowGeometry = NULL;
 
-    return cowGeode;
+	///////////////////////
+	// SETUP COMPUTATION //
+	///////////////////////
+	// Rotate the model automatically 
+	osg::ref_ptr<osg::MatrixTransform> animTransform = new osg::MatrixTransform;
+	osg::NodeCallback* nc = new osg::AnimationPathCallback(
+		animTransform->getBound().center(),osg::Vec3(0.0f,0.0f,1.0f),osg::inDegrees(45.0f));
+	animTransform->setUpdateCallback(nc);
+	animTransform->addChild( cowModel );
+
+	computationNode->setComputeOrder( osgCompute::Computation::UPDATE_PRE_TRAVERSAL );
+	computationNode->addChild( animTransform );
+
+    return computationNode;
 }
 
+//------------------------------------------------------------------------------
+osg::ref_ptr<osgCompute::Computation> loadComputation()
+{
+	osg::ref_ptr<osgCompute::Computation> computationNode;
+
+	std::string dataFile = osgDB::findDataFile( "osgGeometryDemo/scenes/cow.osgCuda" );
+	if( !dataFile.empty() )
+		computationNode = dynamic_cast<osgCuda::Computation*>( osgDB::readNodeFile( dataFile ) );
+	
+	return computationNode;
+}
+
+
+//------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
     osg::ArgumentParser arguments(&argc,argv);
 
-    //////////////
-    // Geometry //
-    //////////////
-    // Load "cow.osg" file
-    osg::ref_ptr<osg::Geode> cowGeode = findCowGeode();
-    if( !cowGeode.valid() )
-    {
-        osg::notify(osg::NOTICE) << "main(): cannot find \"cow.osg\" data." << std::endl;
-        return -1;
-    }
+	////////////
+	// MODULE //
+	////////////
+	osg::ref_ptr<GeometryDemo::Warp> warpModule = new GeometryDemo::Warp;
+	warpModule->setName( "my cow warping" );
 
-    osg::ref_ptr<osg::Geometry> cowGeometry = dynamic_cast<osg::Geometry*>( cowGeode->getDrawable(0) );
-    if( !cowGeometry.valid() )
-    {
-        osg::notify(osg::NOTICE) << "main(): cannot find geometry within data \"cow.osg\"." << std::endl;
-        return -1;
-    }
+	/////////////////
+	// COMPUTATION //
+	/////////////////
+	osg::ref_ptr<osgCompute::Computation> computation = loadComputation();
+	if( !computation.valid() )
+		computation = setupComputation();
 
-    osg::ref_ptr<osg::MatrixTransform> animTransform = new osg::MatrixTransform;
-    animTransform->addChild( cowGeode );
-
-    // Rotate the model automatically 
-    osg::NodeCallback* nc = new osg::AnimationPathCallback(
-        animTransform->getBound().center(),osg::Vec3(0.0f,0.0f,1.0f),osg::inDegrees(45.0f));
-    //animTransform->setUpdateCallback(nc);
-
-    // Configure cuda geometry object
-    osgCuda::Geometry* geometry = new osgCuda::Geometry;
-	geometry->setName("dynamic cow geometry");
-    geometry->setVertexArray( cowGeometry->getVertexArray() );
-    geometry->addPrimitiveSet( cowGeometry->getPrimitiveSet(0) );
-    geometry->setStateSet( cowGeometry->getOrCreateStateSet() );
-    geometry->setTexCoordArray( 0, cowGeometry->getTexCoordArray(0) );
-    geometry->setNormalArray( cowGeometry->getNormalArray() );
-    geometry->setNormalBinding( cowGeometry->getNormalBinding() );
-    geometry->addIdentifier( "WARP_GEOMETRY");
-    // Remove original geometry
-    bool retval = cowGeode->replaceDrawable( cowGeometry, geometry );
-
-    // Cow geometry can now be deleted
-    cowGeometry = NULL;
-
-    //////////////////
-    // MODULE SETUP //
-    //////////////////
-    GeometryDemo::Warp* warpModule = new GeometryDemo::Warp;
-    warpModule->setName( "my cow warping" );
-    osgCuda::Computation* computation = new osgCuda::Computation;
-    computation->setComputeOrder( osgCompute::Computation::UPDATE_PRE_TRAVERSAL );
-    computation->addModule( *warpModule );
-    computation->addChild( animTransform );
+	computation->addModule( *warpModule );
 
     /////////////////
     // SCENE SETUP //
     /////////////////
     osg::Group* scene = new osg::Group;
     scene->addChild( computation );
+
 
     //////////////////
     // VIEWER SETUP //
