@@ -35,7 +35,7 @@ INCLUDE_DIRECTORIES(
 # Set path to header files
 #########################################################################
 
-SET(HEADER_PATH ${osgCompute_SOURCE_DIR}/include/${LIB_NAME})
+SET(HEADER_PATH ${PROJECT_SOURCE_DIR}/include/${LIB_NAME})
 
 
 #########################################################################

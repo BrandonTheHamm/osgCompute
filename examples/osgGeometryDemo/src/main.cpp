@@ -82,9 +82,9 @@ osg::ref_ptr<osgCompute::Computation> loadComputation()
 {
 	osg::ref_ptr<osgCompute::Computation> computationNode;
 
-	std::string dataFile = osgDB::findDataFile( "osgGeometryDemo/scenes/cow.osgCuda" );
-	if( !dataFile.empty() )
-		computationNode = dynamic_cast<osgCuda::Computation*>( osgDB::readNodeFile( dataFile ) );
+	//std::string dataFile = osgDB::findDataFile( "osgGeometryDemo/scenes/cow.osgCuda" );
+	//if( !dataFile.empty() )
+	//	computationNode = dynamic_cast<osgCuda::Computation*>( osgDB::readNodeFile( dataFile ) );
 	
 	return computationNode;
 }
