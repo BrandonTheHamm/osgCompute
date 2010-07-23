@@ -1,14 +1,10 @@
 #########################################################################
-# ATTENTION: THIS LIB IS A PLUGIN
-#########################################################################
-
-#########################################################################
 # Set library and plugin name
 #########################################################################
 
-SET(LIB_NAME osgdb_warp)
-SET(MODULE_NAME warpModule)
-SET(LIB_NAME_LABEL "Module ${MODULE_NAME}")
+SET(LIB_NAME osgdb_serializers_osgCuda)
+SET(PLUGIN_NAME osgCudaSerializer)
+SET(LIB_NAME_LABEL "Plugins ${PLUGIN_NAME}")
 
 
 #########################################################################
@@ -18,14 +14,6 @@ SET(LIB_NAME_LABEL "Module ${MODULE_NAME}")
 INCLUDE(FindOpenThreads)
 INCLUDE(Findosg)
 INCLUDE(FindosgDB)
-INCLUDE(Findmatlab)
-INCLUDE(FindCuda)
-
-#########################################################################
-# Set path to header files
-#########################################################################
-
-SET(HEADER_PATH ${PROJECT_SOURCE_DIR}/include/${MODULE_NAME})
 
 
 #########################################################################
@@ -33,14 +21,11 @@ SET(HEADER_PATH ${PROJECT_SOURCE_DIR}/include/${MODULE_NAME})
 #########################################################################
 
 INCLUDE_DIRECTORIES(
-    ${HEADER_PATH}
 	${OSG_INCLUDE_DIR}
-	${CUDA_INCLUDE_PATH}
+    ${OSGCOMPUTE_INCLUDE_DIR}
+    ${OSGCUDA_INCLUDE_DIR}
+    ${CUDA_INCLUDE_PATH}
 )
-
-
-
-
 
 #########################################################################
 # Collect header and source files
@@ -49,21 +34,20 @@ INCLUDE_DIRECTORIES(
 # collect all headers
 
 SET(TARGET_H
-	${HEADER_PATH}/Warp
 )
 
-SET(MY_CUDA_SOURCE_FILES
-	Warp.cu
-)
-
-# Use the WRAP_CUDA macro.
-WRAP_CUDA( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
 
 # collect the sources
 SET(TARGET_SRC
-	Warp.cpp
-	${CUDA_FILES}
-    ${MY_CUDA_SOURCE_FILES} 
+	Computation.cpp
+	Buffer.cpp
+	Array.cpp
+	Memory.cpp
+	Resource.cpp
+	Geometry.cpp
+	Texture2D.cpp
+	Texture3D.cpp
+	TextureRectangle.cpp
 )
 
 
@@ -71,20 +55,10 @@ SET(TARGET_SRC
 # Setup groups for resources (mainly for MSVC project folders)
 #########################################################################
 
-# Setup groups for headers (especially for files with no extension)
-SOURCE_GROUP(
-    "Header Files"
-    FILES ${TARGET_H}     
-)
+# probably not needed here in a plugin lib
+# for more detailed information and sample script/code see
+# another library which is not a plugin
 
-# Setup groups for sources 
-SOURCE_GROUP(
-    "Source Files"
-    FILES ${TARGET_SRC}
-)
-
-# finally, use module to build groups
-INCLUDE(GroupInstall)
 
 #########################################################################
 # Build Library and prepare install scripts
@@ -97,13 +71,9 @@ ELSE (DYNAMIC_LINKING)
 ENDIF(DYNAMIC_LINKING)
 
 
-#########################################################################
-# Linking
-#########################################################################
-
 # link here the project libraries    
 TARGET_LINK_LIBRARIES(${LIB_NAME}
-    osgCompute
+	osgCompute
 	osgCuda
 )
 
@@ -113,13 +83,9 @@ TARGET_LINK_LIBRARIES(${LIB_NAME}
 LINK_WITH_VARIABLES(${LIB_NAME}
 	OPENTHREADS_LIBRARY
 	OSG_LIBRARY
+	OSGUTIL_LIBRARY
 	OSGDB_LIBRARY
     CUDA_RUNTIME_LIBRARY
 )
-
-
-
-
-
 
 INCLUDE(ModuleInstall OPTIONAL)

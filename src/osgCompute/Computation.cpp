@@ -223,6 +223,27 @@ namespace osgCompute
         subgraphChanged();
     }
 
+	//------------------------------------------------------------------------------
+	const Module* Computation::getModule( const std::string& moduleIdentifier ) const
+	{
+		for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+			if( (*itr)->isIdentifiedBy( moduleIdentifier ) )
+				return (*itr).get();
+
+		return NULL;
+	}
+
+	//------------------------------------------------------------------------------
+	Module* Computation::getModule( const std::string& moduleIdentifier )
+	{
+		for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+			if( (*itr)->isIdentifiedBy( moduleIdentifier ) )
+				return (*itr).get();
+
+		return NULL;
+	}
+
+
     //------------------------------------------------------------------------------
     bool Computation::hasModule( const std::string& moduleIdentifier ) const
     {

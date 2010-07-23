@@ -20,6 +20,7 @@
 #include <vector_types.h>
 #include <osgCompute/Module>
 #include <osgCompute/Memory>
+#include <osgCompute/Export>
 
 namespace GeometryDemo
 {
@@ -36,8 +37,6 @@ namespace GeometryDemo
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        void setFrameStamp( osg::FrameStamp* frameStamp ) { _frameStamp = frameStamp; }
-
         virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
     protected:
         virtual ~Warp() { clearLocal(); }
@@ -48,7 +47,6 @@ namespace GeometryDemo
         osg::ref_ptr<osgCompute::Memory>                  _vertices;
         osg::ref_ptr<osgCompute::Memory>				  _initNormals;
         osg::ref_ptr<osgCompute::Memory>				  _initPos;
-        osg::ref_ptr<osg::FrameStamp>                     _frameStamp;
 
     private:
         Warp(const Warp&, const osg::CopyOp& ) {} 
@@ -58,3 +56,4 @@ namespace GeometryDemo
 };
 
 #endif // WARP_H
+

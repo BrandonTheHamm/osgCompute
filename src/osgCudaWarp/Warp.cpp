@@ -96,7 +96,7 @@ namespace GeometryDemo
         if( isClear() )
             return;
 
-        float time = (float)_frameStamp->getSimulationTime();
+        float time = (float)((osg::FrameStamp*) getUserData())->getSimulationTime();
 
 
         ///////////////////
@@ -104,7 +104,7 @@ namespace GeometryDemo
         ///////////////////
         warp(_numBlocks,
             _numThreads,
-            _vertices->map(),			// Maps the data to the device memory
+            _vertices->map(),
             _vertices->getNumElements(),
             _initPos->map(),
             _initNormals->map(),
@@ -135,6 +135,12 @@ namespace GeometryDemo
         _vertices = NULL;
         _initNormals = NULL;
         _initPos = NULL;
-        _frameStamp = NULL;
     }
+}
+
+//-----------------------------------------------------------------------------
+// Use this function to return a new warp module to the application
+extern "C" OSGCOMPUTE_MODULE_EXPORT osgCompute::Module* OSGCOMPUTE_CREATE_MODULE_FUNCTION( void ) 
+{
+	return new GeometryDemo::Warp;
 }

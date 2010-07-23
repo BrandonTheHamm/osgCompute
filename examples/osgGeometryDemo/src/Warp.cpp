@@ -96,15 +96,14 @@ namespace GeometryDemo
         if( isClear() )
             return;
 
-        float time = (float)_frameStamp->getSimulationTime();
-
+        float time = (float)((osg::FrameStamp*) getUserData())->getSimulationTime();
 
         ///////////////////
         // MOVE VERTICES //
         ///////////////////
         warp(_numBlocks,
             _numThreads,
-            _vertices->map(),			// Maps the data to the device memory
+            _vertices->map(),			
             _vertices->getNumElements(),
             _initPos->map(),
             _initNormals->map(),
@@ -135,6 +134,5 @@ namespace GeometryDemo
         _vertices = NULL;
         _initNormals = NULL;
         _initPos = NULL;
-        _frameStamp = NULL;
     }
 }

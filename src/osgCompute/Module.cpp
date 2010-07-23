@@ -13,10 +13,67 @@
 * The full license is in LICENSE file included with this distribution.
 */
 
+#include <osgDB/Registry>
+#include <osgDB/FileUtils>
 #include <osgCompute/Module>
 
 namespace osgCompute
 {   
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	bool Module::existsModule( const std::string& libraryName )
+	{
+		std::string curLibraryName = osgDB::Registry::instance()->createLibraryNameForNodeKit( libraryName );
+		std::string fullPath = osgDB::findLibraryFile( curLibraryName );
+		if( fullPath.empty() )
+			return false;
+
+		return true;
+	}
+
+	//------------------------------------------------------------------------------
+	Module* Module::loadModule( const std::string& libraryName )
+	{
+		std::string curLibraryName = osgDB::Registry::instance()->createLibraryNameForNodeKit( libraryName );
+		
+		if( osgDB::Registry::instance()->loadLibrary( curLibraryName ) ==  osgDB::Registry::NOT_LOADED )
+		{
+			osg::notify(osg::WARN)
+				<<" Module::loadModule(): cannot find module library "
+				<< libraryName <<"."<<std::endl;
+
+			return NULL;
+		}
+
+		osg::ref_ptr<osgDB::DynamicLibrary> moduleLibrary = osgDB::Registry::instance()->getLibrary( curLibraryName );
+		if( !moduleLibrary.valid() )
+		{
+			osg::notify(osg::WARN)
+				<<" Module::loadModule(): cannot receive module library "
+				<< libraryName << " after load." << std::endl;
+
+			return NULL;
+		}
+
+		OSGCOMPUTE_CREATE_MODULE_FUNCTION_PTR createModuleFunc = (OSGCOMPUTE_CREATE_MODULE_FUNCTION_PTR) moduleLibrary->getProcAddress( OSGCOMPUTE_CREATE_MODULE_FUNCTION_STR );
+		if( createModuleFunc == NULL )
+		{
+			osg::notify(osg::WARN)
+				<<" Module::loadModule(): cannot get pointer to function \""<< OSGCOMPUTE_CREATE_MODULE_FUNCTION_STR<<"\" within module library "
+				<< libraryName << "." << std::endl;
+
+			return NULL;
+		}
+
+		Module* loadedModule = (*createModuleFunc)();
+		if( loadedModule && loadedModule->getLibraryName().empty() )
+			loadedModule->setLibraryName( libraryName );
+
+		return loadedModule;
+	}
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -159,4 +216,5 @@ namespace osgCompute
         _enabled = true;
         _clear = true;
     }
+
 }

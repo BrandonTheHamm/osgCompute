@@ -25,13 +25,22 @@
 
 namespace osgCompute
 {
-    class Context;
-    class Module;
+	class Context;
+	class Module;
 
-    typedef std::vector<osg::ref_ptr<osgCompute::Module> >                          ModuleList;
-    typedef std::vector<osg::ref_ptr<osgCompute::Module> >::iterator                ModuleListItr;
-    typedef std::vector<osg::ref_ptr<osgCompute::Module> >::const_iterator          ModuleListCnstItr;
+	typedef std::vector<osg::ref_ptr<osgCompute::Module> >                          ModuleList;
+	typedef std::vector<osg::ref_ptr<osgCompute::Module> >::iterator                ModuleListItr;
+	typedef std::vector<osg::ref_ptr<osgCompute::Module> >::const_iterator          ModuleListCnstItr;
+}
 
+#define OSGCOMPUTE_CREATE_MODULE_FUNCTION		osgComputeCreateModuleFunc
+#define OSGCOMPUTE_CREATE_MODULE_FUNCTION_STR	"osgComputeCreateModuleFunc"
+#define OSGCOMPUTE_MODULE_EXPORT				__declspec(dllexport)
+
+typedef osgCompute::Module* (*OSGCOMPUTE_CREATE_MODULE_FUNCTION_PTR)( void );
+
+namespace osgCompute
+{
     /**
     */
     class LIBRARY_EXPORT Module : public Resource
@@ -67,6 +76,9 @@ namespace osgCompute
 		virtual void setLibraryName( const std::string& libraryName );
 
         virtual void clear();
+
+		static Module* loadModule( const std::string& libraryName );
+		static bool existsModule( const std::string& libraryName );
 
     protected:
         virtual ~Module() { clearLocal(); }

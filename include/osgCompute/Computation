@@ -121,6 +121,13 @@ namespace osgCompute
         /** Remove the module by providing the module's name. */
         virtual void removeModule( const std::string& moduleIdentifier );
 
+		/** Returns true if the computation uses a module of module name. */
+		virtual const Module* getModule( const std::string& moduleIdentifier ) const;
+
+		/** Returns true if the computation uses the module. */
+		virtual Module* getModule( const std::string& moduleIdentifier );
+
+
         /** Returns true if the computation uses a module of module name. */
         virtual bool hasModule( const std::string& moduleIdentifier ) const;
 

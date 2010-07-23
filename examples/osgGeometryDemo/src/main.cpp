@@ -74,7 +74,15 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
 	computationNode->setComputeOrder( osgCompute::Computation::UPDATE_PRE_TRAVERSAL );
 	computationNode->addChild( animTransform );
 
-	//osgDB::writeNodeFile( *computationNode, "comp.osgt" );
+	//////////////////
+	// SETUP MODULE //
+	//////////////////
+	osg::ref_ptr<osgCompute::Module> warpModule = osgCompute::Module::loadModule( "osgcuda_warp" );
+	warpModule->addIdentifier("osgcuda_warp");
+	computationNode->addModule( *warpModule );
+
+	// Write this computation to file
+	//osgDB::writeNodeFile( *computationNode, "warpcow.osgt" );
 
     return computationNode;
 }
@@ -84,7 +92,7 @@ osg::ref_ptr<osgCompute::Computation> loadComputation()
 {
 	osg::ref_ptr<osgCompute::Computation> computationNode;
 
-	std::string dataFile = osgDB::findDataFile( "osgGeometryDemo/scenes/transformcow.osgt" );
+	std::string dataFile = osgDB::findDataFile( "osgGeometryDemo/scenes/warpcow.osgt" );
 	if( !dataFile.empty() )
 		computationNode = dynamic_cast<osgCuda::Computation*>( osgDB::readNodeFile( dataFile ) );
 	
@@ -96,7 +104,8 @@ osg::ref_ptr<osgCompute::Computation> loadComputation()
 int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
-    osg::ArgumentParser arguments(&argc,argv);
+	osg::ArgumentParser arguments(&argc,argv);
+	osgViewer::Viewer viewer(arguments);
 
 	////////////
 	// MODULE //
@@ -108,10 +117,15 @@ int main(int argc, char *argv[])
 	// COMPUTATION //
 	/////////////////
 	osg::ref_ptr<osgCompute::Computation> computation = loadComputation();
-	if( !computation.valid() )
-		computation = setupComputation();
+	if( !computation.valid() ) computation = setupComputation();
 
-	computation->addModule( *warpModule );
+	osg::ref_ptr<osgCompute::Module> module = computation->getModule( "osgcuda_warp" );
+	if( !module )
+	{
+		osg::notify(osg::FATAL) << "Cannot find module identified by osgcuda_warp." << std::endl;
+		return -1;
+	}
+	module->setUserData( viewer.getFrameStamp() );
 
     /////////////////
     // SCENE SETUP //
@@ -119,15 +133,11 @@ int main(int argc, char *argv[])
     osg::Group* scene = new osg::Group;
     scene->addChild( computation );
 
-
     //////////////////
     // VIEWER SETUP //
     //////////////////
-    osgViewer::Viewer viewer(arguments);
     viewer.setUpViewInWindow( 50, 50, 640, 480);
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
-
-    warpModule->setFrameStamp( viewer.getFrameStamp() );
 
     // You must use single threaded version since osgCompute currently
     // does only support single threaded applications. Please ask in the
