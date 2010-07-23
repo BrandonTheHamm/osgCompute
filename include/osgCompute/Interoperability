@@ -28,10 +28,10 @@ namespace osgCompute
     {
         CUDA_TARGET           = 0x01,
         GL_TARGET             = 0x10,
-        GL_SOURCE_CUDA_SOURCE = 0x00,
-        GL_SOURCE_CUDA_TARGET = 0x01,
-        GL_TARGET_CUDA_SOURCE = 0x10,
-        GL_TARGET_CUDA_TARGET = 0x11,
+        GL_SOURCE_COMPUTE_SOURCE = 0x00,
+        GL_SOURCE_COMPUTE_TARGET = 0x01,
+        GL_TARGET_COMPUTE_SOURCE = 0x10,
+        GL_TARGET_COMPUTE_TARGET = 0x11,
     };
 
     /**

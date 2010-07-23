@@ -43,6 +43,6 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void InteropObject::clearLocal()
     {
-        _usage = GL_SOURCE_CUDA_SOURCE;
+        _usage = GL_SOURCE_COMPUTE_SOURCE;
     }
 }
