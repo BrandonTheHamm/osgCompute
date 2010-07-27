@@ -77,7 +77,8 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
 	//////////////////
 	// SETUP MODULE //
 	//////////////////
-	osg::ref_ptr<osgCompute::Module> warpModule = osgCompute::Module::loadModule( "osgcuda_warp" );
+    osg::ref_ptr<osgCompute::Module> warpModule = new GeometryDemo::Warp;
+    warpModule->setLibraryName("osgcuda_warp");
 	warpModule->addIdentifier("osgcuda_warp");
 	computationNode->addModule( *warpModule );
 
