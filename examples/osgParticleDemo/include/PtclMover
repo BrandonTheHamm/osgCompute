@@ -34,8 +34,6 @@ namespace PtclDemo
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        void setFrameStamp( osg::FrameStamp* frameStamp ) { _frameStamp = frameStamp; }
-
         virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
     protected:
         virtual ~PtclMover();
@@ -46,8 +44,6 @@ namespace PtclDemo
 
         unsigned int                        _numBlocks;
         unsigned int                        _numThreads;
-
-        osg::ref_ptr<osg::FrameStamp>       _frameStamp;
 
         osg::ref_ptr<osgCompute::Memory>    _ptcls;
 

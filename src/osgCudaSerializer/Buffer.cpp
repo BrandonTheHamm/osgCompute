@@ -10,7 +10,7 @@
 //------------------------------------------------------------------------------
 static bool checkArray( const osgCuda::Buffer& buffer )
 {
-	if( buffer.getImage() ) return true;
+	if( buffer.getArray() ) return true;
 	else return false;
 }
 

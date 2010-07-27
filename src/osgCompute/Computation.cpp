@@ -74,7 +74,9 @@ namespace osgCompute
             {
                 if( _enabled && (_computeOrder & OSGCOMPUTE_RENDER) == OSGCOMPUTE_RENDER )
                     addBin( *cv );
-                else
+                else if( (_computeOrder & OSGCOMPUTE_NORENDER) == OSGCOMPUTE_NORENDER )
+					return; // Do not process the childs during rendering
+				else
                     nv.apply(*this);
             }
             else if( ov != NULL )
@@ -103,12 +105,12 @@ namespace osgCompute
             {
                 update( nv );
 
-                if( _enabled && (_computeOrder & UPDATE_PRE_TRAVERSAL) == UPDATE_PRE_TRAVERSAL )
+                if( _enabled && (_computeOrder & UPDATE_BEFORECHILDREN) == UPDATE_BEFORECHILDREN )
                     launch();
 
                 nv.apply( *this );
 
-                if( _enabled && (_computeOrder & UPDATE_POST_TRAVERSAL) == UPDATE_POST_TRAVERSAL )
+                if( _enabled && (_computeOrder & UPDATE_AFTERCHILDREN) == UPDATE_AFTERCHILDREN )
                     launch();
             }
             else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
@@ -563,7 +565,7 @@ namespace osgCompute
         setEventCallback( NULL );
 
         // setup computation order
-        _computeOrder = UPDATE_PRE_TRAVERSAL;//RENDER_PRE_RENDER_PRE_TRAVERSAL;//
+        _computeOrder = UPDATE_BEFORECHILDREN;
         if( (_computeOrder & OSGCOMPUTE_UPDATE) == OSGCOMPUTE_UPDATE )
             setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
     }
@@ -630,7 +632,7 @@ namespace osgCompute
         // We have to look for a better method to add more computation bins
         // to the same hierarchy level
         int rbNum = 0;
-        if( (_computeOrder & OSGCOMPUTE_POST_RENDER) !=  OSGCOMPUTE_POST_RENDER )
+        if( (_computeOrder & OSGCOMPUTE_POSTRENDER) !=  OSGCOMPUTE_POSTRENDER )
         {
             osgUtil::RenderBin::RenderBinList::const_iterator itr = rbList.begin();
             if( itr != rbList.end() && (*itr).first < 0 )

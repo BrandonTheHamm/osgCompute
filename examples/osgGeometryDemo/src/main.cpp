@@ -71,7 +71,7 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
 	animTransform->setUpdateCallback(nc);
 	animTransform->addChild( cowModel );
 
-	computationNode->setComputeOrder( osgCompute::Computation::UPDATE_PRE_TRAVERSAL );
+	computationNode->setComputeOrder( osgCompute::Computation::UPDATE_BEFORECHILDREN );
 	computationNode->addChild( animTransform );
 
 	//////////////////
@@ -82,7 +82,7 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
 	computationNode->addModule( *warpModule );
 
 	// Write this computation to file
-	//osgDB::writeNodeFile( *computationNode, "warpcow.osgt" );
+	//osgDB::writeNodeFile( *computationNode, "geomdemo.osgt" );
 
     return computationNode;
 }
@@ -92,7 +92,7 @@ osg::ref_ptr<osgCompute::Computation> loadComputation()
 {
 	osg::ref_ptr<osgCompute::Computation> computationNode;
 
-	std::string dataFile = osgDB::findDataFile( "osgGeometryDemo/scenes/warpcow.osgt" );
+	std::string dataFile = osgDB::findDataFile( "osgGeometryDemo/scenes/geomdemo.osgt" );
 	if( !dataFile.empty() )
 		computationNode = dynamic_cast<osgCuda::Computation*>( osgDB::readNodeFile( dataFile ) );
 	
@@ -106,12 +106,6 @@ int main(int argc, char *argv[])
     osg::setNotifyLevel( osg::WARN );
 	osg::ArgumentParser arguments(&argc,argv);
 	osgViewer::Viewer viewer(arguments);
-
-	////////////
-	// MODULE //
-	////////////
-	osg::ref_ptr<GeometryDemo::Warp> warpModule = new GeometryDemo::Warp;
-	warpModule->setName( "my cow warping" );
 
 	/////////////////
 	// COMPUTATION //

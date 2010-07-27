@@ -21,6 +21,7 @@
 #include <osg/BlendFunc>
 #include <osg/Geometry>
 #include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
 #include <osgDB/FileUtils>
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
@@ -29,12 +30,10 @@
 #include <osgCuda/Array>
 #include <osgCuda/Texture>
 
-#include "TexStreamer"
-
+#include "TexFilter"
 
 static const char* vertShaderSource = 
 "#version 130 \n"
-//"in mat4 gl_ModelViewProjectionMatrix; \n"
 "in vec4 gl_MultiTexCoord0; \n"
 "in vec4 gl_Vertex; \n"
 "out vec2 texCoord; \n"
@@ -53,17 +52,6 @@ static const char* fragShaderSource =
 "{ vec4 c = texture2D(texImage, texCoord.xy);"
 "  fragColor = c; //vec4( texCoord.x, texCoord.y, 0, 1 ); //vec4(1,0,1,1);// uvec4(gl_Color.xyz * 255.0, 255.0);\n"
 "}\n";
-
-//static const char* fragShaderSource = 
-//"#version 140\n"
-//"#extension GL_EXT_gpu_shader4 : enable \n"
-//"uniform sampler2D texImage; \n"
-//"in vec2 texCoord; \n"
-//"out vec4 fragColor; \n"
-//"void main()\n"
-//"{ vec4 c = texture2D(texImage, texCoord.xy);"
-//"  fragColor = c; //vec4( texCoord.x, texCoord.y, 0, 1 ); //vec4(1,0,1,1);// uvec4(gl_Color.xyz * 255.0, 255.0);\n"
-//"}\n";
 
 osg::Geode* getTexturedQuad( osg::Texture2D& trgTexture )
 {
@@ -98,9 +86,10 @@ osg::Geode* getTexturedQuad( osg::Texture2D& trgTexture )
     return geode;
 }
 
-osg::Group* init()
+//------------------------------------------------------------------------------
+osg::ref_ptr<osgCompute::Computation> setupComputation()
 {
-    osg::Group* scene = NULL;
+    osg::ref_ptr<osgCompute::Computation> computationNode = new osgCuda::Computation;
 
     ///////////////
     // RESOURCEN //
@@ -151,87 +140,64 @@ osg::Group* init()
     //////////////////
     // MODULE SETUP //
     //////////////////
-    osg::ref_ptr<TexDemo::TexStreamer> texStreamer = new TexDemo::TexStreamer;
-    texStreamer->setName( "my texture module" );
+    osg::ref_ptr<TexDemo::TexFilter> texFilter = new TexDemo::TexFilter;
+    texFilter->addIdentifier( "osgcuda_texfilter" );
+    texFilter->setLibraryName( "osgcuda_texfilter" );
 
-    osg::ref_ptr<osgCuda::Computation> computation = new osgCuda::Computation;
     // Execute the computation during the rendering, but before
     // the subgraph is rendered. Default is the execution during
     // the update traversal.
-    computation->setComputeOrder(  osgCompute::Computation::RENDER_PRE_RENDER_PRE_TRAVERSAL );
-    computation->addModule( *texStreamer );
-    computation->addResource( *srcArray );
+    computationNode->setComputeOrder(  osgCompute::Computation::PRERENDER_BEFORECHILDREN );
+    computationNode->addModule( *texFilter );
+    computationNode->addResource( *srcArray );
     // the target texture is located in the subgraph of the computation
-    computation->addChild( getTexturedQuad( *trgTexture ) );
+    computationNode->addChild( getTexturedQuad( *trgTexture ) );
 
-    /////////////////
-    // SCENE SETUP //
-    /////////////////
-    scene = new osg::Group;
-    //scene->addChild( getTexturedQuad(*trgTexture) );
-    scene->addChild( computation );
-    return scene;
+    // Write this computation to file
+    //osgDB::writeNodeFile( *computationNode, "texdemo.osgt" );
+
+    return computationNode;
 }
 
-
-class ViewerHandlerTest : public osgGA::GUIEventHandler
+//------------------------------------------------------------------------------
+osg::ref_ptr<osgCompute::Computation> loadComputation()
 {
-public:
-    ViewerHandlerTest( osgViewer::Viewer* viewer )
-        : osgGA::GUIEventHandler(),
-        _viewer(viewer) {}
+    osg::ref_ptr<osgCompute::Computation> computationNode;
 
-    virtual bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa);
+    std::string dataFile = osgDB::findDataFile( "osgTexDemo/scenes/texdemo.osgt" );
+    if( !dataFile.empty() )
+        computationNode = dynamic_cast<osgCuda::Computation*>( osgDB::readNodeFile( dataFile ) );
 
-protected:
-    osgViewer::Viewer* _viewer;
-};
-
-//------------------------------------------------------------------------------ 
-bool ViewerHandlerTest::handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
-{
-    if( !_viewer )
-        return false;
-
-    ////////////////////////
-    // RESTART SIMULATION //
-    ////////////////////////
-    if( ea.getKey() == 'r' &&
-        ea.getEventType() == osgGA::GUIEventAdapter::KEYDOWN )
-    {
-        _viewer->setSceneData( NULL );
-
-        osg::ref_ptr<osg::Group> scene = init();
-        _viewer->setSceneData( scene );
-
-    }
-
-    return false;
+    return computationNode;
 }
 
-
+//------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
+    osg::ArgumentParser arguments(&argc, argv);
+    osgViewer::Viewer viewer(arguments);
 
-    osg::Group* scene = init();
+    /////////////////
+    // COMPUTATION //
+    /////////////////
+    osg::ref_ptr<osgCompute::Computation> computation = loadComputation();
+    if( !computation.valid() ) computation = setupComputation();
 
     //////////////////
     // VIEWER SETUP //
     //////////////////
-    osg::ArgumentParser arguments(&argc, argv);
-    osgViewer::Viewer viewer(arguments);
-    viewer.setUpViewInWindow( 50, 50, 640, 480);
-    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
+    osg::Group* scene = new osg::Group;
+    scene->addChild( computation );
 
     // You must use single threaded version since osgCompute currently
     // does only support single threaded applications. Please ask in the
     // forum for the multi-threaded version if you need it.
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
-
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);
-    viewer.addEventHandler( new ViewerHandlerTest(&viewer) );
+    viewer.setUpViewInWindow( 50, 50, 640, 480);
+    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
 
     return viewer.run();
 }

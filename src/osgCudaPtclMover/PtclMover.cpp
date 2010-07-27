@@ -1,19 +1,25 @@
 /* osgCompute - Copyright (C) 2008-2009 SVT Group
-*                                                                     
+*
 * This library is free software; you can redistribute it and/or modify
 * it under the terms of the GNU Lesser General Public License as
 * published by the Free Software Foundation; either version 3 of
 * the License, or (at your option) any later version.
-*                                                                     
+*
 * This library is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesse General Public License for more details.
 *
 * The full license is in LICENSE file included with this distribution.
 */
+
+#include <vector_types.h>
+#include <math.h>
+#include <cstdlib>
 #include <osg/Notify>
-#include "PtclMover"
+#include <osg/FrameStamp>
+#include <osgCompute/Module>
+#include <osgCompute/Memory>
 
 //------------------------------------------------------------------------------
 extern "C"
@@ -21,12 +27,43 @@ void move( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float e
 
 namespace PtclDemo
 {
-    //------------------------------------------------------------------------------ 
-    PtclMover::~PtclMover() 
-    { 
-        clearLocal(); 
-    }
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // DECLARATION ///////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    class PtclMover : public osgCompute::Module 
+    {
+    public:
+        PtclMover() : osgCompute::Module() {clearLocal();}
 
+        META_Object( PtclDemo, PtclMover )
+
+        // Modules have to implement at least this
+        // three methods:
+        virtual bool init();
+        virtual void launch();
+        virtual void acceptResource( osgCompute::Resource& resource );
+
+        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+    protected:
+        virtual ~PtclMover() {clearLocal();}
+        void clearLocal();
+
+        double                              _lastTime;
+        bool						        _firstFrame;
+
+        unsigned int                        _numBlocks;
+        unsigned int                        _numThreads;
+
+        osg::ref_ptr<osgCompute::Memory>    _ptcls;
+
+    private:
+        PtclMover(const PtclMover&, const osg::CopyOp& ) {} 
+        inline PtclMover &operator=(const PtclMover &) { return *this; }
+    };
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS //////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------  
     bool PtclMover::init() 
     { 
@@ -48,7 +85,6 @@ namespace PtclDemo
 
             return false;
         }
-
 
         /////////////////////////
         // COMPUTE KERNEL SIZE //
@@ -83,10 +119,7 @@ namespace PtclDemo
         ////////////////////
         // MOVE PARTICLES //
         ////////////////////
-        move(_numBlocks, 
-            _numThreads, 
-            _ptcls->map(), 
-            elapsedtime );
+        move( _numBlocks, _numThreads, _ptcls->map(), elapsedtime );
     }
 
     //------------------------------------------------------------------------------
@@ -111,4 +144,11 @@ namespace PtclDemo
         _lastTime = 0.0;
         _firstFrame = true;
     }
+}
+
+//-----------------------------------------------------------------------------
+// Use this function to return a new warp module to the application
+extern "C" OSGCOMPUTE_MODULE_EXPORT osgCompute::Module* OSGCOMPUTE_CREATE_MODULE_FUNCTION( void ) 
+{
+    return new PtclDemo::PtclMover;
 }

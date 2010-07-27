@@ -44,6 +44,16 @@ namespace GeometryDemo
             return false;
         }
 
+        osg::FrameStamp* fs = (osg::FrameStamp*) getUserData();
+        if( !fs )
+        {
+            osg::notify( osg::WARN )
+                << "GeometryDemo::Warp::init(): frame stamp is missing."
+                << std::endl;
+
+            return false;
+        }
+
         // We need to read the geometry information.
         osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::InteropMemory*)_vertices.get())->getInteropObject() );
         if( !geometry )

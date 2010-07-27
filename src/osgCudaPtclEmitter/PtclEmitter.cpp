@@ -17,7 +17,9 @@
 #include <math.h>
 #include <cstdlib>
 #include <osg/Notify>
-#include "PtclEmitter"
+#include <osg/BoundingBox>
+#include <osgCompute/Module>
+#include <osgCompute/Memory>
 
 //------------------------------------------------------------------------------
 extern "C"
@@ -33,6 +35,43 @@ void reseed( unsigned int numBlocks,
 
 namespace PtclDemo
 {
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // DECLARATION ///////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+    */
+    class PtclEmitter : public osgCompute::Module 
+    {
+    public:
+        PtclEmitter() : osgCompute::Module() {clearLocal();}
+
+        META_Object( PtclDemo, PtclEmitter )
+
+        virtual bool init();
+        virtual void launch();
+        virtual void acceptResource( osgCompute::Resource& resource );
+
+        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+    protected:
+        virtual ~PtclEmitter();
+        void clearLocal();
+
+        unsigned int                                      _numBlocks;
+        unsigned int                                      _numThreads;
+
+        osg::Vec3f                                        _seedBoxMin;
+        osg::Vec3f                                        _seedBoxMax;
+        osg::ref_ptr<osgCompute::Memory>                  _ptcls;
+        osg::ref_ptr<osgCompute::Memory>                  _seeds;
+
+    private:
+        PtclEmitter(const PtclEmitter&, const osg::CopyOp& ) {} 
+        inline PtclEmitter &operator=(const PtclEmitter &) { return *this; }
+    };
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS //////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
     PtclEmitter::~PtclEmitter()
     {
@@ -42,10 +81,10 @@ namespace PtclDemo
     //------------------------------------------------------------------------------
     bool PtclEmitter::init()
     {
-        if( !_ptcls.valid() )
+        if( !_ptcls.valid() || !_seeds.valid() )
         {
             osg::notify( osg::WARN )
-                << "ParticleDemo::ParticleMover::init(): buffers are missing."
+                << "ParticleDemo::PtclEmitter::init(): buffers are missing."
                 << std::endl;
 
             return false;
@@ -62,6 +101,7 @@ namespace PtclDemo
         }
         _seedBoxMin = (*minMaxArray).at(0);
         _seedBoxMax = (*minMaxArray).at(1);
+
 
         /////////////////////////
         // COMPUTE KERNEL SIZE //
@@ -132,4 +172,11 @@ namespace PtclDemo
         _seedBoxMin = osg::Vec3f(0,0,0);
         _seedBoxMax = osg::Vec3f(0,0,0);
     }
+}
+
+//-----------------------------------------------------------------------------
+// Use this function to return a new warp module to the application
+extern "C" OSGCOMPUTE_MODULE_EXPORT osgCompute::Module* OSGCOMPUTE_CREATE_MODULE_FUNCTION( void ) 
+{
+    return new PtclDemo::PtclEmitter;
 }

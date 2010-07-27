@@ -12,7 +12,6 @@
 *
 * The full license is in LICENSE file included with this distribution.
 */
-
 #include <iostream>
 #include <sstream>
 #include <osg/ArgumentParser>
@@ -38,7 +37,7 @@
 #include "PtclMover"
 #include "PtclEmitter"
 
-
+//------------------------------------------------------------------------------
 osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
     osg::Geometry* bbgeom = new osg::Geometry;
@@ -110,6 +109,7 @@ osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     return bbox;
 }
 
+//------------------------------------------------------------------------------
 osg::Geode* getGeode( unsigned int numParticles )
 {
     osg::Geode* geode = new osg::Geode;
@@ -163,17 +163,26 @@ osg::Geode* getGeode( unsigned int numParticles )
     return geode;
 }
 
-int main(int argc, char *argv[])
+//------------------------------------------------------------------------------
+osg::ref_ptr<osgCompute::Computation> setupComputation()
 {
-    osg::setNotifyLevel( osg::WARN );
+    osg::ref_ptr<osgCompute::Computation> computationEmitter = new osgCuda::Computation;
+    computationEmitter->setName( "emit particles computation" );
+    osg::ref_ptr<osgCompute::Computation> computationMover = new osgCuda::Computation;
+    computationMover->setName( "move particles computation" );
 
-    osg::Vec3 bbmin(0,0,0);
-    osg::Vec3 bbmax(4,4,4);
-    unsigned int numParticles = 64000;
+    // Execute the computation during the update traversal before the subgraph is handled. 
+    // This is the default behaviour. Use the following line to execute the computation in
+    // the rendering traversal after the subgraph has been rendered.
+    //osgCompute::Computation::ComputeOrder order = osgCompute::Computation::PRERENDER_AFTERCHILDREN;
+    osgCompute::Computation::ComputeOrder order = osgCompute::Computation::UPDATE_BEFORECHILDREN;
+    computationEmitter->setComputeOrder( order );
+    computationMover->setComputeOrder( order );
 
     ///////////////
     // RESOURCES //
     ///////////////
+    unsigned int numParticles = 64000;
     // Seeds
     osg::FloatArray* seedValues = new osg::FloatArray();
     for( unsigned int s=0; s<numParticles; ++s )
@@ -186,59 +195,86 @@ int main(int argc, char *argv[])
     seedBuffer->setArray( seedValues );
     seedBuffer->addIdentifier( "PTCL_SEEDS" );
 
-    ///////////////////
-    // SETUP MODULES //
-    ///////////////////
-    // Create module
+    ////////////////////
+    // SETUP HIERACHY //
+    ////////////////////
     PtclDemo::PtclMover* ptclMover = new PtclDemo::PtclMover;
-    ptclMover->setName( "ptclMover" );
-
+    ptclMover->addIdentifier("osgcuda_ptclmover");
+    ptclMover->setLibraryName("osgcuda_ptclmover");
     PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
-    ptclEmitter->setName( "ptclEmitter" );
-    ptclEmitter->setSeedBox( bbmin, bbmax );
+    ptclEmitter->addIdentifier("osgcuda_ptclemitter");
+    ptclEmitter->setLibraryName("osgcuda_ptclemitter");
 
-    osgCuda::Computation* computationEmit = new osgCuda::Computation;
-    // Execute the computation during the update traversal before the subgraph is handled. 
-    // This is the default behaviour. Use the following line to execute the computation in
-    // the rendering traversal after the subgraph has been rendered.
-    //computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
-    computationEmit->setName("emit");
-    computationEmit->addModule( *ptclEmitter );  
-    computationEmit->addResource( *seedBuffer );
-    // The particle buffer is located in the subgraph of
-    // the modules
-    computationEmit->addChild( getGeode( numParticles ) );
+    computationEmitter->addModule( *ptclEmitter );  
+    computationEmitter->addResource( *seedBuffer );
+    // The particle buffer is a leaf of the computation graph
+    computationEmitter->addChild( getGeode( numParticles ) );
+    computationMover->addModule( *ptclMover );
+    computationMover->addChild( computationEmitter );
 
-    osgCuda::Computation* computationMove = new osgCuda::Computation;
-    //computationMove->setComputeOrder( osgCompute::Computation::RENDER_PRE_RENDER_POST_TRAVERSAL );
-    computationMove->setName( "move" );
-    computationMove->addModule( *ptclMover );
-    computationMove->addChild( computationEmit );
+    // Write this computation to file
+    //osgDB::writeNodeFile( *computationMover, "ptcldemo.osgt" );
+
+    return computationMover;
+}
+
+//------------------------------------------------------------------------------
+osg::ref_ptr<osgCompute::Computation> loadComputation()
+{
+    osg::ref_ptr<osgCompute::Computation> computationGraph;
+
+    std::string dataFile = osgDB::findDataFile( "osgParticleDemo/scenes/ptcldemo.osgt" );
+    if( !dataFile.empty() )
+        computationGraph = dynamic_cast<osgCompute::Computation*>( osgDB::readNodeFile( dataFile ) );
+
+    return computationGraph;
+}
+
+//------------------------------------------------------------------------------
+int main(int argc, char *argv[])
+{
+    osg::setNotifyLevel( osg::WARN );
+    osg::ArgumentParser arguments(&argc, argv);
+    osgViewer::Viewer viewer(arguments);
+
+    osg::Vec3 bbmin(0,0,0);
+    osg::Vec3 bbmax(4,4,4);
+
+    osg::ref_ptr<osg::Vec3Array> minMaxArray = new osg::Vec3Array(2);
+    minMaxArray->at(0) = bbmin;
+    minMaxArray->at(1) = bbmax;
+
+    /////////////////
+    // COMPUTATION //
+    /////////////////
+    osg::ref_ptr<osgCompute::Computation> computationMover = loadComputation();
+    if( !computationMover.valid() ) computationMover = setupComputation();
+
+    // Setup dynamic variables
+    osg::ref_ptr<osgCompute::Module> ptclMover = computationMover->getModule( "osgcuda_ptclmover" );
+    ptclMover->setUserData( viewer.getFrameStamp()  );
+
+    osg::ref_ptr<osgCompute::Computation> computationEmitter = dynamic_cast<osgCompute::Computation*>( computationMover->getChild(0) );
+    osg::ref_ptr<osgCompute::Module> ptclEmitter = computationEmitter->getModule( "osgcuda_ptclemitter" );
+    ptclEmitter->setUserData( minMaxArray.get() );
 
     /////////////////
     // SETUP SCENE //
     /////////////////
     osg::Group* scene = new osg::Group;
-    scene->addChild( computationMove );
-    scene->addChild( getBoundingBox( bbmin, bbmax ) );
+    scene->addChild( computationMover );
+    scene->addChild(getBoundingBox( bbmin, bbmax ));
 
     //////////////////
     // SETUP VIEWER //
     //////////////////
-    osg::ArgumentParser arguments(&argc, argv);
-    osgViewer::Viewer viewer(arguments);
-    viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
-    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
-    viewer.setUpViewInWindow( 50, 50, 640, 480);
-
-
-    ptclMover->setFrameStamp( viewer.getFrameStamp() );
-
     // You must use the single threaded version since osgCompute currently
     // does only support single threaded applications. Please ask in the
     // forum for the multi-threaded version if you need it.
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
-
+    viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
+    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
+    viewer.setUpViewInWindow( 50, 50, 640, 480);
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);
 

@@ -14,9 +14,10 @@
 */
 #include <cuda_runtime.h>
 #include <osg/Notify>
+#include <osgCompute/Module>
+#include <osgCompute/Memory>
 #include <osgCuda/Buffer>
 #include <osgCuda/Texture>
-#include "TexStreamer"
 
 // Declare CUDA-kernel functions
 extern "C"
@@ -31,15 +32,47 @@ void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcAr
 namespace TexDemo
 {
     //////////////////////////////////////////////////////////////////////////////////////////////////
+    // DECLARATION ///////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    class TexFilter : public osgCompute::Module 
+    {
+    public:
+        TexFilter() : osgCompute::Module() {clearLocal();}
+
+        META_Object( TexDemo, TexFilter )
+
+        // Modules have to implement at least this
+        // three methods:
+        virtual bool init();
+        virtual void launch();
+        virtual void acceptResource( osgCompute::Resource& resource );
+
+        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+    protected:
+        virtual ~TexFilter() { clearLocal(); }
+        void clearLocal();
+
+        dim3											_blocks;
+        dim3											_threads;
+        osg::ref_ptr<osgCompute::Memory>				_srcArray;
+        osg::ref_ptr<osgCompute::Memory>                _tmpBuffer;
+        osg::ref_ptr<osgCompute::Memory>                _trgBuffer;
+
+    private:
+        TexFilter(const TexFilter&, const osg::CopyOp& ) {} 
+        inline TexFilter &operator=(const TexFilter &) { return *this; }
+    };
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------  
-    bool TexStreamer::init() 
+    bool TexFilter::init() 
     { 
         if( !_trgBuffer || !_srcArray )
         {
             osg::notify( osg::WARN ) 
-                << "TexDemo::TexStreamer::init(): buffers are missing."
+                << "TexDemo::TexFilter::init(): buffers are missing."
                 << std::endl;
             return false;
         }
@@ -53,7 +86,7 @@ namespace TexDemo
         if( !_tmpBuffer->init() )
         {
             osg::notify( osg::WARN ) 
-                << "TexDemo::TexStreamer::init(): cannot allocate temporary buffer."
+                << "TexDemo::TexFilter::init(): cannot allocate temporary buffer."
                 << std::endl;
             return false;
         }
@@ -82,7 +115,7 @@ namespace TexDemo
     }
 
     //------------------------------------------------------------------------------  
-    void TexStreamer::launch()
+    void TexFilter::launch()
     {
         if( isClear() )
             return;
@@ -139,7 +172,7 @@ namespace TexDemo
     }
 
     //------------------------------------------------------------------------------
-    void TexStreamer::acceptResource( osgCompute::Resource& resource )
+    void TexFilter::acceptResource( osgCompute::Resource& resource )
     {
         // Search for your handles. This Method is called for each resource
         // located in the subgraph of this module.
@@ -153,7 +186,7 @@ namespace TexDemo
     // PROTECTED FUNCTIONS ///////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------  
-    void TexStreamer::clearLocal() 
+    void TexFilter::clearLocal() 
     { 
         _threads = dim3(0,0,0);
         _blocks = dim3(0,0,0);
@@ -161,4 +194,11 @@ namespace TexDemo
         _tmpBuffer = NULL;
         _srcArray = NULL;
     }
+}
+
+//-----------------------------------------------------------------------------
+// Use this function to return a new warp module to the application
+extern "C" OSGCOMPUTE_MODULE_EXPORT osgCompute::Module* OSGCOMPUTE_CREATE_MODULE_FUNCTION( void ) 
+{
+    return new TexDemo::TexFilter;
 }

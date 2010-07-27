@@ -35,8 +35,6 @@ namespace PtclDemo
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        inline void setSeedBox( osg::Vec3f& seedMin, osg::Vec3f& seedMax ) { _seedBoxMin = seedMin; _seedBoxMax = seedMax; }
-
         virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
     protected:
         virtual ~PtclEmitter();

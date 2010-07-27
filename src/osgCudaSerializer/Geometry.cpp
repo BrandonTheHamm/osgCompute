@@ -14,8 +14,7 @@ static bool checkIdentifiers( const osgCuda::Geometry& geometry )
 static bool writeIdentifiers( osgDB::OutputStream& os, const osgCuda::Geometry& geometry )
 {	
 	const osgCompute::IdentifierSet ids = geometry.getIdentifiers();
-	//os << osgDB::PROPERTY("Identifiers") << " " << ids.size() << " " << osgDB::BEGIN_BRACKET;
-	os << ids.size() << osgDB::BEGIN_BRACKET;
+	os << ids.size() << osgDB::BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::IdentifierSetCnstItr idItr = ids.begin();
 		idItr != ids.end();
@@ -60,24 +59,26 @@ static bool checkUsage( const osgCuda::Geometry& geometry )
 //------------------------------------------------------------------------------
 static bool writeUsage( osgDB::OutputStream& os, const osgCuda::Geometry& geometry )
 {	
-	//os << osgDB::PROPERTY("Usage");
 
 	switch( geometry.getUsage() )
 	{
 	case osgCompute::GL_TARGET_COMPUTE_SOURCE:
 		os.writeWrappedString(" GL_TARGET_COMPUTE_SOURCE ");
+        os << std::endl;
 		break;
 	case osgCompute::GL_SOURCE_COMPUTE_TARGET:
 		os.writeWrappedString(" GL_SOURCE_COMPUTE_TARGET ");
+        os << std::endl;
 		break;
 	case osgCompute::GL_TARGET_COMPUTE_TARGET:
 		os.writeWrappedString(" GL_TARGET_COMPUTE_TARGET ");
+        os << std::endl;
 		break;
 	default:
 		os.writeWrappedString(" GL_SOURCE_COMPUTE_SOURCE ");
+        os << std::endl;
+        break;
 	}
-
-	os << std::endl;
 
 	return true;
 }

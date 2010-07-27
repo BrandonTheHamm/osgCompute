@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 static bool checkArray( const osgCuda::Array& array )
 {
-	if( array.getImage() ) return true;
+	if( array.getArray() ) return true;
 	else return false;
 }
 
@@ -35,22 +35,27 @@ static bool checkChannelFormatDesc( const osgCuda::Array& array )
 static bool writeChannelFormatDesc( osgDB::OutputStream& os, const osgCuda::Array& array )
 {	
 	const cudaChannelFormatDesc& desc = array.getChannelFormatDesc();
-	//os << osgDB::PROPERTY("ChannelFormatDesc") << osgDB::BEGIN_BRACKET << " "<< desc.x << " " << desc.y << " " << desc.z << " " << desc.w;
-	os << osgDB::BEGIN_BRACKET << " "<< desc.x << " " << desc.y << " " << desc.z << " " << desc.w << std::endl;
+	os << osgDB::BEGIN_BRACKET << std::endl;
+    os << desc.x  << desc.y << desc.z << desc.w << std::endl;
 	
 	switch( desc.f )
 	{
 	case cudaChannelFormatKindFloat:
-		os.writeWrappedString(" cudaChannelFormatKindFloat ");
+		os.writeWrappedString("cudaChannelFormatKindFloat");
+        os << std::endl;
 		break;
 	case cudaChannelFormatKindSigned:
-		os.writeWrappedString(" cudaChannelFormatKindSigned ");
+		os.writeWrappedString("cudaChannelFormatKindSigned");
+        os << std::endl;
 		break;
 	case cudaChannelFormatKindUnsigned:
-		os.writeWrappedString(" cudaChannelFormatKindUnsigned ");
+		os.writeWrappedString("cudaChannelFormatKindUnsigned");
+        os << std::endl;
 		break;
 	default:
-		os.writeWrappedString(" cudaChannelFormatKindNone ");
+		os.writeWrappedString("cudaChannelFormatKindNone");
+        os << std::endl;
+        break;
 	}
 	os << osgDB::END_BRACKET << std::endl;
 	
@@ -61,7 +66,6 @@ static bool writeChannelFormatDesc( osgDB::OutputStream& os, const osgCuda::Arra
 static bool readChannelFormatDesc( osgDB::InputStream& is, osgCuda::Array& array )
 {
 	cudaChannelFormatDesc desc;
-	//is >> osgDB::PROPERTY("ChannelFormatDesc") >> osgDB::BEGIN_BRACKET;
 	is >> osgDB::BEGIN_BRACKET;
 
 	is >> desc.x;

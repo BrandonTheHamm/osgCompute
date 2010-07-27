@@ -14,8 +14,7 @@ static bool checkIdentifiers( const osgCuda::Texture3D& interopObject )
 static bool writeIdentifiers( osgDB::OutputStream& os, const osgCuda::Texture3D& interopObject )
 {	
 	const osgCompute::IdentifierSet ids = interopObject.getIdentifiers();
-	//os << osgDB::PROPERTY("Identifiers") << " " << ids.size() << " " << osgDB::BEGIN_BRACKET;
-	os << ids.size() << osgDB::BEGIN_BRACKET;
+	os << ids.size() << osgDB::BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::IdentifierSetCnstItr idItr = ids.begin();
 		idItr != ids.end();
@@ -34,7 +33,6 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCuda::Texture3D& interop
 {
 
 	unsigned int numIds = 0;  
-	//is >> osgDB::PROPERTY("Identifiers") >> numIds >> osgDB::BEGIN_BRACKET;
 	is >> numIds >> osgDB::BEGIN_BRACKET;
 
 	for( unsigned int i=0; i<numIds; ++i )
@@ -60,8 +58,6 @@ static bool checkUsage( const osgCuda::Texture3D& interopObject )
 //------------------------------------------------------------------------------
 static bool writeUsage( osgDB::OutputStream& os, const osgCuda::Texture3D& interopObject )
 {	
-	//os << osgDB::PROPERTY("Usage");
-
 	switch( interopObject.getUsage() )
 	{
 	case osgCompute::GL_TARGET_COMPUTE_SOURCE:
@@ -85,8 +81,6 @@ static bool writeUsage( osgDB::OutputStream& os, const osgCuda::Texture3D& inter
 //------------------------------------------------------------------------------
 static bool readUsage( osgDB::InputStream& is, osgCuda::Texture3D& interopObject )
 {
-	//is >> osgDB::PROPERTY("Usage");
-
 	std::string interopUsage;
 	is.readWrappedString(interopUsage);
 	if( interopUsage == "GL_TARGET_COMPUTE_SOURCE" )

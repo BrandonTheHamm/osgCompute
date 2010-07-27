@@ -25,8 +25,7 @@ static bool writeResources( osgDB::OutputStream& os, const osgCuda::Computation&
 			numRes++;
 
 	// Write attached resources
-	//os << osgDB::PROPERTY("Resources") << " " << numRes << " " << osgDB::BEGIN_BRACKET;
-	os << numRes << osgDB::BEGIN_BRACKET;
+	os << numRes << osgDB::BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::ResourceHandleListCnstItr resItr = resList.begin();
 		resItr != resList.end();
@@ -42,7 +41,6 @@ static bool writeResources( osgDB::OutputStream& os, const osgCuda::Computation&
 static bool readResources( osgDB::InputStream& is, osgCuda::Computation& computation )
 {
 	unsigned int numRes = 0;  
-	//is >> osgDB::PROPERTY("Resources") >> numRes >> osgDB::BEGIN_BRACKET;
 	is >> numRes >> osgDB::BEGIN_BRACKET;
 
 	for( unsigned int i=0; i<numRes; ++i )
@@ -77,8 +75,7 @@ static bool writeModules( osgDB::OutputStream& os, const osgCuda::Computation& c
 			numMods++;
 
 	// Write attached resources
-	//os << osgDB::PROPERTY("Modules") << " " << numRes << " " << osgDB::BEGIN_BRACKET;
-	os << numMods << osgDB::BEGIN_BRACKET;
+	os << numMods << osgDB::BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::ModuleListCnstItr modItr = modList.begin(); modItr != modList.end(); ++modItr )
 	{
@@ -97,7 +94,6 @@ static bool writeModules( osgDB::OutputStream& os, const osgCuda::Computation& c
 static bool readModules( osgDB::InputStream& is, osgCuda::Computation& computation )
 {
 	unsigned int numMods = 0;  
-	//is >> osgDB::PROPERTY("Modules") >> numRes >> osgDB::BEGIN_BRACKET;
 	is >> numMods >> osgDB::BEGIN_BRACKET;
 
 	for( unsigned int i=0; i<numMods; ++i )
@@ -133,13 +129,17 @@ REGISTER_OBJECT_WRAPPER(osgCuda_Computation,
 						osgCuda::Computation,
 						"osg::Object osg::Node osg::Group osgCuda::Computation" )
 {
-	BEGIN_ENUM_SERIALIZER( ComputeOrder, UPDATE_PRE_TRAVERSAL ) ;
-		ADD_ENUM_VALUE( UPDATE_POST_TRAVERSAL );
-		ADD_ENUM_VALUE( UPDATE_PRE_TRAVERSAL );
-		ADD_ENUM_VALUE( RENDER_PRE_RENDER_PRE_TRAVERSAL );
-		ADD_ENUM_VALUE( RENDER_PRE_RENDER_POST_TRAVERSAL );
-		ADD_ENUM_VALUE( RENDER_POST_RENDER_POST_TRAVERSAL );
-		ADD_ENUM_VALUE( RENDER_POST_RENDER_PRE_TRAVERSAL );
+	BEGIN_ENUM_SERIALIZER( ComputeOrder, UPDATE_BEFORECHILDREN ) ;
+		ADD_ENUM_VALUE( UPDATE_AFTERCHILDREN );
+		ADD_ENUM_VALUE( UPDATE_BEFORECHILDREN );
+		ADD_ENUM_VALUE( UPDATE_AFTERCHILDREN_NORENDER );
+		ADD_ENUM_VALUE( UPDATE_BEFORECHILDREN_NORENDER );
+		ADD_ENUM_VALUE( PRERENDER_BEFORECHILDREN );
+		ADD_ENUM_VALUE( PRERENDER_AFTERCHILDREN );
+		ADD_ENUM_VALUE( POSTRENDER_AFTERCHILDREN );
+		ADD_ENUM_VALUE( POSTRENDER_BEFORECHILDREN );
+		ADD_ENUM_VALUE( PRERENDER_NOCHILDREN );
+		ADD_ENUM_VALUE( POSTRENDER_NOCHILDREN );
 	END_ENUM_SERIALIZER();
 	ADD_BOOL_SERIALIZER( AutoCheckSubgraph, false );
 	ADD_USER_SERIALIZER( Modules );

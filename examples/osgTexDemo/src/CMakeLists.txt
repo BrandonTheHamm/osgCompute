@@ -43,12 +43,12 @@ INCLUDE_DIRECTORIES(
 # collect all headers
 
 SET(TARGET_H
-	 ${HEADER_PATH}/TexStreamer
+	 ${HEADER_PATH}/TexFilter
 )
 
 
 SET(MY_CUDA_SOURCE_FILES
-	TexStreamer.cu
+	TexFilter.cu
 )
 
 # Use the WRAP_CUDA macro.
@@ -57,7 +57,7 @@ WRAP_CUDA( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
 # collect the sources
 SET(TARGET_SRC
 	main.cpp
-	TexStreamer.cpp
+	TexFilter.cpp
 	${CUDA_FILES}
     ${MY_CUDA_SOURCE_FILES} 
 )

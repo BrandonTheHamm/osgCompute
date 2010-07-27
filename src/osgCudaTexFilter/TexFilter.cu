@@ -13,8 +13,8 @@
 * The full license is in LICENSE file included with this distribution.
 */
 
-#ifndef TEXDEMO_TEXSTREAMER_KERNEL_H
-#define TEXDEMO_TEXSTREAMER_KERNEL_H 1
+#ifndef TEXDEMO_TEXFILTER_KERNEL_H
+#define TEXDEMO_TEXFILTER_KERNEL_H 1
 
 
 texture<uchar4, 1, cudaReadModeElementType> gaussTex; 
@@ -234,7 +234,6 @@ void sobelKernel( uchar4* trg )
 __global__ 
 void swapKernel( uchar4* trg, unsigned int trgPitch, unsigned int imageWidth, unsigned int imageHeight ) 
 {
-
     // compute thread dimension
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -300,4 +299,4 @@ void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcAr
     swapKernel<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trgBuffer), trgPitch, imageWidth, imageHeight );
 }
 
-#endif // TEXDEMO_TEXSTREAMER_KERNEL_H
+#endif // TEXDEMO_TEXFILTER_KERNEL_H

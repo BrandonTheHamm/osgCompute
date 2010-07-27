@@ -6,8 +6,8 @@
 # Set library and plugin name
 #########################################################################
 
-SET(LIB_NAME osgcuda_warp)
-SET(MODULE_NAME osgCudaWarp)
+SET(LIB_NAME osgcuda_ptclemitter)
+SET(MODULE_NAME osgCudaPtclEmitter)
 SET(LIB_NAME_LABEL "Module ${MODULE_NAME}")
 
 
@@ -49,11 +49,10 @@ INCLUDE_DIRECTORIES(
 # collect all headers
 
 SET(TARGET_H
-	#${HEADER_PATH}/Warp
 )
 
 SET(MY_CUDA_SOURCE_FILES
-	Warp.cu
+	PtclEmitter.cu
 )
 
 # Use the WRAP_CUDA macro.
@@ -61,7 +60,7 @@ WRAP_CUDA( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
 
 # collect the sources
 SET(TARGET_SRC
-	Warp.cpp
+	PtclEmitter.cpp
 	${CUDA_FILES}
     ${MY_CUDA_SOURCE_FILES} 
 )

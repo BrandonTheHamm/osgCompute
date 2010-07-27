@@ -13,9 +13,10 @@
 * The full license is in LICENSE file included with this distribution.
 */
 #include <osg/Array>
+#include <osgCompute/Module>
+#include <osgCompute/Memory>
 #include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
-#include "Warp"
 
 // Declare CUDA-kernel functions
 extern "C"
@@ -29,6 +30,38 @@ void warp(unsigned int numBlocks,
 
 namespace GeometryDemo
 {
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // DECLARATION ///////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    class Warp : public osgCompute::Module 
+    {
+    public:
+        Warp() : osgCompute::Module() {clearLocal();}
+
+        META_Object( GeometryDemo, Warp )
+
+        // Modules have to implement at least this
+        // three methods:
+        virtual bool init();
+        virtual void launch();
+        virtual void acceptResource( osgCompute::Resource& resource );
+
+        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+    protected:
+        virtual ~Warp() { clearLocal(); }
+        void clearLocal();
+
+        unsigned int                                      _numBlocks;
+        unsigned int                                      _numThreads;
+        osg::ref_ptr<osgCompute::Memory>                  _vertices;
+        osg::ref_ptr<osgCompute::Memory>				  _initNormals;
+        osg::ref_ptr<osgCompute::Memory>				  _initPos;
+
+    private:
+        Warp(const Warp&, const osg::CopyOp& ) {} 
+        inline Warp &operator=(const Warp &) { return *this; }
+    };
+
     //////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -142,5 +175,5 @@ namespace GeometryDemo
 // Use this function to return a new warp module to the application
 extern "C" OSGCOMPUTE_MODULE_EXPORT osgCompute::Module* OSGCOMPUTE_CREATE_MODULE_FUNCTION( void ) 
 {
-	return new GeometryDemo::Warp;
+    return new GeometryDemo::Warp;
 }

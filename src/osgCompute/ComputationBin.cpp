@@ -87,7 +87,7 @@ namespace osgCompute
         }
 
 
-        if( (_computeOrder & OSGCOMPUTE_PRE_TRAVERSAL ) == OSGCOMPUTE_PRE_TRAVERSAL )
+        if( (_computeOrder & OSGCOMPUTE_BEFORECHILDREN ) == OSGCOMPUTE_BEFORECHILDREN )
         {
             if( _launchCallback ) 
                 (*_launchCallback)( *_computation ); 
@@ -98,9 +98,10 @@ namespace osgCompute
         }
 
         // render sub-graph leafs
-        drawLeafs(renderInfo, previous );
+		if( (_computeOrder & OSGCOMPUTE_NOCHILDREN ) != OSGCOMPUTE_NOCHILDREN )
+			drawLeafs(renderInfo, previous );
 
-        if( (_computeOrder & OSGCOMPUTE_PRE_TRAVERSAL ) != OSGCOMPUTE_PRE_TRAVERSAL )
+        if( (_computeOrder & OSGCOMPUTE_BEFORECHILDREN ) != OSGCOMPUTE_BEFORECHILDREN )
         {
             if( _launchCallback ) 
                 (*_launchCallback)( *_computation ); 
@@ -265,7 +266,7 @@ namespace osgCompute
     void ComputationBin::clearLocal()
     {
         _computation = NULL;
-        _computeOrder = osgCompute::Computation::RENDER_PRE_RENDER_PRE_TRAVERSAL;
+        _computeOrder = osgCompute::Computation::PRERENDER_BEFORECHILDREN;
         _clear = true;
         _launchCallback = NULL;
         _modules.clear();
