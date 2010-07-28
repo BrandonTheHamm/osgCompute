@@ -679,7 +679,7 @@ namespace osgCuda
             else if( getNumDimensions() == 2 )
             {
                 res = cudaMemcpy2D( memory._devPtr, memory._pitch, memory._hostPtr, getElementSize()*getDimension(0), 
-                    getDimension(0), getDimension(1), cudaMemcpyHostToDevice );
+                    getDimension(0)*getElementSize(), getDimension(1), cudaMemcpyHostToDevice );
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
@@ -740,7 +740,7 @@ namespace osgCuda
             else if( getNumDimensions() == 2 )
             {
                 res = cudaMemcpy2D( memory._hostPtr, getElementSize()*getDimension(0), memory._devPtr, memory._pitch, 
-                    getDimension(0), getDimension(1), cudaMemcpyDeviceToHost );
+                    getDimension(0)*getElementSize(), getDimension(1), cudaMemcpyDeviceToHost );
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
@@ -797,6 +797,7 @@ namespace osgCuda
                 return;
             }
         }
+
 
         _image = image;
         _array = NULL;

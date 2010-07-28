@@ -1460,7 +1460,7 @@ namespace osgCuda
                 }
                 else if( getNumDimensions() == 2 )
                 {
-                    res = cudaMemcpy2D( memory._hostPtr, getDimension(0)*getElementSize(), memory._devPtr, memory._pitch, getDimension(0), getDimension(1), cudaMemcpyDeviceToHost );
+                    res = cudaMemcpy2D( memory._hostPtr, getDimension(0)*getElementSize(), memory._devPtr, memory._pitch, getDimension(0)*getElementSize(), getDimension(1), cudaMemcpyDeviceToHost );
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
