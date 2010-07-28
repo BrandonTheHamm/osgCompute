@@ -1,0 +1,57 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+*                                                                     
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*                                                                     
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef TEXSTREAMER_H
+#define TEXSTREAMER_H 1
+
+#include <osg/ref_ptr>
+#include <vector_types.h>
+#include <osgCompute/Module>
+#include <osgCompute/Memory>
+
+namespace TexDemo
+{
+    class TexFilter : public osgCompute::Module 
+    {
+    public:
+        TexFilter() : osgCompute::Module() {clearLocal();}
+
+        META_Object( TexDemo, TexFilter )
+
+        // Modules have to implement at least this
+        // three methods:
+        virtual bool init();
+        virtual void launch();
+        virtual void acceptResource( osgCompute::Resource& resource );
+
+        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+    protected:
+        virtual ~TexFilter() { clearLocal(); }
+        void clearLocal();
+
+        dim3											_blocks;
+        dim3											_threads;
+        osg::ref_ptr<osgCompute::Memory>				_srcArray;
+        osg::ref_ptr<osgCompute::Memory>                _tmpBuffer;
+        osg::ref_ptr<osgCompute::Memory>                _trgBuffer;
+
+    private:
+        TexFilter(const TexFilter&, const osg::CopyOp& ) {} 
+        inline TexFilter &operator=(const TexFilter &) { return *this; }
+    };
+
+};
+
+#endif // TEXSTREAMER_H
