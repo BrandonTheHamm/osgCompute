@@ -32,27 +32,6 @@
 
 #include "TexFilter"
 
-static const char* vertShaderSource = 
-"#version 130 \n"
-"in vec4 gl_MultiTexCoord0; \n"
-"in vec4 gl_Vertex; \n"
-"out vec2 texCoord; \n"
-"void main()\n"
-"{ texCoord = gl_MultiTexCoord0.xy; \n"
-"  gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex; \n"
-"}\n";
-
-static const char* fragShaderSource = 
-"#version 140\n"
-"#extension GL_EXT_gpu_shader4 : enable \n"
-"uniform usampler2D texImage; \n"
-"in vec2 texCoord; \n"
-"out vec4 fragColor; \n"
-"void main()\n"
-"{ vec4 c = texture2D(texImage, texCoord.xy);"
-"  fragColor = c; //vec4( texCoord.x, texCoord.y, 0, 1 ); //vec4(1,0,1,1);// uvec4(gl_Color.xyz * 255.0, 255.0);\n"
-"}\n";
-
 osg::Geode* getTexturedQuad( osg::Texture2D& trgTexture )
 {
     osg::Geode* geode = new osg::Geode;
@@ -68,20 +47,6 @@ osg::Geode* getTexturedQuad( osg::Texture2D& trgTexture )
     geode->getOrCreateStateSet()->setTextureAttributeAndModes( 0, &trgTexture, osg::StateAttribute::ON );
     geode->getOrCreateStateSet()->addUniform( 
         new osg::Uniform( "texImage", 0 ) );
-
-    ////////////
-    // SHADER //
-    ////////////
-    osg::ref_ptr<osg::Program> program = new osg::Program;
-    osg::ref_ptr<osg::Shader> vertShader = new osg::Shader;
-    vertShader->setShaderSource( vertShaderSource );
-    vertShader->setType( osg::Shader::VERTEX );
-    osg::ref_ptr<osg::Shader> fragShader = new osg::Shader;
-    fragShader->setShaderSource( fragShaderSource );
-    fragShader->setType( osg::Shader::FRAGMENT );
-    program->addShader( vertShader );
-    program->addShader( fragShader );
-    geode->getOrCreateStateSet()->setAttribute( program );
 
     return geode;
 }
@@ -123,10 +88,10 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     osg::ref_ptr< osgCuda::Texture2D > trgTexture = new osgCuda::Texture2D;  
     // Note: GL_RGBA8 Bit format is not yet supported by CUDA, use GL_RGBA8UI_EXT instead.
     // GL_RGBA8UI_EXT requires the additional work of scaling the fragment shader
-    // output from 0-1 to 0-255. 
-    trgTexture->setInternalFormat( GL_RGBA8UI_EXT );
-    trgTexture->setSourceFormat( GL_RGBA_INTEGER_EXT );
-    trgTexture->setSourceType( GL_UNSIGNED_BYTE );
+    // output from 0-1 to 0-255. 	
+	trgTexture->setInternalFormat( GL_RGBA32F_ARB );
+    trgTexture->setSourceFormat( GL_RGBA );
+    trgTexture->setSourceType( GL_FLOAT );
     // in case you choose a texture size which is not a multiple of the alignment restriction CUDA 
     // will allocate more memory to fulfill the alignemnt requirements. To get the
     // actual pitch (bytes of a single row) call osgCompute::Memory::getPitch()

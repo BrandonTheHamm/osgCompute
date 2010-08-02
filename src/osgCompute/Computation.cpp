@@ -307,7 +307,6 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     bool osgCompute::Computation::hasResource( const std::string& handle ) const
     {
-        Resource* curResource = NULL;
         for( ResourceHandleListCnstItr itr = _resources.begin(); itr != _resources.end(); ++itr )
         {
             if(	(*itr)._resource.valid() && (*itr)._resource->isIdentifiedBy(handle)  )

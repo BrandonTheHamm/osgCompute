@@ -229,10 +229,9 @@ void sobelKernel( uchar4* trg )
         255);
 }
 
-
 //-------------------------------------------------------------------------
 __global__ 
-void swapKernel( uchar4* trg, unsigned int trgPitch, unsigned int imageWidth, unsigned int imageHeight ) 
+void swapKernel( float4* trg, unsigned int trgPitch, unsigned int imageWidth, unsigned int imageHeight ) 
 {
 
     // compute thread dimension
@@ -248,14 +247,10 @@ void swapKernel( uchar4* trg, unsigned int trgPitch, unsigned int imageWidth, un
         float4 src = tex2D( swapTex, texCoord.x, texCoord.y );
        
         // compute target address 
-        uchar4* target = (uchar4*)(((char*) trg) + trgPitch * y ) + x;
+        float4* target = (float4*)(((char*) trg) + trgPitch * y ) + x;
 
         // swap channels
-        (*target) = make_uchar4( 
-            (unsigned char)(src.z*255.0f), 
-            (unsigned char)(src.x*255.0f),
-            (unsigned char)(src.y*255.0f),
-            (unsigned char)(src.w*255.0f));
+        (*target) = make_float4(src.z,src.x,src.y,src.w);
     }
 }
 
@@ -297,7 +292,7 @@ void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcAr
     cudaError res = cudaBindTextureToArray( swapTex, reinterpret_cast<cudaArray*>(srcArray) );
 
     // call kernel
-    swapKernel<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trgBuffer), trgPitch, imageWidth, imageHeight );
+    swapKernel<<< blocks, threads >>>( reinterpret_cast<float4*>(trgBuffer), trgPitch, imageWidth, imageHeight );
 }
 
 #endif // TEXDEMO_TEXSTREAMER_KERNEL_H

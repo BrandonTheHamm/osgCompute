@@ -933,7 +933,7 @@ namespace osgCuda
             }
             if( getNumDimensions() == 2 )
             {
-                cudaError res = cudaMallocPitch( &memory._devPtr, static_cast<size_t*>(&memory._pitch), getDimension(0) * getElementSize(), getDimension(1) );
+                cudaError res = cudaMallocPitch( &memory._devPtr, (size_t*)(&memory._pitch), getDimension(0) * getElementSize(), getDimension(1) );
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)

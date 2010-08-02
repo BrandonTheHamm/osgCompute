@@ -148,7 +148,7 @@ namespace PtclDemo
 
 //-----------------------------------------------------------------------------
 // Use this function to return a new warp module to the application
-extern "C" OSGCOMPUTE_MODULE_EXPORT osgCompute::Module* OSGCOMPUTE_CREATE_MODULE_FUNCTION( void ) 
+extern "C" OSGCOMPUTE_MODULE_EXPORT osgCompute::Module* OSGCOMPUTE_CREATE_MODULE_FUNCTION() 
 {
     return new PtclDemo::PtclTracer;
 }

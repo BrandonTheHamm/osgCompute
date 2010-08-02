@@ -91,7 +91,6 @@ namespace GeometryDemo
         /////////////////////////
         // COMPUTE KERNEL SIZE //
         /////////////////////////
-        unsigned int val = _vertices->getDimension(0);
         _numBlocks = _vertices->getDimension(0) / 128;
         if( _vertices->getDimension(0) % 128 != 0 )
             _numBlocks+=1;

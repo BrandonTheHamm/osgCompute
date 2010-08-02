@@ -58,7 +58,7 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
 	geometry->setNormalBinding( cowGeometry->getNormalBinding() );
 	geometry->addIdentifier( "WARP_GEOMETRY");
 	// Remove original osg::Geometry
-	bool retval = cowGeode->replaceDrawable( cowGeometry, geometry );
+	cowGeode->replaceDrawable( cowGeometry, geometry );
 	cowGeometry = NULL;
 
 	///////////////////////

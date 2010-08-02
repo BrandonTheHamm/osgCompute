@@ -128,8 +128,6 @@ namespace PtclDemo
         bbmax.y = _seedBoxMax.y();
         bbmax.z = _seedBoxMax.z();
 
-        void* mySeeds = _seeds->map();
-
         ////////////
         // RESEED //
         ////////////
