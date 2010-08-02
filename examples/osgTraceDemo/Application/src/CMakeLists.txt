@@ -2,7 +2,7 @@
 # Set target name und set path to data folder of the target
 #########################################################################
 
-SET(TARGETNAME osgGeometryDemo)
+SET(TARGETNAME osgTraceDemo)
 SET(TARGET_DATA_PATH "${DATA_PATH}/${TARGETNAME}")
 
 
@@ -28,7 +28,7 @@ INCLUDE(FindCuda)
 #########################################################################
 
 # set include dirs
-SET(HEADER_PATH ${osgCompute_SOURCE_DIR}/examples/${TARGETNAME}/include)
+SET(HEADER_PATH ${PROJECT_SOURCE_DIR}/examples/${TARGETNAME}/include)
 INCLUDE_DIRECTORIES(
     ${HEADER_PATH}
     ${OSG_INCLUDE_DIR}
@@ -43,12 +43,11 @@ INCLUDE_DIRECTORIES(
 # collect all headers
 
 SET(TARGET_H
-	 ${HEADER_PATH}/Warp
 )
 
 
 SET(MY_CUDA_SOURCE_FILES
-	Warp.cu
+
 )
 
 # Use the WRAP_CUDA macro.
@@ -57,7 +56,6 @@ WRAP_CUDA( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
 # collect the sources
 SET(TARGET_SRC
 	main.cpp
-	Warp.cpp
 	${CUDA_FILES}
     ${MY_CUDA_SOURCE_FILES} 
 )
@@ -86,8 +84,6 @@ SOURCE_GROUP(
 
 # collect shader files
 SET(MY_SHADER_FILES
-    ${TARGET_DATA_PATH}/shader/WarpMe.vsh
-    ${TARGET_DATA_PATH}/shader/WarpMe.fsh
 )
 
 # finally, use module to build groups

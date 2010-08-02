@@ -89,19 +89,6 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
 }
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Computation> loadComputation()
-{
-	osg::ref_ptr<osgCompute::Computation> computationNode;
-
-	std::string dataFile = osgDB::findDataFile( "osgGeometryDemo/scenes/geomdemo.osgt" );
-	if( !dataFile.empty() )
-		computationNode = dynamic_cast<osgCuda::Computation*>( osgDB::readNodeFile( dataFile ) );
-	
-	return computationNode;
-}
-
-
-//------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
@@ -111,8 +98,7 @@ int main(int argc, char *argv[])
 	/////////////////
 	// COMPUTATION //
 	/////////////////
-	osg::ref_ptr<osgCompute::Computation> computation = loadComputation();
-	if( !computation.valid() ) computation = setupComputation();
+	osg::ref_ptr<osgCompute::Computation> computation = setupComputation();
 
 	osg::ref_ptr<osgCompute::Module> module = computation->getModule( "osgcuda_warp" );
 	if( !module )

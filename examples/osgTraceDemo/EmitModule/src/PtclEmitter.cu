@@ -18,9 +18,27 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 inline __device__ 
-float4 operator+(float4 a, float4 b)
+float lerp(float a, float b, float t)
 {
-    return make_float4(a.x + b.x, a.y + b.y, a.z + b.z,  a.w + b.w);
+    return a + t*(b-a);
+}
+
+//------------------------------------------------------------------------------
+inline __device__
+float4 reseed( float* seeds, unsigned int seedCount, unsigned int seedIdx, unsigned int ptclIdx, float3 bbmin, float3 bbmax )
+{
+    // random seed idx
+    unsigned int idx1 = (seedIdx + ptclIdx) % seedCount;
+    unsigned int idx2 = (idx1 + ptclIdx) % seedCount;
+    unsigned int idx3 = (idx2 + ptclIdx) % seedCount;
+
+    // seeds are within the range [0,1]
+    float intFac1 = seeds[idx1];
+    float intFac2 = seeds[idx2];
+    float intFac3 = seeds[idx3];
+
+    return make_float4(lerp(bbmin.x,bbmax.x,intFac1), lerp(bbmin.y,bbmax.y,intFac3),
+        lerp(bbmin.z,bbmax.z,intFac2), 1);
 }
 
 //------------------------------------------------------------------------------
@@ -40,12 +58,21 @@ unsigned int thIdx()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void moveKernel( float4* ptcls, float etime )
+void reseedKernel( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int seedIdx, float3 bbmin, float3 bbmax )
 {
+    // Receive particle pos
     unsigned int ptclIdx = thIdx();
+    float4 curPtcl = ptcls[ptclIdx];
 
-    // perform a euler step
-    ptcls[ptclIdx] = ptcls[ptclIdx] + make_float4(0,etime,0,0);
+    // Reseed Particles if they
+    // moved out of the bounding box
+    if( curPtcl.x < bbmin.x ||
+        curPtcl.y < bbmin.y ||
+        curPtcl.z < bbmin.z ||
+        curPtcl.x > bbmax.x ||
+        curPtcl.y > bbmax.y ||
+        curPtcl.z > bbmax.z )
+        ptcls[ptclIdx] = reseed( seeds, seedCount, seedIdx, ptclIdx, bbmin, bbmax );
 }
 
 
@@ -54,10 +81,23 @@ void moveKernel( float4* ptcls, float etime )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 extern "C" __host__
-void move( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime )
+void reseed(unsigned int numBlocks, 
+            unsigned int numThreads, 
+            void* ptcls, 
+            void* seeds, 
+            unsigned int seedCount, 
+            unsigned int seedIdx, 
+            float3 bbmin, 
+            float3 bbmax )
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );
 
-    moveKernel<<< blocks, threads >>>(reinterpret_cast<float4*>(ptcls),etime);
+    reseedKernel<<< blocks, threads >>>(
+        reinterpret_cast<float4*>(ptcls),
+        reinterpret_cast<float*>(seeds),
+        seedCount,
+        seedIdx,
+        bbmin,
+        bbmax );
 }

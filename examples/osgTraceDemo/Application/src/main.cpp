@@ -34,9 +34,6 @@
 #include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
 
-#include "PtclMover"
-#include "PtclEmitter"
-
 //------------------------------------------------------------------------------
 osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
@@ -148,8 +145,8 @@ osg::Geode* getGeode( unsigned int numParticles )
     ////////////
     // Add program
     osg::Program* program = new osg::Program;
-    program->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile("osgParticleDemo/shader/PtclSprite.vsh")));
-    program->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile("osgParticleDemo/shader/PtclSprite.fsh")));
+    program->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile("osgTraceDemo/shader/PtclSprite.vsh")));
+    program->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile("osgTraceDemo/shader/PtclSprite.fsh")));
     geode->getOrCreateStateSet()->setAttribute(program);
 
     // Screen resolution for particle sprite
@@ -168,8 +165,8 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
 {
     osg::ref_ptr<osgCompute::Computation> computationEmitter = new osgCuda::Computation;
     computationEmitter->setName( "emit particles computation" );
-    osg::ref_ptr<osgCompute::Computation> computationMover = new osgCuda::Computation;
-    computationMover->setName( "move particles computation" );
+    osg::ref_ptr<osgCompute::Computation> computationTracer = new osgCuda::Computation;
+    computationTracer->setName( "trace particles computation" );
 
     // Execute the computation during the update traversal before the subgraph is handled. 
     // This is the default behaviour. Use the following line to execute the computation in
@@ -177,7 +174,7 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     //osgCompute::Computation::ComputeOrder order = osgCompute::Computation::PRERENDER_AFTERCHILDREN;
     osgCompute::Computation::ComputeOrder order = osgCompute::Computation::UPDATE_BEFORECHILDREN;
     computationEmitter->setComputeOrder( order );
-    computationMover->setComputeOrder( order );
+    computationTracer->setComputeOrder( order );
 
     ///////////////
     // RESOURCES //
@@ -198,24 +195,34 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     ////////////////////
     // SETUP HIERACHY //
     ////////////////////
-    PtclDemo::PtclMover* ptclMover = new PtclDemo::PtclMover;
-    ptclMover->addIdentifier("osgcuda_ptclmover");
-    ptclMover->setLibraryName("osgcuda_ptclmover");
-    PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
-    ptclEmitter->addIdentifier("osgcuda_ptclemitter");
-    ptclEmitter->setLibraryName("osgcuda_ptclemitter");
+    osgCompute::Module* ptclTracer = osgCompute::Module::loadModule("osgcuda_ptcltracer");
+    ptclTracer->addIdentifier( "osgcuda_ptcltracer" );
+    osgCompute::Module* ptclEmitter = osgCompute::Module::loadModule("osgcuda_ptclemitter");
+    ptclEmitter->addIdentifier( "osgcuda_ptclemitter" );
 
     computationEmitter->addModule( *ptclEmitter );  
     computationEmitter->addResource( *seedBuffer );
     // The particle buffer is a leaf of the computation graph
     computationEmitter->addChild( getGeode( numParticles ) );
-    computationMover->addModule( *ptclMover );
-    computationMover->addChild( computationEmitter );
+    computationTracer->addModule( *ptclTracer );
+    computationTracer->addChild( computationEmitter );
 
     // Write this computation to file
-    //osgDB::writeNodeFile( *computationMover, "ptcldemo.osgt" );
+    //osgDB::writeNodeFile( *computationTracer, "tracedemo.osgt" );
 
-    return computationMover;
+    return computationTracer;
+}
+
+//------------------------------------------------------------------------------
+osg::ref_ptr<osgCompute::Computation> loadComputation()
+{
+    osg::ref_ptr<osgCompute::Computation> computationNode;
+
+    std::string dataFile = osgDB::findDataFile( "osgTraceDemo/scenes/tracedemo.osgt" );
+    if( !dataFile.empty() )
+        computationNode = dynamic_cast<osgCuda::Computation*>( osgDB::readNodeFile( dataFile ) );
+
+    return computationNode;
 }
 
 //------------------------------------------------------------------------------
@@ -225,8 +232,8 @@ int main(int argc, char *argv[])
     osg::ArgumentParser arguments(&argc, argv);
     osgViewer::Viewer viewer(arguments);
 
-    osg::Vec3 bbmin(0,0,0);
-    osg::Vec3 bbmax(4,4,4);
+    osg::Vec3 bbmin(-1.f,-1.f,-1.f);
+    osg::Vec3 bbmax(1.f,1.f,1.f);
 
     osg::ref_ptr<osg::Vec3Array> minMaxArray = new osg::Vec3Array(2);
     minMaxArray->at(0) = bbmin;
@@ -235,13 +242,14 @@ int main(int argc, char *argv[])
     /////////////////
     // COMPUTATION //
     /////////////////
-    osg::ref_ptr<osgCompute::Computation> computationMover = setupComputation();
+    osg::ref_ptr<osgCompute::Computation> computation = loadComputation();
+    if( !computation.valid() ) computation = setupComputation();
 
     // Setup dynamic variables
-    osg::ref_ptr<osgCompute::Module> ptclMover = computationMover->getModule( "osgcuda_ptclmover" );
-    ptclMover->setUserData( viewer.getFrameStamp()  );
+    osg::ref_ptr<osgCompute::Module> ptclTracer = computation->getModule( "osgcuda_ptcltracer" );
+    ptclTracer->setUserData( viewer.getFrameStamp()  );
 
-    osg::ref_ptr<osgCompute::Computation> computationEmitter = dynamic_cast<osgCompute::Computation*>( computationMover->getChild(0) );
+    osg::ref_ptr<osgCompute::Computation> computationEmitter = dynamic_cast<osgCompute::Computation*>( computation->getChild(0) );
     osg::ref_ptr<osgCompute::Module> ptclEmitter = computationEmitter->getModule( "osgcuda_ptclemitter" );
     ptclEmitter->setUserData( minMaxArray.get() );
 
@@ -249,7 +257,7 @@ int main(int argc, char *argv[])
     // SETUP SCENE //
     /////////////////
     osg::Group* scene = new osg::Group;
-    scene->addChild( computationMover );
+    scene->addChild( computation );
     scene->addChild(getBoundingBox( bbmin, bbmax ));
 
     //////////////////
