@@ -84,6 +84,8 @@ SOURCE_GROUP(
 
 # collect shader files
 SET(MY_SHADER_FILES
+	${TARGET_DATA_PATH}/shader/PtclSprite.fsh
+	${TARGET_DATA_PATH}/shader/PtclSprite.vsh
 )
 
 # finally, use module to build groups
@@ -120,7 +122,13 @@ SET(TARGET_VARS_LIBRARIES
 	OSGDB_LIBRARY
     CUDA_RUNTIME_LIBRARY
 )
-	
+
+# if a dependency to a lib is necessary which has NOT been linked already (e.g. plugins, modules)
+# then put it here!
+SET(MODULE_DEPENDENCIES
+    osgcuda_ptclemitter
+    osgcuda_ptcltracer
+)
 
 #########################################################################
 # Example setup and install
