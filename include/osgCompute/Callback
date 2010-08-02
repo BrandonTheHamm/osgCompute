@@ -95,8 +95,9 @@ namespace osgCompute
 
     //! Computation callback class
     /**
-    * Callback class which is used for adding launch callbacks to computation nodes or modules.<br>
-    * This allows users to customize a callback function during the rendering.
+    * Callback class which is used for adding launch callbacks to computation nodes.<br>
+    * This allows users to customize the order in which modules are launched. The callback function is called 
+	* before modules are launched.
     *
     */
     class LIBRARY_EXPORT LaunchCallback : public virtual osg::Object

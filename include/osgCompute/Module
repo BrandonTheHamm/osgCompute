@@ -46,45 +46,143 @@ typedef osgCompute::Module* (*OSGCOMPUTE_CREATE_MODULE_FUNCTION_PTR)( void );
 
 namespace osgCompute
 {
+    //! Modules implement the application specific algorithms
     /**
+	* A module is the base class to implement application specific parallel algorithms. 
+	* Modules can be used in combination with computation nodes. A module then is attached to a
+	* computation node an will be executed either during the update cycle or during the 
+	* render cycle of the scene (see launch()). Additionaly, a computation will forward resources
+	* that are located in its sub-graph to each attached module via acceptResource(). A module 
+	* should check for resources during init() and should execute its algorithm during the launch() method.
+	* A module can also allocate its own resources. 
     */
     class LIBRARY_EXPORT Module : public Resource
     {
     public:
+		/**
+		Constructor. 
+		*/
         Module() { clearLocal(); }
 
+		/**
+		This function should be used to create and initialize all resources necessary for the algorithm
+		If the module is attached to computation node the function is called once before launch() and every
+		time the module returns true on isClear().
+		*/
         virtual bool init();
+		/**
+		The launch method is the core function of each algorithm. A computation node will call launch of its
+		modules in each frame as long as the module returns true on isEnabled().
+		*/
         virtual void launch() = 0;
-
+		/**
+		The accept resource method exchanges resources between this modules and other modules that are spread throughout
+		the current graph. A module can use the isIdentifiedBy() method of resources to check if
+		the resource is required by an algorithm or not.
+		*/
         virtual void acceptResource( Resource& resource );
-        virtual bool usesResource( const std::string& handle ) const;
+
+		/**
+		Users should (not necessarily) overwrite this method and return true if a resource with this identifier 
+		is referenced by this module.
+		*/
+        virtual bool usesResource( const std::string& identifier ) const;
+		/**
+		Users should (not necessarily) overwrite this method in order to remove the referenced resource.
+		*/
         virtual void removeResource( const Resource& resource );
-        virtual void removeResource( const std::string& handle );
-        virtual Resource* getResource( const std::string& handle );
-        virtual const Resource* getResource( const std::string& handle ) const;
-        virtual void getResources( ResourceList& resourceList, const std::string& handle );
+		/**
+		Users should (not necessarily) overwrite this method in order to remove the resource with this identifier.
+		*/
+        virtual void removeResource( const std::string& identifier );
+		/**
+		Users should (not necessarily) overwrite this method to return the resource with this identifier and NULL if the 
+		the resource is not used.
+		*/
+        virtual Resource* getResource( const std::string& identifier );
+		/**
+		Users should (not necessarily) overwrite this method to return the resource with this identifier and NULL if the 
+		the resource is not used.
+		*/
+        virtual const Resource* getResource( const std::string& identifier ) const;
+		/**
+		Users should (not necessarily) overwrite this method and return all utilized resources with this identifier in resource list.
+		*/
+        virtual void getResources( ResourceList& resourceList, const std::string& identifier );
+		/**
+		Users should (not necessarily) overwrite this method and return all utilized resources in resource list.
+		*/
         virtual void getAllResources( ResourceList& resourceList );
 
+		/**
+		Add a update callback.
+		*/
         virtual void setUpdateCallback( ModuleCallback* uc );
+		/**
+		Returns a pointer to the update callback and NULL if no update callback is attached.
+		*/
         virtual ModuleCallback* getUpdateCallback();
+		/**
+		Returns a pointer to the update callback and NULL if no update callback is attached.
+		*/
         virtual const ModuleCallback* getUpdateCallback() const;
+		/**
+		Add a event callback.
+		*/
         virtual void setEventCallback( ModuleCallback* ec );
+		/**
+		Returns a pointer to the event callback and NULL if no update callback is attached.
+		*/
         virtual ModuleCallback* getEventCallback();
+		/**
+		Returns a pointer to the event callback and NULL if no update callback is attached.
+		*/
         virtual const ModuleCallback* getEventCallback() const;
 
+		/**
+		A module is enabled by default. An enabled module can be executed.
+		*/
         virtual void enable();
+		/**
+		Use this function to disable a module and prevent it from being launched.
+		*/
         virtual void disable();
+		/**Returns true if the module is enabled*/
         virtual bool isEnabled() const;
 
+		/**
+		Returns the library name of the module. The library name is required during
+		the dynamic load (See loadModule() ).
+		*/
 		virtual const std::string& getLibraryName() const;
+		/**
+		Returns the library name of the module. The library name is required during
+		the dynamic load (See loadModule() ).
+		*/
 		virtual std::string& getLibraryName();
+		/**
+		Set the library name of this module. The library name is required during
+		the dynamic load (See loadModule()).
+		*/
 		virtual void setLibraryName( const std::string& libraryName );
 
-        virtual void clear();
-
+		/**
+		Use this function to load a module as a dynamic library. osgDB methods are
+		utilized to encapsulate platform dependent loading methods. After the module
+		has been loaded the function will call the exported create()-function to return
+		a pointer to a new object of type module. If the load fails then NULL is returned.
+		*/
 		static Module* loadModule( const std::string& libraryName );
+		/**
+		Returns true if osgDB can find a dynamic library with that library name. The method will
+		not check for the success of the create()-function.
+		*/
 		static bool existsModule( const std::string& libraryName );
 
+		/**
+		Removes all referenced resources.
+		*/
+        virtual void clear();
     protected:
         virtual ~Module() { clearLocal(); }
         void clearLocal();

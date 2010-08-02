@@ -66,21 +66,87 @@ namespace osgCompute
 	typedef std::list< ResourceHandle >::iterator					ResourceHandleListItr;
 	typedef std::list< ResourceHandle >::const_iterator				ResourceHandleListCnstItr;
 
-    //! Abstract base node of any computation
+    //! Abstract base node for computations.
     /**
-    * A computation node allows you to execute your own parallel code during the rendering within                   <br>
-    * a scene graph. Your code should be encapsulated by modules which are added to                                 <br>
-    * a computation by addModule() and is executed in the order they were added. Please use a                       <br>
-    * launch callback to change the order in which the modules are executed or derive from                          <br>
-    * a computation in order to define your own computations.                                                       <br>
-    * Please note that the rendering of the computation's sub graph is enabled by default.                          <br> 
-    * ( see xxx to disable the traversal of the sub-graph in order to remove the sub-graph from rendering ).        <br>
-    * Parameters that should be shared throughout modules can be added via addModule(). Please note            <br>
-    * that each param is referenced by a handle and modules comparing these handles in order to accept parameters.  <br>
-    **/                                                                                                         
+    * A computation node allows you to execute your own parallel code/modules during <b>the update cycle or the rendering cycle</b> 
+	* of your scene. However, if you do not need any interoperability with OpenGL you can launch your modules at any place and you 
+	* do not need a computation node at all. A computation does the context handling between OpenGL and the compute API (e.g. CUDA). It 
+	* does not implement specific algorithms its only a <b>container class</b> where you can add 
+	* your osgCompute::Module objects. A module then implements specific algorithms, just like osg::Program is a container for your osg::Shader objects.
+	* <br />
+	* You can add an arbitray graph to a computation node. Every resource ( of type osgCompute::Resource ) that is 
+	* located in this subgraph will be forwarded to modules which have been attached to the computation by addModule(). If the subgraph changes
+	* very often, then use setAutoCheckSubgraph() to search for changes in each frame. Otherwise a computation searches for resources only once during
+	* the first traversal.
+    * Additional parameters that are not located in the sub-graph can be added via addResource(). Please note                
+	* that each param is referenced by an identifier and modules should compare these identifiers in order to accept their resources of interest. 
+	* The rendering of a computation's sub-graph is enabled by default.                          
+    * ( see osg::Node::setNodeMask() to disable the traversal of the sub-graph in order to remove the sub-graph from the rendering cycle).
+	* <br />
+	* osgCompute::Computation is an interface class and you have to allocate a specialized computation like a osgCuda::Computation. 
+	* For example to execute a CUDA algorithm which utilizes OpenGL memory you have to do the following steps:
+	* 
+	\code
+	 osg::ref_ptr<osgCompute::Computation> myComputation = new osgCuda::Computation;
+	 myComputation->addModule( myCudaAlgorithm );
+	 myComputation->setComputeOrder( osgCompute::Computation::UPDATE_BEFORECHILDREN );
+	 myComputation->addChild( mySceneWithOpenGLResources );
+	 someGroupNode->addChild( myComputation );
+	\endcode
+	*
+	* <br />
+	*
+	* To add additional resource directly, e.g. a osgCuda::Buffer, use the addResource() method:
+	\code
+	 osg::ref_ptr<osgCompute::Memory> myBuffer = new osgCuda::Buffer;
+	 myComputation->addResource( myBuffer );
+	\endcode
+	*
+	* <br />
+	*
+	* Modules are executed in the order they have been attached. For example, myFirstAlgorithm is
+	* executed before mySecondAlgorithm with the following definition:
+	\code
+	 myComputation->addModule( myFirstAlgorithm );
+	 myComputation->addModule( mySecondAlgorithm );
+	\endcode
+    *   
+	* <br />
+	* You can define your own execution order if you use a osgCompute::LaunchCallback(): 
+	\code
+	 osg::ref_ptr<osgCompute::LaunchCallback> myLaunchCallback = new MyOwnLaunchCallback();
+	 myComputation->setLaunchCallback( myLaunchCallback );
+	
+	 ...
+	
+	 virtual void MyOwnLaunchCallback::operator()( Computation& computation )
+	 {
+	   osgCompute::ModuleList& modules = computation.getModules();
+	   modules[1]->launch(); //mySecondAlgorithm
+	   modules[0]->launch(); //myFirstAlgorithm
+	 }
+	\endcode
+	*
+	* <br />
+	*
+	* You have to specify at which time during the traversals modules should be launched (see xxx). With the following command you 
+	* will execute your code during the update cycle before the subgraph is traversed:
+	\code
+	 myComputation->setComputeOrder( osgCompute::Computation::UPDATE_BEFORECHILDREN );
+	\endcode
+    **/                                                                                                        
     class LIBRARY_EXPORT Computation : public osg::Group
     {
     public: 
+		/**
+			The compute order defines when a computation should be executed during the traversals. 
+			Currently modules will be executed only during the render traversal (PRERENDER or POSTRENDER) or 
+			the update traversal (UPDATE). However you still have to decide if and when the child nodes are traversed. AFTERCHILDREN
+			will launch the modules after the subgraph has been traversed. BEFORECHILDREN will launch them before
+			any child nodes are handled. NOCHILDREN will completely stop the traversal after the modules have been
+			launched. If you decide to execute the modules during the render traversal you have to choose between PRERENDER or POSTRENDER
+			in the same way as for osgUtil::RenderBins.
+		*/
         enum ComputeOrder
         {
             PRERENDER_AFTERCHILDREN = OSGCOMPUTE_PRERENDER | OSGCOMPUTE_AFTERCHILDREN,
@@ -97,79 +163,88 @@ namespace osgCompute
 
     public:
 
-        /** Constructor. The object will be initialized with default values. */
+        /** 
+		* Constructor. The object will be initialized with the compute order UPDATE_BEFORECHILDREN and is enabled by default.
+		*/
         Computation();
 
         /** 
         * Is called during the traversal of the graph. Overwrite this method
-        * in a derived class to design your own traversal.
+        * in a derived class to design your own traversal. During the first update traversal a resource visitor will 		
+		* collect resources in the sub-graph. These resources are then forwarded to the attached modules. 
         */
         virtual void accept( osg::NodeVisitor& nv );
 
-        /** The derived class must provide a valid library name of the required computation bin. */
-        virtual std::string binLibraryName() const = 0;
-        /** The derived class must provide a valid class name of the required computation bin. */
-        virtual std::string binClassName() const = 0;
-
-        /** The derived class must provide a valid library name of the required computation bin. */
-        virtual std::string visitorLibraryName() const = 0;
-        /** The derived class must provide a valid class name of the required computation bin. */
-        virtual std::string visitorClassName() const = 0;
-        /** The derived class must provide a method which allows to create new bins*/
-        virtual osgCompute::ResourceVisitor* newVisitor() const = 0;
+		/** The derived class must provide a valid library name of the required computation bin. */
+		virtual std::string binLibraryName() const = 0;
+		/** The derived class must provide a valid class name of the required computation bin. */
+		virtual std::string binClassName() const = 0;
+		/** The derived class must provide a valid library name of the required computation bin. */
+		virtual std::string visitorLibraryName() const = 0;
+		/** The derived class must provide a valid class name of the required computation bin. */
+		virtual std::string visitorClassName() const = 0;
+		/** The derived class must provide a method which allows to create new bins*/
+		virtual osgCompute::ResourceVisitor* newVisitor() const = 0;
 
         /** Add a module to the computation. */
         virtual void addModule( Module& module );
-
-        /** Remove the module by providing a reference to the module. */
+        /** Remove the module by reference. */
         virtual void removeModule( Module& module );
-
-        /** Remove the module by providing the module's name. */
+        /** Remove the module by identifier. */
         virtual void removeModule( const std::string& moduleIdentifier );
-
-		/** Returns true if the computation uses a module of module name. */
+		/** Returns the module with this identifier. Returns NULL if it does not exist*/
 		virtual const Module* getModule( const std::string& moduleIdentifier ) const;
-
-		/** Returns true if the computation uses the module. */
+		/** Returns the module with this identifier. Returns NULL if it does not exist. */
 		virtual Module* getModule( const std::string& moduleIdentifier );
-
-
-        /** Returns true if the computation uses a module of module name. */
+        /** Returns true if the computation uses the referenced module. */
         virtual bool hasModule( const std::string& moduleIdentifier ) const;
-
         /** Returns true if the computation uses the module. */
         virtual bool hasModule( Module& module ) const;
-
         /** Returns true if the computation has modules at all. */
         virtual bool hasModules() const;
-
-        /** Return all modules. */
+        /** Return all modules.  The returned list is empty if no module is attached.*/
         virtual ModuleList& getModules();
+		/** Return all modules.  The returned list is empty if no module is attached.*/
         virtual const ModuleList& getModules() const;
-
-        /** Return the number of modules. */
+        /** Return the number of attached modules. */
         virtual unsigned int getNumModules() const;
-
+		/** Remove all attached modules. */
         virtual void removeModules();
 
-        /** Add a resource to the computation. */
+        /** Adds a resource to all currently or later attached modules. */
 		virtual void addResource( Resource& resource, bool attach = true );
-        virtual void removeResource( const std::string& handle );
+		/** Remove resource by identifier. Does nothing if no module with that identifier can be found.*/
+        virtual void removeResource( const std::string& identifier );
+		/** Remove resource by reference. Does nothing if no module with that identifier can be found. */
         virtual void removeResource( Resource& resource );
+		/** Returns true if the computation has a resource which is addressed by this identifier. */
         virtual bool hasResource( const std::string& handle ) const;
+		/** Returns true if the computation has this resource. */
 		virtual bool hasResource( Resource& resource ) const;
+		/** Returns true if resource has been attached to the computation. */
 		virtual bool isResourceAttached( Resource& resource ) const;
+		/** Returns all resources of that computation. */
         virtual ResourceHandleList& getResources();
+		/** Returns all resources of that computation. */
         virtual const ResourceHandleList& getResources() const;
-
+		/** Remove all resources. */
         virtual void removeResources();
-
+		/** Notify computation that subgraph has changed. The computation will collect all resources of the new sub-graph during 
+		* the next update traversal.
+ 		*/
         virtual void subgraphChanged();
-
+		/**
+		* Return a pointer to the parent computation node and NULL if there is none.
+		*/
         virtual Computation* getParentComputation() const;
-
+		/**
+		* Set a launch callback. You can use a launch callback to define a different execution order for the modules. This callback
+		* replaces the internal default launch() function. 
+		*/
         virtual void setLaunchCallback( LaunchCallback* lc );
+		/** Returns the launch callback and NULL if there is none. */
         virtual LaunchCallback* getLaunchCallback();
+		/** Returns the launch callback and NULL if there is none.*/
         virtual const LaunchCallback* getLaunchCallback() const;
 
         /** 
@@ -181,22 +256,29 @@ namespace osgCompute
         /** Returns the compute order */
         virtual ComputeOrder getComputeOrder() const;
 
-
+		/** 
+		* Set this flag to true if the computation's sub-graph changes very often. 
+		* The computation will search for resources in each update traversal.
+		*/
         virtual void setAutoCheckSubgraph( bool autoCheckSubgraph );
+		/** Returns true if the AutoCheckSubgraph flag is activated.*/
         virtual bool getAutoCheckSubgraph() const;
-
         /** Activates the computation (a computation is enabled by default) */
         virtual void enable();
 
-        /** If the computation is disabled its modules won't be executed during rendering */
+        /** Calling this method will deactivate all modules. */
         virtual void disable();
 
-        /** check whether the module is enabled */
+        /** Returns true if the computation and its modules are enabled */
         virtual bool isEnabled() const;
 
-        /** Restore object to default state. Calls clearLocal(). */
+        /** Restore object to default state (Before initialization). Calls clearLocal(). */
         virtual void clear();
-
+		/** 
+		* Method is called by OSG to release all OpenGL resources. 
+		* All resources used within the state's context will be released including the non GL 
+		* resources.
+		*/
         virtual void releaseGLObjects( osg::State* state ) const;
 
     protected:

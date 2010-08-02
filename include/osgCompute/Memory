@@ -30,6 +30,14 @@ namespace osgCompute
         SYNC_ARRAY  = 0x100,
     };
 
+	/**
+	* During the map() function a memory resource expects a flag
+	* where to map the data. If MAP_HOST_XXX the data can be used on the 
+	* CPU side. If MAP_DEVICE_XXX a pointer to the device memory is returned.
+	* If the data is mapped as MAP_XXX_SOURCE then the memory object is utilized as
+	* read only and is not used for writing. Otherwise if 
+	* MAP_XXX_TARGET is specified, the data is accessed for writing.
+	*/
     enum Mapping
     {
         UNMAP                       = 0x00000000,
@@ -42,8 +50,8 @@ namespace osgCompute
         MAP_DEVICE_ARRAY            = 0x00001000,
     }; 
 
-    //! A MemoryObject provides internal information about the memory resources of a memory area on the device.
-    /** 
+    // A MemoryObject provides internal information about the memory resources of a memory area on the device.
+    /* 
     Every time a buffer is mapped an object of this type is created. All allocations are done lazily
     at the time Memory::map is called. You can remove the handle by calling Memory::clear(). However, as a 
     normal user you should never get into contact with MemoryObjects. Such objects are hidden from application developers. 
@@ -73,25 +81,47 @@ namespace osgCompute
         MemoryObject& operator=( const MemoryObject& ) { return *this; }
     };
 
-    //! Memories allow developers to deal with memory resources on an abstract level.
+//! Memory objects allow developers to deal with memory resources on an abstract level.
     /**
-    A buffer handles device memory as well as host memory. At least you have to specify the dimensions of a buffer and
-    the size of a single element. The following example shows how to setup a 1D buffer with 125000 floats: 
+    * A memory object handles device memory as well as host memory. At least you have to specify the dimensions of a buffer and
+    * the size of a single element. The following example shows how to setup a 1D CUDA buffer with 125000 floats: 
+
     \code
+	osg::ref_ptr<osgCompute::Memory> someMemory = new osgCuda::Buffer;
     someMemory->setDimension( 0, 125000 );
     someMemory->setElementSize( sizeof(float) );
     \endcode
-    At any time when you call the mapping function (Memory::map) the respective memory block then is allocated lazily 
-    within the desired memory space. So in order to allocate the buffer on the device memory just use one of the following
-    function calls:
+    
+	<br />
+
+	* At any time when you call the mapping function (Memory::map) the respective memory block then is allocated lazily 
+    * within the desired memory space. So in order to allocate the buffer on the device memory just use one of the following
+    * function calls:
+
     \code
-    void* devPtr = someMemory->map( context, osgCompute::MAP_DEVICE );
+	// first call to map() will allocate the required memory
+    void* devPtr = someMemory->map( osgCompute::MAP_DEVICE );
     // or as osgCompute::MAP_DEVICE is the default paramter...
-    void* devPtr = someMemory->map( context );
+    void* devPtr = someMemory->map();
     // or access the buffer with an offset of 120000 bytes
-    void* devPtr = someMemory->map( context, osgCompute::MAP_DEVICE, 120000 );
+    void* devPtr = someMemory->map( osgCompute::MAP_DEVICE, 120000 );
     \endcode
-    */
+
+	<br />
+
+	* Whenever you have mapped a memory with MAP_HOST_TARGET the memory will be copied to the device if you use MAP_DEVICE_XXX afterwards:
+	
+	\code
+	// we are going to write to the host memory
+	void* hostPtr = someMemory->map( osgCompute::MAP_HOST_TARGET );
+	memset( hostPtr, 0x0, someMemory->getByteSize() );
+
+	// With the following call the initialized host data is copied to the device memory ...
+	void* devPtr = someMemory->map( osgCompute::MAP_DEVICE_SOURCE );
+    \endcode
+	
+
+	*/
     class LIBRARY_EXPORT Memory : public Resource
     {  
     public:
@@ -100,36 +130,112 @@ namespace osgCompute
 
         virtual bool init();
 
-        /***/
+        /**
+		* Will return a pointer to the respective memory. If the mapping context differs from the last call to this
+		* function the memory object will check if synchronization between contexts is required. If the memory is
+		* used within OpenGL then the memory is mapped from the OpenGL context to the current compute context (e.g. CUDA context).
+		*/
         virtual void* map( unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) = 0;
-        virtual void unmap( unsigned int hint = 0 ) = 0;
+        /**
+		* Unmap() makes the previously mapped pointer invalid. If the memory exists in the OpenGL context
+		* the respective memory is mapped back to OpenGL. The function is automatically called whenever the object will be used for rendering.
+		*/
+		virtual void unmap( unsigned int hint = 0 ) = 0;
+		/**
+		* This method clears the current memory and resets it to the state which has been before the first call to map(). 
+		*/
         virtual bool reset( unsigned int hint = 0  ) = 0;
+
         virtual bool isMappingAllowed( unsigned int mapping, unsigned int hint = 0 ) const = 0;
+		/**
+		* Returns the current mapping state.
+		*/
         virtual unsigned int getMapping( unsigned int hint = 0 ) const;
+		/**
+		* 2D or 3D memory objects have to allocate some additional memory in order to fulfill the
+		* alignment requirements of the underlying hardware. With getPitch() the number of Bytes for 
+		* a single row of memory is returned. This byte count might be different to getDimension(0)*getElementSize().
+		* Use this function to determine the offset to each new row whenever your memory is two dimensional or three dimensional. 
+		*/
         virtual unsigned int getPitch( unsigned int hint = 0 ) const;
 
+		/**
+		* Set the byte size of one element.
+		*/
         virtual void setElementSize( unsigned int elementSize );
+		/**
+		* Returns the byte size of one element.
+		*/
         virtual unsigned int getElementSize() const;
+		/**
+		* Returns the overall logical byte size. For 2D or 3D memory blocks this might be 
+		* not the same as the allocated byte size, because the allocated pitch might differ from getDimension(0)*getElementSize().
+		*/
         virtual unsigned int getByteSize() const;
-
+		/**
+		* Set the number of elements for the specified dimension.
+		*/
         virtual void setDimension( unsigned int dimIdx, unsigned int dimSize );
+		/**
+		* Returns the number of elements for the specified dimension.
+		*/
         virtual unsigned int getDimension( unsigned int dimIdx ) const;
+		/**
+		* Returns the number of dimensions for a memory block
+		*/
         virtual unsigned int getNumDimensions() const;
+		/**
+		* Returns the overall number of elements.
+		*/
         virtual unsigned int getNumElements() const;
 
-
+		/**
+		* Set specific allocation hints.
+		*/
         virtual void setAllocHint( unsigned int allocHint );
+		/**
+		* Returns the allocation hints.
+		*/
         virtual unsigned int getAllocHint() const;
-
+		
+		/**
+		* Set a subload callback to initialize the memory after allocation. Allocation is done lazily during
+		* the first call to map(). The subload callback is called whenever map() is called.
+		*/
         virtual void setSubloadCallback( SubloadCallback* sc );
+		/**
+		* Returns the attached subload callback and NULL if no callback is attached.
+		*/
         virtual SubloadCallback* getSubloadCallback();
+		/**
+		* Returns the attached subload callback and NULL if no callback is attached.
+		*/
         virtual const SubloadCallback* getSubloadCallback() const;
 
+		/**
+		* If the memory objects consist of more than one block, swap() will switch
+		* the current block. The increment parameter is used to swap the block by incr number of times.
+		* Blocks are utilized e.g. by pingpong buffers. By default only one block is expected.
+		*/
         virtual void swap( unsigned int incr = 1 );
+		/**
+		* Returns the current active block index.
+		* Blocks are utilized e.g. by pingpong buffers. By default there is only one block.
+		*/
         virtual unsigned int getSwapIdx() const;
+		/**
+		* Returns the number of blocks.
+		* Blocks are utilized e.g. by pingpong buffers. By default there is only one block.
+		*/
         virtual unsigned int getSwapCount() const;
 
+		/**
+		* Will set the memory to a clear state. This method will release all allocated memory blocks.
+		*/
         virtual void clear();
+		/**
+		* Release the memory block associated with the current context.
+		*/
         virtual void clearCurrent();
     protected:
         virtual ~Memory();
