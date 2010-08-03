@@ -88,4 +88,10 @@ LINK_WITH_VARIABLES(${LIB_NAME}
     CUDA_RUNTIME_LIBRARY
 )
 
+
+# Do not use 'lib' prefix in e.g. linux - this
+# is a common rule for all plugins in OSG
+SET_TARGET_PROPERTIES( ${LIB_NAME} PROPERTIES PREFIX "" )
+
+
 INCLUDE(ModuleInstall OPTIONAL)
