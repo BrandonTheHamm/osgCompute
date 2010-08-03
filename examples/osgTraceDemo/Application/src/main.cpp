@@ -196,19 +196,23 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     // SETUP HIERACHY //
     ////////////////////
     osgCompute::Module* ptclTracer = osgCompute::Module::loadModule("osgcuda_ptcltracer");
-    osgCompute::Module* ptclEmitter = osgCompute::Module::loadModule("osgcuda_ptclemitter");
-
-    if ( ptclTracer && ptclEmitter )
+    if( ptclTracer )
     {
         ptclTracer->addIdentifier( "osgcuda_ptcltracer" );
-        ptclEmitter->addIdentifier( "osgcuda_ptclemitter" );
-        computationEmitter->addModule( *ptclEmitter );  
-        computationEmitter->addResource( *seedBuffer );
-        // The particle buffer is a leaf of the computation graph
-        computationEmitter->addChild( getGeode( numParticles ) );
         computationTracer->addModule( *ptclTracer );
-        computationTracer->addChild( computationEmitter );
     }
+
+    osgCompute::Module* ptclEmitter = osgCompute::Module::loadModule("osgcuda_ptclemitter");
+    if( ptclEmitter )
+    {
+        ptclEmitter->addIdentifier( "osgcuda_ptclemitter" );
+        computationEmitter->addModule( *ptclEmitter );
+    }
+
+    computationEmitter->addResource( *seedBuffer );
+    // The particle buffer is a leaf of the computation graph
+    computationEmitter->addChild( getGeode( numParticles ) );
+    computationTracer->addChild( computationEmitter );
 
     // Write this computation to file
     //osgDB::writeNodeFile( *computationTracer, "tracedemo.osgt" );
@@ -250,7 +254,7 @@ int main(int argc, char *argv[])
 
     // Setup dynamic variables
     osg::ref_ptr<osgCompute::Module> ptclTracer = computation->getModule( "osgcuda_ptcltracer" );
-    if( !ptclTracer )
+    if( !ptclTracer.valid() )
     {
         osg::notify(osg::FATAL) << "Cannot find module identified by osgcuda_ptcltracer." << std::endl;
         return -1;
@@ -259,7 +263,7 @@ int main(int argc, char *argv[])
 
     osg::ref_ptr<osgCompute::Computation> computationEmitter = dynamic_cast<osgCompute::Computation*>( computation->getChild(0) );
     osg::ref_ptr<osgCompute::Module> ptclEmitter = computationEmitter->getModule( "osgcuda_ptclemitter" );
-    if( !ptclEmitter )
+    if( !ptclEmitter.valid() )
     {
         osg::notify(osg::FATAL) << "Cannot find module identified by osgcuda_ptclemitter." << std::endl;
         return -1;
