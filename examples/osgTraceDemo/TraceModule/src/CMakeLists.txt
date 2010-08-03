@@ -7,8 +7,7 @@
 #########################################################################
 
 SET(LIB_NAME osgcuda_ptcltracer)
-SET(MODULE_NAME osgCudaPtclTracer)
-SET(LIB_NAME_LABEL "Module ${MODULE_NAME}")
+SET(LIB_NAME_LABEL "Module ${LIB_NAME}")
 
 
 #########################################################################
@@ -20,13 +19,6 @@ INCLUDE(Findosg)
 INCLUDE(FindosgDB)
 INCLUDE(Findmatlab)
 INCLUDE(FindCuda)
-
-#########################################################################
-# Set path to header files
-#########################################################################
-
-SET(HEADER_PATH ${PROJECT_SOURCE_DIR}/include/${MODULE_NAME})
-
 
 #########################################################################
 # Set basic include directories
@@ -97,6 +89,8 @@ ENDIF(DYNAMIC_LINKING)
 
 # install the module to the executable of the application 
 INSTALL(TARGETS ${LIB_NAME} LIBRARY DESTINATION share/bin)
+
+SET_TARGET_PROPERTIES(${LIB_NAME} PROPERTIES PROJECT_LABEL "${LIB_NAME_LABEL}")
 
 #########################################################################
 # Linking

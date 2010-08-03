@@ -7,8 +7,7 @@
 #########################################################################
 
 SET(LIB_NAME osgcuda_ptclemitter)
-SET(MODULE_NAME osgCudaPtclEmitter)
-SET(LIB_NAME_LABEL "Module ${MODULE_NAME}")
+SET(LIB_NAME_LABEL "Module ${LIB_NAME}")
 
 
 #########################################################################
@@ -97,6 +96,9 @@ ENDIF(DYNAMIC_LINKING)
 
 # install the module to the executable of the application 
 INSTALL(TARGETS ${LIB_NAME} LIBRARY DESTINATION share/bin)
+
+
+SET_TARGET_PROPERTIES(${LIB_NAME} PROPERTIES PROJECT_LABEL "${LIB_NAME_LABEL}")
 
 #########################################################################
 # Linking
