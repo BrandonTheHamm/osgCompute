@@ -196,16 +196,19 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     // SETUP HIERACHY //
     ////////////////////
     osgCompute::Module* ptclTracer = osgCompute::Module::loadModule("osgcuda_ptcltracer");
-    ptclTracer->addIdentifier( "osgcuda_ptcltracer" );
     osgCompute::Module* ptclEmitter = osgCompute::Module::loadModule("osgcuda_ptclemitter");
-    ptclEmitter->addIdentifier( "osgcuda_ptclemitter" );
 
-    computationEmitter->addModule( *ptclEmitter );  
-    computationEmitter->addResource( *seedBuffer );
-    // The particle buffer is a leaf of the computation graph
-    computationEmitter->addChild( getGeode( numParticles ) );
-    computationTracer->addModule( *ptclTracer );
-    computationTracer->addChild( computationEmitter );
+    if ( ptclTracer && ptclEmitter )
+    {
+        ptclTracer->addIdentifier( "osgcuda_ptcltracer" );
+        ptclEmitter->addIdentifier( "osgcuda_ptclemitter" );
+        computationEmitter->addModule( *ptclEmitter );  
+        computationEmitter->addResource( *seedBuffer );
+        // The particle buffer is a leaf of the computation graph
+        computationEmitter->addChild( getGeode( numParticles ) );
+        computationTracer->addModule( *ptclTracer );
+        computationTracer->addChild( computationEmitter );
+    }
 
     // Write this computation to file
     //osgDB::writeNodeFile( *computationTracer, "tracedemo.osgt" );
@@ -247,10 +250,20 @@ int main(int argc, char *argv[])
 
     // Setup dynamic variables
     osg::ref_ptr<osgCompute::Module> ptclTracer = computation->getModule( "osgcuda_ptcltracer" );
+    if( !ptclTracer )
+    {
+        osg::notify(osg::FATAL) << "Cannot find module identified by osgcuda_ptcltracer." << std::endl;
+        return -1;
+    }
     ptclTracer->setUserData( viewer.getFrameStamp()  );
 
     osg::ref_ptr<osgCompute::Computation> computationEmitter = dynamic_cast<osgCompute::Computation*>( computation->getChild(0) );
     osg::ref_ptr<osgCompute::Module> ptclEmitter = computationEmitter->getModule( "osgcuda_ptclemitter" );
+    if( !ptclEmitter )
+    {
+        osg::notify(osg::FATAL) << "Cannot find module identified by osgcuda_ptclemitter." << std::endl;
+        return -1;
+    }
     ptclEmitter->setUserData( minMaxArray.get() );
 
     /////////////////

@@ -95,6 +95,8 @@ ELSE (DYNAMIC_LINKING)
     ADD_LIBRARY(${LIB_NAME} STATIC ${TARGET_SRC} ${TARGET_H})
 ENDIF(DYNAMIC_LINKING)
 
+# install the module to the executable of the application 
+INSTALL(TARGETS ${LIB_NAME} LIBRARY DESTINATION share/bin)
 
 #########################################################################
 # Linking
@@ -115,10 +117,3 @@ LINK_WITH_VARIABLES(${LIB_NAME}
 	OSGDB_LIBRARY
     CUDA_RUNTIME_LIBRARY
 )
-
-
-
-
-
-
-INCLUDE(ModuleInstall OPTIONAL)
