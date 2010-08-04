@@ -100,6 +100,13 @@ INSTALL(TARGETS ${LIB_NAME} LIBRARY DESTINATION share/bin)
 
 SET_TARGET_PROPERTIES(${LIB_NAME} PROPERTIES PROJECT_LABEL "${LIB_NAME_LABEL}")
 
+# ensure that NO debug / release folder is created in "build" directory
+# we need this here explicitly because we do not use INCLUDE(ModuleInstall OPTIONAL) 
+IF(MSVC)
+	SET_TARGET_PROPERTIES(${LIB_NAME} PROPERTIES PREFIX "../")
+ENDIF(MSVC)
+
+
 #########################################################################
 # Linking
 #########################################################################
