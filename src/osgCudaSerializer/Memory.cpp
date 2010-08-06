@@ -52,5 +52,7 @@ REGISTER_OBJECT_WRAPPER(osgCompute_Memory,
 	ADD_UINT_SERIALIZER( ElementSize, 0 );
 	ADD_USER_SERIALIZER( Dimensions );
 	ADD_UINT_SERIALIZER( AllocHint, 0 );
+    ADD_UINT_SERIALIZER( SwapCount, 0 );
+    ADD_UINT_SERIALIZER( SwapIdx, 0 );
 }
 

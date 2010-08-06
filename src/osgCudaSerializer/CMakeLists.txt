@@ -39,6 +39,7 @@ SET(TARGET_H
 
 # collect the sources
 SET(TARGET_SRC
+	Util.cpp
 	Computation.cpp
 	Buffer.cpp
 	Array.cpp

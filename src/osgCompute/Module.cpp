@@ -69,7 +69,10 @@ namespace osgCompute
 
 		Module* loadedModule = (*createModuleFunc)();
 		if( loadedModule && loadedModule->getLibraryName().empty() )
+        {
 			loadedModule->setLibraryName( libraryName );
+            loadedModule->addIdentifier( libraryName );
+        }
 
 		return loadedModule;
 	}

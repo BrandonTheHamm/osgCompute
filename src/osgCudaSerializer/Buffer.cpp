@@ -6,6 +6,7 @@
 #include <osgDB/Output>
 #include <osgDB/ParameterOutput>
 #include <osgCuda/Buffer>
+#include "Util.h"
 
 //------------------------------------------------------------------------------
 static bool checkArray( const osgCuda::Buffer& buffer )

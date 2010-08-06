@@ -2,6 +2,7 @@
 #include <osgDB/Input>
 #include <osgDB/Output>
 #include <osgCuda/Geometry>
+#include "Util.h"
 
 //------------------------------------------------------------------------------
 static bool checkIdentifiers( const osgCuda::Geometry& geometry )
@@ -39,7 +40,9 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCuda::Geometry& geometry
 	for( unsigned int i=0; i<numIds; ++i )
 	{
 		std::string curId;
-		is.readWrappedString( curId );
+        is.readWrappedString( curId );
+        curId = osgCuda::trim( curId );
+
 		geometry.addIdentifier( curId );
 	}
 
@@ -89,7 +92,10 @@ static bool readUsage( osgDB::InputStream& is, osgCuda::Geometry& geometry )
 	//is >> osgDB::PROPERTY("Usage");
 
 	std::string interopUsage;
-	is.readWrappedString(interopUsage);
+    is.readWrappedString(interopUsage);
+    interopUsage = osgCuda::trim( interopUsage );
+    
+
 	if( interopUsage == "GL_TARGET_COMPUTE_SOURCE" )
 		geometry.setUsage( osgCompute::GL_TARGET_COMPUTE_SOURCE );
 	else if( interopUsage == "GL_SOURCE_COMPUTE_TARGET" )

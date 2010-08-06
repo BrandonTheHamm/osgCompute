@@ -2,6 +2,7 @@
 #include <osgDB/Input>
 #include <osgDB/Output>
 #include <osgCompute/Resource>
+#include "Util.h"
 
 //------------------------------------------------------------------------------
 static bool checkIdentifiers( const osgCompute::Resource& resource )
@@ -38,7 +39,8 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCompute::Resource& resou
 	for( unsigned int i=0; i<numIds; ++i )
 	{
 		std::string curId;
-		is.readWrappedString( curId );
+        is.readWrappedString( curId );
+        curId = osgCuda::trim( curId );
 		resource.addIdentifier( curId );
 	}
 

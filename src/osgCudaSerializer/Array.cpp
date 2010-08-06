@@ -3,6 +3,8 @@
 #include <osgDB/Output>
 #include <osgDB/WriteFile>
 #include <osgCuda/Array>
+#include "Util.h"
+
 
 //------------------------------------------------------------------------------
 static bool checkArray( const osgCuda::Array& array )
@@ -75,6 +77,8 @@ static bool readChannelFormatDesc( osgDB::InputStream& is, osgCuda::Array& array
 
 	std::string channelFormatKind;
 	is.readWrappedString(channelFormatKind);
+    channelFormatKind = osgCuda::trim( channelFormatKind );
+
 	if( channelFormatKind == "cudaChannelFormatKindFloat" )
 		desc.f = cudaChannelFormatKindFloat;
 	else if( channelFormatKind == "cudaChannelFormatKindSigned" )

@@ -219,10 +219,23 @@ namespace osgCompute
 		*/
         virtual void swap( unsigned int incr = 1 );
 		/**
+		* Setup the current active block index.
+		* Blocks are utilized e.g. by pingpong buffers. By default there is only one block.
+		*/
+        virtual void setSwapIdx( unsigned int sIdx );
+
+		/**
 		* Returns the current active block index.
 		* Blocks are utilized e.g. by pingpong buffers. By default there is only one block.
 		*/
         virtual unsigned int getSwapIdx() const;
+
+
+        /**
+        * Set the number of blocks. Only affects specialized objects and has no effect here by default.
+        */
+        virtual void setSwapCount( unsigned int sc = 1 );
+
 		/**
 		* Returns the number of blocks.
 		* Blocks are utilized e.g. by pingpong buffers. By default there is only one block.

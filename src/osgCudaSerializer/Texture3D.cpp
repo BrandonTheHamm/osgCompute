@@ -2,6 +2,7 @@
 #include <osgDB/Input>
 #include <osgDB/Output>
 #include <osgCuda/Texture>
+#include "Util.h"
 
 //------------------------------------------------------------------------------
 static bool checkIdentifiers( const osgCuda::Texture3D& interopObject )
@@ -38,7 +39,9 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCuda::Texture3D& interop
 	for( unsigned int i=0; i<numIds; ++i )
 	{
 		std::string curId;
-		is.readWrappedString( curId );
+        is.readWrappedString( curId );
+        curId = osgCuda::trim( curId );
+
 		interopObject.addIdentifier( curId );
 	}
 
@@ -83,6 +86,8 @@ static bool readUsage( osgDB::InputStream& is, osgCuda::Texture3D& interopObject
 {
 	std::string interopUsage;
 	is.readWrappedString(interopUsage);
+    interopUsage = osgCuda::trim( interopUsage );
+
 	if( interopUsage == "GL_TARGET_COMPUTE_SOURCE" )
 		interopObject.setUsage( osgCompute::GL_TARGET_COMPUTE_SOURCE );
 	else if( interopUsage == "GL_SOURCE_COMPUTE_TARGET" )

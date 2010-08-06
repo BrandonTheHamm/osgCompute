@@ -16,6 +16,7 @@
 #include <sstream>
 #include <osg/NodeVisitor>
 #include <osg/OperationThread>
+#include <osgDB/Registry>
 #include <osgUtil/CullVisitor>
 #include <osgUtil/GLObjectsVisitor>
 #include <osgCompute/Visitor>

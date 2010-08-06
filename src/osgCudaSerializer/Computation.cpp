@@ -2,7 +2,10 @@
 #include <osgDB/Input>
 #include <osgDB/Output>
 #include <osgCompute/Module>
+#include <osgCompute/Interoperability>
 #include <osgCuda/Computation>
+#include "Util.h"
+
 
 //------------------------------------------------------------------------------
 static bool checkResources( const osgCuda::Computation& computation )
@@ -30,8 +33,21 @@ static bool writeResources( osgDB::OutputStream& os, const osgCuda::Computation&
 	for( osgCompute::ResourceHandleListCnstItr resItr = resList.begin();
 		resItr != resList.end();
 		++resItr )
+    {
 		if( resItr->_attached )
-			os.writeObject( (*resItr)._resource.get() );
+        {
+            osgCompute::InteropMemory* iom = dynamic_cast<osgCompute::InteropMemory*>( (*resItr)._resource.get() );
+            if( iom != NULL )
+            { // if layered interoperability object then store the interoperability object
+                osg::Object* ioo = dynamic_cast<osg::Object*>( iom->getInteropObject() );
+                if( ioo ) os.writeObject( ioo );
+            }
+            else
+            {
+			    os.writeObject( (*resItr)._resource.get() );
+            }
+        }
+    }
 
 	os << osgDB::END_BRACKET << std::endl;
 	return true;
@@ -45,9 +61,21 @@ static bool readResources( osgDB::InputStream& is, osgCuda::Computation& computa
 
 	for( unsigned int i=0; i<numRes; ++i )
 	{
-		osgCompute::Resource* curRes = dynamic_cast<osgCompute::Resource*>( is.readObject() );
-		if( curRes != NULL )
-			computation.addResource( *curRes );
+        osg::Object* newRes = is.readObject();
+        if( newRes != NULL )
+        {
+            osgCompute::InteropObject* ioo = dynamic_cast<osgCompute::InteropObject*>( newRes );
+            if( ioo != NULL )
+            {
+                computation.addResource( *ioo->getOrCreateInteropMemory() );
+            }
+            else
+            {
+		        osgCompute::Resource* curRes = dynamic_cast<osgCompute::Resource*>( newRes );
+		        if( curRes != NULL ) computation.addResource( *curRes );
+            }
+
+        }
 	}
 
 	is >> osgDB::END_BRACKET;
@@ -100,6 +128,7 @@ static bool readModules( osgDB::InputStream& is, osgCuda::Computation& computati
 	{
 		std::string moduleLibraryName;
 		is.readWrappedString( moduleLibraryName );
+        moduleLibraryName = osgCuda::trim( moduleLibraryName );
 
 		if( !osgCompute::Module::existsModule(moduleLibraryName) )
 		{
@@ -113,7 +142,6 @@ static bool readModules( osgDB::InputStream& is, osgCuda::Computation& computati
 		osgCompute::Module* module = osgCompute::Module::loadModule( moduleLibraryName );
 		if( module != NULL )
 		{
-			module->addIdentifier( moduleLibraryName );
 			computation.addModule( *module );
 		}
 	}

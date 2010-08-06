@@ -210,7 +210,13 @@ namespace osgCompute
 
 
     //------------------------------------------------------------------------------
-    void Memory::swap( unsigned int incr /*= 1 */ )
+    void Memory::swap( unsigned int )
+    {
+        // Function should be implemented by swap buffers.
+    }
+
+    //------------------------------------------------------------------------------
+    void Memory::setSwapCount( unsigned int )
     {
         // Function should be implemented by swap buffers.
     }
@@ -220,6 +226,12 @@ namespace osgCompute
     {
         // Function should be implemented by swap buffers.
         return 1;
+    }
+
+    //------------------------------------------------------------------------------
+    void Memory::setSwapIdx( unsigned int )
+    {
+        // Function should be implemented by swap buffers.
     }
 
     //------------------------------------------------------------------------------
