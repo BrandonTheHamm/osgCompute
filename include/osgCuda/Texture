@@ -126,6 +126,7 @@ namespace osgCuda
 
     //    virtual void apply(osg::State& state) const;
     //    virtual void releaseGLObjects(osg::State* state=0) const;
+    //    virtual void compileGLObjects(State& state) const;
 
     //    virtual void freeProxy();
     //    virtual bool isClear();
@@ -168,6 +169,7 @@ namespace osgCuda
 
         virtual void apply(osg::State& state) const;
         virtual void releaseGLObjects(osg::State* state=0) const;
+        virtual void compileGLObjects(osg::State& state) const;
 
         virtual void freeProxy();
         virtual bool isClear();
@@ -210,6 +212,7 @@ namespace osgCuda
 
         virtual void apply(osg::State& state) const;
         virtual void releaseGLObjects(osg::State* state=0) const;
+        virtual void compileGLObjects(osg::State& state) const;
 
         virtual void freeProxy();
         virtual bool isClear();
@@ -252,6 +255,7 @@ namespace osgCuda
 
         virtual void apply(osg::State& state) const;
         virtual void releaseGLObjects(osg::State* state=0) const;
+        virtual void compileGLObjects(osg::State& state) const;
 
         virtual void freeProxy();
         virtual bool isClear();

@@ -1645,6 +1645,12 @@ namespace osgCuda
     //}
 
     ////------------------------------------------------------------------------------
+    //void Texture1D::compileGLObjects(osg::State& state) const
+    //{
+    //    osg::Texture::apply(state);
+    //}
+
+    ////------------------------------------------------------------------------------
     //void Texture1D::apply(osg::State& state) const
     //{
     //    _proxy->unmap();
@@ -1840,6 +1846,12 @@ namespace osgCuda
         if( _proxy != NULL )
             _proxy->clearCurrent();
         osg::Texture2D::releaseGLObjects( state );
+    }
+
+    //------------------------------------------------------------------------------
+    void Texture2D::compileGLObjects(osg::State& state) const
+    {
+        osg::Texture2D::apply(state);
     }
 
     //------------------------------------------------------------------------------
@@ -2045,6 +2057,12 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
+    void Texture3D::compileGLObjects(osg::State& state) const
+    {
+        osg::Texture3D::apply(state);
+    }
+
+    //------------------------------------------------------------------------------
     void Texture3D::apply(osg::State& state) const
     {
         if( _proxy != NULL )
@@ -2244,6 +2262,12 @@ namespace osgCuda
         if( _proxy != NULL )
             _proxy->clearCurrent();
         osg::TextureRectangle::releaseGLObjects( state );
+    }
+
+    //------------------------------------------------------------------------------
+    void TextureRectangle::compileGLObjects(osg::State& state) const
+    {
+        osg::TextureRectangle::apply(state);
     }
 
     //------------------------------------------------------------------------------
