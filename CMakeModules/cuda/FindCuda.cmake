@@ -133,7 +133,7 @@ endif()
 
 #specify additional/system specific CUDA options by user
 SET (CUDA_NVCC_USER_OPTIONS
-    ""
+    "-arch sm_10"
 	CACHE
 	STRING
 	"Set additional user specific compiler options to Cuda nvcc" 
