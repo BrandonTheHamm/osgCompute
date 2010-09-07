@@ -231,7 +231,8 @@ namespace osgCuda
             return NULL;
         TextureObject& memory = *memoryPtr;
 
-        if( _usage & osgCompute::GL_TARGET )
+        if( _usage & osgCompute::GL_TARGET &&
+            !(memory._syncOp & osgCompute::SYNC_ARRAY))
         {
             if( memory._graphicsResource == NULL )
             {
@@ -931,7 +932,7 @@ namespace osgCuda
                 memory._pitch = pitchPtr.pitch;
                 memory._devPtr = pitchPtr.ptr;
             }
-            if( getNumDimensions() == 2 )
+            else if( getNumDimensions() == 2 )
             {
                 cudaError res = cudaMallocPitch( &memory._devPtr, (size_t*)(&memory._pitch), getDimension(0) * getElementSize(), getDimension(1) );
                 if( res != cudaSuccess )
@@ -1031,7 +1032,7 @@ namespace osgCuda
                         return false;
                     }
                 }
-                else if( getNumDimensions() == 2 ) 
+                if( getNumDimensions() == 2 ) 
                 {
                     res = cudaMemcpy2DToArray( memory._graphicsArray, 0, 0, memory._hostPtr, 
                         getDimension(0)*getElementSize(), getDimension(0)*getElementSize(), getDimension(1), 

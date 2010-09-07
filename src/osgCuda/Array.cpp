@@ -935,16 +935,7 @@ namespace osgCuda
         if( getDimension(0) == 0 || getElementSize() == 0 ) 
             return 0;
 
-        int device;
-        cudaGetDevice( &device );
-        cudaDeviceProp devProp;
-        cudaGetDeviceProperties( &devProp, device );
-
-        unsigned int remainingAlignmentBytes = (getDimension(0)*getElementSize()) % devProp.textureAlignment;
-        if( remainingAlignmentBytes != 0 )
-            return (getDimension(0)*getElementSize()) + (devProp.textureAlignment-remainingAlignmentBytes);
-        else
-            return (getDimension(0)*getElementSize()); // no additional bytes required.
+        return (getDimension(0)*getElementSize()); // no additional bytes required.
     }
 
     //------------------------------------------------------------------------------
