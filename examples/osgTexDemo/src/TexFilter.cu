@@ -239,9 +239,12 @@ void swapKernel( float4* trg, unsigned int trgPitch, unsigned int imageWidth, un
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
     if( x < imageWidth && y < imageHeight )
     {
+
+        float offset_X = (1.f/(float)imageWidth)*0.5f;
+        float offset_Y = (1.f/(float)imageHeight)*0.5f;
         // compute texture coordinates
-        float2 texCoord = make_float2( ((float) x / (float) imageWidth) ,
-            ((float) y / (float) imageHeight) );
+        float2 texCoord = make_float2( ((float) x / (float) imageWidth)+offset_X ,
+                                       ((float) y / (float) imageHeight)+offset_Y );
         
         // sample value
         float4 src = tex2D( swapTex, texCoord.x, texCoord.y );
