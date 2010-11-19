@@ -25,15 +25,6 @@
 
 namespace osgCuda
 {
-    //enum TextureSyncOp
-    //{
-    //    SYNC_ARRAY = 0x100
-    //};
-
-    //enum TextureMapping
-    //{
-    //    MAP_DEVICE_ARRAY = 0x01000000 | osgCompute::MAP_DEVICE_SOURCE,
-    //};
 
     /**
     */
@@ -45,6 +36,7 @@ namespace osgCuda
         cudaArray*                  _graphicsArray;
         cudaGraphicsResource*       _graphicsResource;
         unsigned int	            _lastModifiedCount;
+		unsigned int				_lastModifiedAddress;
 
         TextureObject();
         virtual ~TextureObject();

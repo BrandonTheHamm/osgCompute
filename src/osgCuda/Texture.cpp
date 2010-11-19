@@ -20,7 +20,8 @@ namespace osgCuda
           _devPtr(NULL),
           _graphicsArray(NULL),
           _graphicsResource(NULL),
-          _lastModifiedCount(UINT_MAX)
+          _lastModifiedCount(UINT_MAX),
+		  _lastModifiedAddress(UINT_MAX)
     {
     }
 
@@ -292,9 +293,14 @@ namespace osgCuda
         memory._mapping = mapping;
         bool firstLoad = false;
 
-        // Check if image has changed
+        // Check if image has changed.
+		// Modified count is different if the data has changed and
+		// modified address is different if the image object has changed
         bool needsSetup = false;
-        if( _texref->getImage(0) != NULL && memory._lastModifiedCount != _texref->getImage(0)->getModifiedCount() )
+        if( _texref->getImage(0) != NULL && 
+			( memory._lastModifiedCount != _texref->getImage(0)->getModifiedCount() || 
+			  memory._lastModifiedAddress != (unsigned int) _texref->getImage(0) )
+		   )
             needsSetup = true;
 
         if( mapping & osgCompute::MAP_HOST )
@@ -744,6 +750,7 @@ namespace osgCuda
             memory._syncOp |= osgCompute::SYNC_DEVICE;
             memory._syncOp |= osgCompute::SYNC_HOST;
             memory._lastModifiedCount = _texref->getImage(0)->getModifiedCount();
+			memory._lastModifiedAddress = (unsigned int) _texref->getImage(0);
         }
         else if( mapping & osgCompute::MAP_DEVICE )
         {
@@ -793,6 +800,7 @@ namespace osgCuda
             memory._syncOp |= osgCompute::SYNC_HOST;
             memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._lastModifiedCount = _texref->getImage(0)->getModifiedCount();
+			memory._lastModifiedAddress = (unsigned int) _texref->getImage(0);
         }
         else if( mapping & osgCompute::MAP_HOST )
         {
@@ -822,6 +830,7 @@ namespace osgCuda
             memory._syncOp |= osgCompute::SYNC_DEVICE;
             memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._lastModifiedCount = _texref->getImage(0)->getModifiedCount();
+			memory._lastModifiedAddress = (unsigned int) _texref->getImage(0);
         }
 
         return true;
