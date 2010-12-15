@@ -679,21 +679,21 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Computation::launch()
     {
-        if( _launchCallback ) 
+        // For all contexts launch modules
+        for( ContextSetItr itr = _contextSet.begin(); itr != _contextSet.end(); ++itr )
         {
-            (*_launchCallback)( *this ); 
-        }
-        else
-        {
-            // For all contexts launch modules
-            for( ContextSetItr itr = _contextSet.begin(); itr != _contextSet.end(); ++itr )
-            {
-                if( !(*itr)->isCurrent() )
-                    (*itr)->makeCurrent();
-            
-                // Activate Resource Entries
-                Resource::setCurrentIdx( (*itr)->getState()->getContextID() );
+            if( !(*itr)->isCurrent() )
+                (*itr)->makeCurrent();
+        
+            // Activate Resource Entries
+            Resource::setCurrentIdx( (*itr)->getState()->getContextID() );
 
+            if( _launchCallback.valid() ) 
+            {
+                (*_launchCallback)( *this ); 
+            }
+            else
+            {
                 // Launch modules
                 for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
                 {

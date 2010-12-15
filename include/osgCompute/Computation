@@ -301,7 +301,7 @@ namespace osgCompute
         virtual void setParentComputation( Computation* parentComputation );
 
         bool                                	_enabled;
-        LaunchCallback*                     	_launchCallback; 
+        osg::ref_ptr<LaunchCallback>            _launchCallback; 
         ModuleList                          	_modules;
         ResourceHandleList                      _resources;
         ComputeOrder                        	_computeOrder;

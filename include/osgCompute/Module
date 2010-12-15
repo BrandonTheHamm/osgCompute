@@ -82,6 +82,15 @@ namespace osgCompute
 		*/
         virtual void acceptResource( Resource& resource );
 
+        
+        /**
+        With hints you give a general way to setup different states within a module
+        */
+        virtual void setState( unsigned int state = 0 );
+        /**
+        Returns the current state of this module
+        */
+        virtual unsigned int getState() const;
 		/**
 		Users should (not necessarily) overwrite this method and return true if a resource with this identifier 
 		is referenced by this module.

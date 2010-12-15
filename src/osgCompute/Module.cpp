@@ -87,6 +87,17 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
+    void Module::setState( unsigned int state )
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int Module::getState() const
+    {
+        return 0;
+    }
+
+    //------------------------------------------------------------------------------
     void Module::setUpdateCallback( ModuleCallback* uc ) 
     { 
         _updateCallback = uc; 
