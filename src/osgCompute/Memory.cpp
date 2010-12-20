@@ -25,9 +25,9 @@ namespace osgCompute
     MemoryObject::MemoryObject() 
         :   Referenced(),
             _mapping( UNMAP ),
-            _allocHint(0),
-            _pitch(0),
-            _syncOp(NO_SYNC)
+			_allocHint(0),
+			_syncOp(NO_SYNC),
+            _pitch(0)
     {
     }
 

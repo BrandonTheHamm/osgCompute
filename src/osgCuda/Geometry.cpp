@@ -16,9 +16,9 @@ namespace osgCuda
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
     GeometryObject::GeometryObject()
-        :	osgCompute::MemoryObject(),
+	:	osgCompute::MemoryObject(),
+		_hostPtr(NULL),
         _devPtr(NULL),
-        _hostPtr(NULL),
         _graphicsResource( NULL )
     {
         _lastModifiedCount.clear();
@@ -60,12 +60,12 @@ namespace osgCuda
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
     IndexedGeometryObject::IndexedGeometryObject()
-        :	GeometryObject(),
+	:	GeometryObject(),
+			_hostIdxPtr(NULL),
             _devIdxPtr(NULL),
-            _hostIdxPtr(NULL),
-            _graphicsIdxResource( NULL ),
-            _idxMapping( osgCompute::UNMAP ),
-            _syncIdxOp( osgCompute::NO_SYNC )
+			_graphicsIdxResource( NULL ),
+			_syncIdxOp( osgCompute::NO_SYNC ),
+            _idxMapping( osgCompute::UNMAP )
     {   
         _lastIdxModifiedCount.clear();
     }

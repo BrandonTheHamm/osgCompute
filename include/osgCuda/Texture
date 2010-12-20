@@ -36,7 +36,7 @@ namespace osgCuda
         cudaArray*                  _graphicsArray;
         cudaGraphicsResource*       _graphicsResource;
         unsigned int	            _lastModifiedCount;
-		unsigned int				_lastModifiedAddress;
+		void*						_lastModifiedAddress;
 
         TextureObject();
         virtual ~TextureObject();

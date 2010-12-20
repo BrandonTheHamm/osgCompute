@@ -264,7 +264,7 @@ void swapKernel( float4* trg, unsigned int trgPitch, unsigned int imageWidth, un
 extern "C"
 void gauss( const dim3& blocks, const dim3& threads, void* trg, void* src, unsigned int byteSize )
 {
-    cudaError res = cudaBindTexture( 0, gaussTex, src, byteSize ); 
+    cudaBindTexture( 0, gaussTex, src, byteSize ); 
 
     // call kernel
     gaussKernel<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trg) );
@@ -275,7 +275,7 @@ extern "C"
 void sobel( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcBuffer, unsigned int byteSize )
 {
     // bind texture
-    cudaError res = cudaBindTexture( 0, srcTex, srcBuffer, byteSize ); 
+    cudaBindTexture( 0, srcTex, srcBuffer, byteSize ); 
 
     // call kernel
     sobelKernel<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trgBuffer) );
@@ -292,7 +292,7 @@ void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcAr
     swapTex.addressMode[1] = cudaAddressModeClamp;
 
     // bind texture
-    cudaError res = cudaBindTextureToArray( swapTex, reinterpret_cast<cudaArray*>(srcArray) );
+    cudaBindTextureToArray( swapTex, reinterpret_cast<cudaArray*>(srcArray) );
 
     // call kernel
     swapKernel<<< blocks, threads >>>( reinterpret_cast<float4*>(trgBuffer), trgPitch, imageWidth, imageHeight );

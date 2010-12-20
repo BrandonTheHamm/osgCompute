@@ -608,7 +608,6 @@ namespace osgCuda
             {
                 int device = 0;
                 cudaGetDevice( &device );
-                int textureAlignment = 0;
                 cudaDeviceProp devProp;
                 cudaGetDeviceProperties( &devProp, device );
 
