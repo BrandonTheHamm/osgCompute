@@ -78,7 +78,6 @@ namespace osgCuda
         virtual ~TextureBuffer();
         void clearLocal();
 
-
         bool setup( unsigned int mapping );
         bool alloc( unsigned int mapping );
         bool sync( unsigned int mapping );
@@ -93,50 +92,6 @@ namespace osgCuda
         TextureBuffer( const TextureBuffer& , const osg::CopyOp& ) {}
         TextureBuffer& operator=(const TextureBuffer&) { return (*this); }
     };
-
-
-    ///**
-    //*/
-    //class LIBRARY_EXPORT Texture1D : public osg::Texture1D, public osgCompute::InteropObject
-    //{
-    //public:
-    //    Texture1D();
-
-    //    META_Object( osgCuda, Texture1D )
-
-    //    virtual osgCompute::InteropMemory* getMemory();
-    //    virtual const osgCompute::InteropMemory* getMemory() const;
-	//    virtual osgCompute::InteropMemory* getOrCreateMemory();
-		//virtual osgCompute::IdentifierSet& getIdentifiers();
-		//virtual const osgCompute::IdentifierSet& getIdentifiers() const;
-
-    //    virtual bool init();
-
-    //    virtual void addIdentifier( const std::string& identifier );
-    //    virtual void removeIdentifier( const std::string& identifier );
-    //    virtual bool isIdentifiedBy( const std::string& identifier ) const;
-
-    //    virtual void apply(osg::State& state) const;
-    //    virtual void releaseGLObjects(osg::State* state=0) const;
-    //    virtual void compileGLObjects(State& state) const;
-
-    //    virtual void freeProxy();
-    //    virtual bool isClear();
-    //    virtual void clear();
-    //protected:
-    //    friend class TextureBuffer;
-    //    virtual ~Texture1D();
-    //    void clearLocal();
-
-    //    mutable TextureBuffer* 	_proxy;
-    //    bool						_clear;
-    //    osgCompute::IdentifierSet		_identifiers;
-
-    //private:
-    //    // copy constructor and operator should not be called
-    //    Texture1D( const Texture1D& , const osg::CopyOp& ) {}
-    //    Texture1D& operator=(const Texture1D&) { return (*this); }
-    //};
 
     /**
     */

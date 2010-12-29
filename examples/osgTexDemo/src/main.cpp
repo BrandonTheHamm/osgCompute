@@ -27,7 +27,7 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Computation>
-#include <osgCuda/Array>
+#include <osgCuda/Buffer>
 #include <osgCuda/Texture>
 
 #include "TexFilter"
@@ -76,7 +76,7 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     srcDesc.z = 8;
     srcDesc.w = 8;
 
-    osg::ref_ptr<osgCuda::Array> srcArray = new osgCuda::Array;
+    osg::ref_ptr<osgCuda::Buffer> srcArray = new osgCuda::Buffer;
     srcArray->setElementSize( sizeof(osg::Vec4ub) );
     srcArray->setChannelFormatDesc( srcDesc );
     srcArray->setDimension( 0, srcImage->s() );
@@ -146,6 +146,7 @@ int main(int argc, char *argv[])
     // does only support single threaded applications. Please ask in the
     // forum for the multi-threaded version if you need it.
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    viewer.setReleaseContextAtEndOfFrameHint(false);
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);
     viewer.setUpViewInWindow( 50, 50, 640, 480);

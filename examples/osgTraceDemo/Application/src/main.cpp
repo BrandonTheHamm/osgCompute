@@ -284,6 +284,7 @@ int main(int argc, char *argv[])
     // does only support single threaded applications. Please ask in the
     // forum for the multi-threaded version if you need it.
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    viewer.setReleaseContextAtEndOfFrameHint(false);
     viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.setUpViewInWindow( 50, 50, 640, 480);

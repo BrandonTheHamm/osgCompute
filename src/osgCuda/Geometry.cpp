@@ -258,7 +258,7 @@ namespace osgCuda
         }
         else if( (mapping & osgCompute::MAP_DEVICE) )
         {
-            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getCurrentIdx() );
+            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
             if( !glBO )
                 return NULL;
 
@@ -541,7 +541,7 @@ namespace osgCuda
         vbo->dirty();
 
         // Compile vertex buffer
-        osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getCurrentIdx() );
+        osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
         if( NULL == glBO )
         {
             osg::notify(osg::FATAL)
@@ -608,7 +608,7 @@ namespace osgCuda
         osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
         if( mapping & osgCompute::MAP_DEVICE )
         {
-            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( Resource::getCurrentIdx() );
+            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( Resource::getContextID() );
             if( !glBO->isDirty() )
                 return true;
 
@@ -757,7 +757,7 @@ namespace osgCuda
             }
 
             // Compile vertex buffer
-            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getCurrentIdx() );
+            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
             if( !glBO )
             {
                 osg::notify(osg::FATAL)
@@ -836,7 +836,7 @@ namespace osgCuda
             if( memory._graphicsResource == NULL )
             {
                 osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
-                osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getCurrentIdx() );
+                osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
                 if( !glBO )
                     return false;
 
@@ -1067,7 +1067,7 @@ namespace osgCuda
         }
         else if( (mapping & osgCompute::MAP_DEVICE) )
         {
-            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getCurrentIdx() );
+            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
             if( !glBO )
                 return NULL;
 
@@ -1350,7 +1350,7 @@ namespace osgCuda
         ebo->dirty();
 
         // Compile element buffer
-        osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getCurrentIdx() );
+        osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
         if( NULL == glBO )
         {
             osg::notify(osg::FATAL)
@@ -1421,7 +1421,7 @@ namespace osgCuda
         osg::ElementBufferObject* ebo = _geomref.get()->getOrCreateElementBufferObject();
         if( mapping & osgCompute::MAP_DEVICE )
         {
-            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( Resource::getCurrentIdx() );
+            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( Resource::getContextID() );
             if( !glBO->isDirty() )
                 return true;
 
@@ -1570,7 +1570,7 @@ namespace osgCuda
             }
 
             // Compile vertex buffer
-            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getCurrentIdx() );
+            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
             if( !glBO )
             {
                 osg::notify(osg::FATAL)
@@ -1649,7 +1649,7 @@ namespace osgCuda
             if( memory._graphicsIdxResource == NULL )
             {
                 osg::ElementBufferObject* ebo = _geomref.get()->getOrCreateElementBufferObject();
-                osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getCurrentIdx() );
+                osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
                 if( !glBO )
                     return false;
 
@@ -1880,24 +1880,31 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Geometry::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        _proxy->clearCurrent();
+        if( NULL != _proxy && state != NULL && state->getContextID() == osgCompute::Resource::getContextID() )
+            _proxy->clearObject();
+
         osg::Geometry::releaseGLObjects( state );
     }
 
     //------------------------------------------------------------------------------
     void Geometry::drawImplementation( osg::RenderInfo& renderInfo ) const
     {
-        _proxy->unmap();
+        if( NULL != _proxy && renderInfo.getContextID() == osgCompute::Resource::getContextID() )//&& renderInfo.getState()->getGraphicsContext() != osgCompute::Resource::getGraphicsContext() ) 
+            _proxy->unmap(); 
+
         osg::Geometry::drawImplementation( renderInfo );
     }
 
     //------------------------------------------------------------------------------
     void Geometry::freeProxy()
     {
-        // attach identifiers
-        _identifiers = _proxy->getIdentifiers();
-        // proxy is now deleted
-        _proxy = NULL;
+        if( NULL != _proxy )
+        {
+            // attach identifiers
+            _identifiers = _proxy->getIdentifiers();
+            // proxy is now deleted
+            _proxy = NULL;
+        }
     }
 
     //------------------------------------------------------------------------------

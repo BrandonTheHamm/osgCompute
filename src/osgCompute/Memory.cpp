@@ -54,13 +54,6 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Memory::clearCurrent()
-    {
-        if( Resource::getCurrentIdx() < _objects.size() )
-            _objects[ Resource::getCurrentIdx() ] = NULL;
-    }
-
-    //------------------------------------------------------------------------------
     bool Memory::init()
     {
         if( !isClear() )
@@ -187,11 +180,8 @@ namespace osgCompute
         if( isClear() )
             return osgCompute::UNMAP;
 
-        if( Resource::getCurrentIdx() > _objects.size() )
-            return osgCompute::UNMAP;
-
-        if( _objects[ Resource::getCurrentIdx() ].valid() )
-            return _objects[ Resource::getCurrentIdx() ]->_mapping;
+        if( _object.valid() )
+            return _object->_mapping;
         else 
             return osgCompute::UNMAP;
     }
@@ -241,6 +231,13 @@ namespace osgCompute
         return 0;
     }
 
+    //------------------------------------------------------------------------------
+    void Memory::clearObject()
+    {
+        _object = NULL;
+        Resource::clearObject();
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -259,7 +256,8 @@ namespace osgCompute
         _allocHint = 0;
         _subloadCallback = NULL;
         _pitch = 0;
-        _objects.clear(); // free memory
+
+        // clearObject() is called implicitly by Resource::clear()
     }
 
 
@@ -269,12 +267,7 @@ namespace osgCompute
         if( isClear() )
             return NULL;
 
-        // resize memory array for new context
-        if( (Resource::getCurrentIdx()+1) > _objects.size() )
-            _objects.resize( Resource::getCurrentIdx()+1 );
-
-        // Allocate/Register handles on demand
-        if( !_objects[Resource::getCurrentIdx()].valid() )
+        if( !_object.valid() )
         {
             MemoryObject* newObject = createObject();
             if( newObject == NULL )
@@ -286,10 +279,10 @@ namespace osgCompute
             }
             newObject->_mapping = osgCompute::UNMAP;
             newObject->_allocHint = getAllocHint();
-            _objects[Resource::getCurrentIdx()] = newObject;
+            _object = newObject;
         }
 
-        return _objects[Resource::getCurrentIdx()].get();
+        return _object.get();
     }
 
     //------------------------------------------------------------------------------
@@ -298,12 +291,7 @@ namespace osgCompute
         if( isClear() )
             return NULL;
 
-        // resize memory array for new context
-        if( (Resource::getCurrentIdx()+1) > _objects.size() )
-            _objects.resize( Resource::getCurrentIdx()+1 );
-
-        // Allocate/Register handles on demand
-        if( !_objects[Resource::getCurrentIdx()].valid() )
+        if( !_object.valid() )
         {
             MemoryObject* newObject = createObject();
             if( newObject == NULL )
@@ -315,10 +303,10 @@ namespace osgCompute
             }
             newObject->_mapping = osgCompute::UNMAP;
             newObject->_allocHint = getAllocHint();
-            _objects[Resource::getCurrentIdx()] = newObject;
+            _object = newObject;
         }
 
-        return _objects[Resource::getCurrentIdx()].get();
+        return _object.get();
     }
 
     //------------------------------------------------------------------------------

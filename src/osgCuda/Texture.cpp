@@ -238,14 +238,14 @@ namespace osgCuda
             if( memory._graphicsResource == NULL )
             {
                 // Initialize texture resource if it is a render target
-                osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getCurrentIdx() );
+                osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
                 if( !tex )
                 {
                     osg::State* state;
                     osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
                     for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
                     {
-                        if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::Resource::getCurrentIdx()) )
+                        if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::Resource::getContextID()) )
                         {
                             state = (*itr)->getState();
                             break;
@@ -262,7 +262,7 @@ namespace osgCuda
                     }
 
                     _texref->compileGLObjects( *state );
-                    tex = _texref->getTextureObject( osgCompute::Resource::getCurrentIdx() );
+                    tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
                 }
 
                 // Register vertex buffer object for Cuda
@@ -714,7 +714,7 @@ namespace osgCuda
             osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
             for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
             {
-                if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::Resource::getCurrentIdx()) )
+                if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::Resource::getContextID()) )
                 {
                     state = (*itr)->getState();
                     break;
@@ -736,7 +736,7 @@ namespace osgCuda
             //////////////////
             // REGISTER TEX //
             //////////////////
-            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getCurrentIdx() );
+            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
             cudaError res = cudaGraphicsGLRegisterImage( &memory._graphicsResource, tex->id(), tex->_profile._target, cudaGraphicsMapFlagsNone );
             if( res != cudaSuccess )
             {
@@ -872,14 +872,14 @@ namespace osgCuda
             if( memory._graphicsResource != NULL )
                 return true;
 
-            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getCurrentIdx() );
+            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
             if( !tex )
             {
                 osg::State* state;
                 osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
                 for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
                 {
-                    if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::Resource::getCurrentIdx()) )
+                    if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::Resource::getContextID()) )
                     {
                         state = (*itr)->getState();
                         break;
@@ -896,7 +896,7 @@ namespace osgCuda
                 }
 
                 _texref->compileGLObjects( *state );
-                tex = _texref->getTextureObject( osgCompute::Resource::getCurrentIdx() );
+                tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
             }
 
             // Register vertex buffer object for Cuda
@@ -1161,7 +1161,7 @@ namespace osgCuda
             {
                 if( memory._graphicsResource == NULL )
                 {
-                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getCurrentIdx() );
+                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
                     if( !tex )
                     {
                         osg::notify(osg::WARN)
@@ -1313,7 +1313,7 @@ namespace osgCuda
             {
                 if( memory._graphicsResource == NULL )
                 {
-                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getCurrentIdx() );
+                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
                     if( !tex )
                     {
                         osg::notify(osg::WARN)
@@ -1508,211 +1508,6 @@ namespace osgCuda
         return new TextureObject;
     }
 
-
-
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    //// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ////------------------------------------------------------------------------------
-    //Texture1D::Texture1D()
-    //    : osg::Texture1D(),
-    //    _proxy(NULL)
-    //{
-    //    clearLocal();
-
-    //    // some flags for textures are not available right now
-    //    // like resize to a power of two and mip-maps
-    //    asTexture()->setResizeNonPowerOfTwoHint( false );
-    //    asTexture()->setUseHardwareMipMapGeneration( false );
-    //}
-
-    ////------------------------------------------------------------------------------
-    //bool Texture1D::init()
-    //{
-    //    if( NULL != _proxy )
-    //    {
-    //        _proxy->_usage = getUsage();
-    //        _proxy->init();
-    //    }
-    //    _clear = false;
-    //    return true;
-    //}
-
-    ////------------------------------------------------------------------------------
-    //osgCompute::InteropMemory* Texture1D::getMemory()
-    //{
-    //    return _proxy;
-    //}
-
-    ////------------------------------------------------------------------------------
-    //const osgCompute::InteropMemory* Texture1D::getMemory() const
-    //{
-    //    return _proxy;
-    //}
-
-    ////------------------------------------------------------------------------------
-    //osgCompute::InteropMemory* Texture1D::getOrCreateMemory()
-    //{
-    //    // create proxy buffer on demand
-    //    if( _proxy == NULL )
-    //    {
-    //        _proxy = new TextureBuffer;
-    //        _proxy->setName( getName() );
-    //        _proxy->_texref = this;
-    //        _proxy->_usage = getUsage();
-    //        _proxy->setIdentifiers( _identifiers );
-    //        _identifiers.clear();
-    //        if( !_proxy->init() )
-    //        {
-    //            _proxy->unref();
-    //            _proxy = NULL;
-    //        }
-    //    }
-
-    //    return _proxy;
-    //}
-
-    ////------------------------------------------------------------------------------
-    //void Texture1D::addIdentifier( const std::string& identifier )
-    //{
-    //    if( _proxy != NULL )
-    //    {
-    //        _proxy->addIdentifier( identifier );
-    //    }
-    //    else
-    //    {
-    //        if( !isIdentifiedBy(identifier) )
-    //            _identifiers.insert( identifier );
-    //    }
-    //}
-
-    ////------------------------------------------------------------------------------
-    //void Texture1D::removeIdentifier( const std::string& identifier )
-    //{
-    //    if( _proxy != NULL )
-    //    {
-    //        _proxy->removeIdentifier( identifier );
-    //    }
-    //    else
-    //    {
-    //        osgCompute::IdentifierSetItr itr = _identifiers.find( identifier );
-    //        if( itr != _identifiers.end() )
-    //            _identifiers.erase( itr );
-
-    //    }
-    //}
-
-    ////------------------------------------------------------------------------------
-    //bool Texture1D::isIdentifiedBy( const std::string& identifier ) const
-    //{
-    //    if( _proxy != NULL )
-    //    {
-    //        return _proxy->isIdentifiedBy( identifier );
-    //    }
-    //    else
-    //    {
-    //        osgCompute::IdentifierSetCnstItr itr = _identifiers.find( identifier );
-    //        if( itr == _identifiers.end() )
-    //            return false;
-
-    //        return true;
-    //    }
-    //}
-
-	////------------------------------------------------------------------------------
-	//osgCompute::IdentifierSet& Texture1D::getIdentifiers()
-	//{
-	//	if( _proxy != NULL )
-	//	{
-	//		return _proxy->getIdentifiers();
-	//	}
-	//	else
-	//	{
-	//		return _identifiers;
-	//	}
-	//}
-
-	////------------------------------------------------------------------------------
-	//const osgCompute::IdentifierSet& Texture1D::getIdentifiers() const
-	//{
-	//	if( _proxy != NULL )
-	//	{
-	//		return _proxy->getIdentifiers();
-	//	}
-	//	else
-	//	{
-	//		return _identifiers;
-	//	}
-	//}
-
-    ////------------------------------------------------------------------------------
-    //void Texture1D::releaseGLObjects( osg::State* state/*=0*/ ) const
-    //{
-    //    _proxy->clearCurrent();
-    //    osg::Texture1D::releaseGLObjects( state );
-    //}
-
-    ////------------------------------------------------------------------------------
-    //void Texture1D::compileGLObjects(osg::State& state) const
-    //{
-    //    osg::Texture::apply(state);
-    //}
-
-    ////------------------------------------------------------------------------------
-    //void Texture1D::apply(osg::State& state) const
-    //{
-    //    _proxy->unmap();
-    //    osg::Texture1D::apply( state );
-    //}
-
-    ////------------------------------------------------------------------------------
-    //void Texture1D::freeProxy()
-    //{
-    //    // attach identifiers
-    //    _identifiers = _proxy->getIdentifiers();
-    //    // proxy is now deleted
-    //    _proxy = NULL;
-    //}
-
-    ////------------------------------------------------------------------------------
-    //bool Texture1D::isClear()
-    //{
-    //    return _clear;
-    //}
-
-    ////------------------------------------------------------------------------------
-    //void Texture1D::clear()
-    //{
-    //    clearLocal();
-    //}
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    //// PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ////------------------------------------------------------------------------------
-    //Texture1D::~Texture1D()
-    //{
-    //    if( _proxy != NULL )
-    //    {
-    //        osg::notify(osg::FATAL)
-    //            << getName() << " [osgCuda::Texture1D::destructor()]: proxy is still valid!!!."
-    //            << std::endl;
-    //    }
-    //}
-
-    ////------------------------------------------------------------------------------
-    //void Texture1D::clearLocal()
-    //{
-    //    _clear = true;
-    //    if( NULL != _proxy )
-    //    {
-    //        _proxy->clear();
-    //    }
-    //    _identifiers.clear();
-    //}
-
-
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1852,8 +1647,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( _proxy != NULL )
-            _proxy->clearCurrent();
+        if( _proxy != NULL && state != NULL && state->getContextID() == osgCompute::Resource::getContextID() )
+            _proxy->clearObject();
+
         osg::Texture2D::releaseGLObjects( state );
     }
 
@@ -1866,8 +1662,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::apply(osg::State& state) const
     {
-        if( _proxy != NULL )
+        if( _proxy != NULL && state.getContextID() == osgCompute::Resource::getContextID() )
             _proxy->unmap();
+
         osg::Texture2D::apply( state );
     }
 
@@ -2060,8 +1857,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( _proxy != NULL )
-            _proxy->clearCurrent();
+        if( _proxy != NULL && state != NULL && state->getContextID() == osgCompute::Resource::getContextID() )
+            _proxy->clearObject();
+
         osg::Texture3D::releaseGLObjects( state );
     }
 
@@ -2074,8 +1872,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::apply(osg::State& state) const
     {
-        if( _proxy != NULL )
+        if( _proxy != NULL && state.getContextID() == osgCompute::Resource::getContextID() )
             _proxy->unmap();
+
         osg::Texture3D::apply( state );
     }
 
@@ -2268,8 +2067,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( _proxy != NULL )
-            _proxy->clearCurrent();
+        if( _proxy != NULL && state != NULL && state->getContextID() == osgCompute::Resource::getContextID() )
+            _proxy->clearObject();
+
         osg::TextureRectangle::releaseGLObjects( state );
     }
 
@@ -2282,8 +2082,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::apply(osg::State& state) const
     {
-        if( _proxy != NULL )
+        if( _proxy != NULL && state.getContextID() == osgCompute::Resource::getContextID() )
             _proxy->unmap();
+
         osg::TextureRectangle::apply( state );
     }
 

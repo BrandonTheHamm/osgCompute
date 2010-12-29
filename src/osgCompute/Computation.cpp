@@ -82,13 +82,13 @@ namespace osgCompute
             }
             else if( ov != NULL )
             {
-                addContext( *ov->getState() );
+                setupContext( *ov->getState() );
 
                 // Setup state
                 if( !isDeviceReady() ) 
                 {               
                     osg::notify(osg::FATAL) 
-                        << getName() << " [Computation::accept(GLObjectsVisitor)]: No valid GL Device found."
+                        << getName() << " [Computation::accept(GLObjectsVisitor)]: No valid Computation Device found."
                         << std::endl;
 
                     return;
@@ -533,12 +533,26 @@ namespace osgCompute
     {
         if( state != NULL )
         {
-            ContextSetItr itr = _contextSet.find( state->getGraphicsContext() );
-            if( itr != _contextSet.end() )
-                _contextSet.erase( state->getGraphicsContext() );
-            
-            Group::releaseGLObjects( state );
+            if( state->getContextID() == Resource::getContextID() )
+            {
+                osg::GraphicsContext* context = osg::GraphicsContext::getCompileContext(Resource::getContextID());
+                if( context != NULL && context->isRealized() )
+                {     
+                    // Make context the current context
+                    if( !context->isCurrent() )
+                        context->makeCurrent();
+
+                    // Release all resources associated with the current context
+                    for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+                        (*itr)->clearObject();
+
+                    for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
+                        (*itr)._resource->clearObject();
+                }
+            }
         }
+
+        Group::releaseGLObjects( state );
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -556,7 +570,6 @@ namespace osgCompute
         _autoCheckSubgraph = false;
         _parentComputation = NULL;
         _resourceVisitor = NULL;
-        _contextSet.clear();
 
         // clear node or group related members
         removeChildren(0,osg::Group::getNumChildren());
@@ -575,7 +588,6 @@ namespace osgCompute
     {
     }
 
-
     //------------------------------------------------------------------------------
     void Computation::setParentComputation( Computation* parentComputation )
     {
@@ -583,25 +595,34 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Computation::addContext( osg::State& state )
+    void Computation::setupContext( osg::State& state )
     {
         if( !state.getGraphicsContext() )
         {
-            osg::notify(osg::FATAL)  << "Computation::addContext() for \""
+            osg::notify(osg::FATAL)  << "Computation::setupContext() for \""
                 << getName()<<"\": GLObjectsVisitor must provide a valid graphics context."
                 << std::endl;
 
             return;
         }
 
-        // find context
-        ContextSetItr itr = _contextSet.find( state.getGraphicsContext() );
-        if( itr != _contextSet.end() )
-            return;
+        if( UINT_MAX != Resource::getContextID() && 
+            Resource::getContextID() != state.getContextID() )
+        {
+            osg::notify(osg::FATAL)  << "Computation::setupContext() for \""
+                << getName()<<"\": GLObjectsVisitor can handle only a single context."
+                << " However multiple contexts are detected."
+                << " Please make shure to share a computation context by several windows."
+                << std::endl;
 
-        // insert new context
-        _contextSet.insert( state.getGraphicsContext() );
+            return;
+        }
+
+        if( Resource::getContextID() == UINT_MAX )
+            Resource::bindToContextID( state.getContextID() );
     }
+
+    
 
     //------------------------------------------------------------------------------
     void Computation::addBin( osgUtil::CullVisitor& cv )
@@ -678,23 +699,25 @@ namespace osgCompute
 
     //------------------------------------------------------------------------------
     void Computation::launch()
-    {
-        // For all contexts launch modules
-        for( ContextSetItr itr = _contextSet.begin(); itr != _contextSet.end(); ++itr )
-        {
-            if( !(*itr)->isCurrent() )
-                (*itr)->makeCurrent();
-        
-            // Activate Resource Entries
-            Resource::setCurrentIdx( (*itr)->getState()->getContextID() );
+    {            
+        // Check if graphics context exist
+        // or return otherwise
+        if( UINT_MAX != Resource::getContextID() )
+        {       
+            osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(Resource::getContextID());
+            if( contexts.empty() || !contexts.front()->isRealized() )
+                return;
+                    
+            // Make context the current context
+            if( !contexts.front()->isCurrent() ) contexts.front()->makeCurrent();
 
+            // Launch modules
             if( _launchCallback.valid() ) 
             {
                 (*_launchCallback)( *this ); 
             }
             else
             {
-                // Launch modules
                 for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
                 {
                     if( (*itr)->isEnabled() )

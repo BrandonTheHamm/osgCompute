@@ -58,10 +58,6 @@ namespace osgCompute
 		bool						_attached;
 	};
 
-    typedef std::set< osg::GraphicsContext* >						ContextSet;
-    typedef std::set< osg::GraphicsContext* >::iterator				ContextSetItr;
-    typedef std::set< osg::GraphicsContext* >::const_iterator		ContextSetCnstItr;
-
 	typedef std::list< ResourceHandle >								ResourceHandleList;
 	typedef std::list< ResourceHandle >::iterator					ResourceHandleListItr;
 	typedef std::list< ResourceHandle >::const_iterator				ResourceHandleListCnstItr;
@@ -291,7 +287,7 @@ namespace osgCompute
         void clearLocal();
 
         virtual void checkDevice();
-        virtual void addContext( osg::State& state );
+        virtual void setupContext( osg::State& state );
         virtual void update( osg::NodeVisitor& uv );
         virtual void collectResources();
         virtual void launch();
@@ -302,16 +298,14 @@ namespace osgCompute
 
         bool                                	_enabled;
         osg::ref_ptr<LaunchCallback>            _launchCallback; 
-        ModuleList                          	_modules;
-        ResourceHandleList                      _resources;
+        mutable ModuleList                      _modules;
+        mutable ResourceHandleList              _resources;
         ComputeOrder                        	_computeOrder;
         bool                                	_subgraphChanged;
         osg::ref_ptr<ResourceVisitor>       	_resourceVisitor;
         Computation*                        	_parentComputation; 
         bool                                	_resourcesCollected;
         bool                                	_autoCheckSubgraph;
-
-        mutable ContextSet                  	_contextSet;
 
         static bool isDeviceReady();
         static void setDeviceReady();

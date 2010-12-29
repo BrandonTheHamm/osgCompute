@@ -123,7 +123,9 @@ int main(int argc, char *argv[])
     // You must use single threaded version since osgCompute currently
     // does only support single threaded applications. Please ask in the
     // forum for the multi-threaded version if you need it.
+
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    viewer.setReleaseContextAtEndOfFrameHint(false);
     viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);
 

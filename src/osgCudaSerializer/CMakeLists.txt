@@ -42,7 +42,6 @@ SET(TARGET_SRC
 	Util.cpp
 	Computation.cpp
 	Buffer.cpp
-	Array.cpp
 	Memory.cpp
 	Resource.cpp
 	Geometry.cpp

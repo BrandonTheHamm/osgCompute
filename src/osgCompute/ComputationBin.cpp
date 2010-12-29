@@ -63,9 +63,6 @@ namespace osgCompute
     { 
         osg::State& state = *renderInfo.getState();
         
-        // Activate Resource Entries
-        Resource::setCurrentIdx( state.getContextID() );
-
         unsigned int numToPop = (previous ? osgUtil::StateGraph::numToPop(previous->_parent) : 0);
         if (numToPop>1) --numToPop;
         unsigned int insertStateSetPosition = state.getStateSetStackSize() - numToPop;

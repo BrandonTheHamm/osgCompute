@@ -12,7 +12,7 @@
 *
 * The full license is in LICENSE file included with this distribution.
 */
-
+#include <osg/GraphicsContext>
 #include <osgCompute/Interoperability>
 
 namespace osgCompute
@@ -44,5 +44,50 @@ namespace osgCompute
     void InteropObject::clearLocal()
     {
         _usage = GL_SOURCE_COMPUTE_SOURCE;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    void InteropMemory::clear()
+    {
+        clearLocal();
+        osgCompute::Memory::clear();
+    }
+
+    //------------------------------------------------------------------------------
+    void InteropMemory::clearObject()
+    {
+        if( Resource::getContextID() != UINT_MAX )
+        {
+            osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(Resource::getContextID());
+            if( !contexts.empty() && contexts.front()->isRealized() )
+            {      
+                // Make context the current context
+                if( !contexts.front()->isCurrent() )
+                    contexts.front()->makeCurrent();
+            }
+            else if( contexts.empty() )
+            {
+                osg::notify(osg::FATAL) 
+                    << "[InteropMemory::clearObject()]: "
+                    << "the associated graphics context is not available anymore."
+                    << "Check that you call releaseGLObjects(state) before removing the context."
+                    << "Maybe freeing OpenGL related resources is not possible."
+                    << std::endl;
+            }
+        }
+
+        osgCompute::Memory::clearObject();
+    }
+        
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    void InteropMemory::clearLocal()
+    {
+        //InteropMemory::clearObject() is called by Resource::clear()
     }
 }

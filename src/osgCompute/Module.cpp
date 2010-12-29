@@ -87,12 +87,12 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Module::setState( unsigned int state )
+    void Module::setLaunchHint( unsigned int state )
     {
     }
 
     //------------------------------------------------------------------------------
-    unsigned int Module::getState() const
+    unsigned int Module::getLaunchHint() const
     {
         return 0;
     }

@@ -22,18 +22,24 @@ namespace osgCompute
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    unsigned int			Resource::s_CurrentIdx = 0;
+    unsigned int Resource::s_contextID = UINT_MAX;
 
     //------------------------------------------------------------------------------
-    void Resource::setCurrentIdx( unsigned int idx )
+    void Resource::bindToContextID( unsigned int contextID )
     {
-        s_CurrentIdx = idx;
+        s_contextID = contextID;
     }
 
     //------------------------------------------------------------------------------
-    unsigned int Resource::getCurrentIdx()
+    void Resource::clearContextID()
     {
-        return s_CurrentIdx;
+        s_contextID = UINT_MAX;
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int Resource::getContextID()
+    {
+        return s_contextID;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,9 +117,8 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Resource::clearCurrent()
+    void Resource::clearObject()
     {
-
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -130,6 +135,9 @@ namespace osgCompute
     {
         _clear = true;
         _identifiers.clear();
+        
+        // free memory
+        clearObject();
     } 
 
 

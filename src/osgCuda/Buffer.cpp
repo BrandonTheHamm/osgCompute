@@ -16,6 +16,7 @@ namespace osgCuda
     BufferObject::BufferObject()
         :   osgCompute::MemoryObject(),
         _devPtr(NULL),
+        _devArray(NULL),
         _hostPtr(NULL),
         _modifyCount(UINT_MAX)
     {
@@ -35,6 +36,16 @@ namespace osgCuda
             }
         }
 
+        if( NULL != _devArray )
+        {
+            cudaError_t res = cudaFreeArray( _devArray );
+            if( res != cudaSuccess )
+            {
+                osg::notify(osg::FATAL)
+                    <<"BufferObject::~BufferObject(): error during cudaFreeArray(). "
+                    <<cudaGetErrorString(res)<<std::endl;
+            }
+        }
 
         if( NULL != _hostPtr)
             free( _hostPtr );
@@ -68,7 +79,19 @@ namespace osgCuda
 
         unsigned int byteSize = numElements * getElementSize();
 
-        // check stream data
+        if( getElementSize() == 0 || getNumDimensions() == 0 )
+        {
+            osg::notify(osg::WARN)
+                << getName() 
+                << " [osgCuda::Buffer::init()] \""<<getName()<<"\": "
+                << "no valid buffer size. Call setElementSize() and setDimension() first."
+                << std::endl;
+
+                clear();
+                return false;
+        }
+
+        // Check image data
         if( _image.valid() )
         {
             if( _image->getNumMipmapLevels() > 1 )
@@ -95,6 +118,7 @@ namespace osgCuda
             }
         }
 
+        // Check Array
         if( _array.valid() )
         {
             if( _array->getTotalDataSize() != byteSize )
@@ -108,6 +132,8 @@ namespace osgCuda
                 return false;
             }
         }
+
+        // The ChannelFormatDescription should be checked by the application
 
         return osgCompute::Memory::init();
     }
@@ -152,6 +178,9 @@ namespace osgCuda
         void* ptr = NULL;
         if( (memory._mapping & osgCompute::MAP_HOST) )
         {
+            /////////////////////
+            // ALLOCATE STREAM //
+            /////////////////////
             if( NULL == memory._hostPtr )
             {
                 // allocate host-memory 
@@ -161,12 +190,16 @@ namespace osgCuda
                 firstLoad = true;
             }
 
-            // setup stream 
+            //////////////////
+            // SETUP STREAM //
+            //////////////////
             if( needsSetup )
                 if( !setup( mapping ) )
                     return NULL;
 
-            // sync stream 
+            /////////////////
+            // SYNC STREAM //
+            /////////////////
             if( (memory._syncOp & osgCompute::SYNC_HOST) && 
                 NULL != memory._devPtr )
                 if( !sync( mapping ) )
@@ -174,8 +207,42 @@ namespace osgCuda
 
             ptr = memory._hostPtr;
         }
+        else if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
+        {
+            /////////////////////
+            // ALLOCATE STREAM //
+            /////////////////////
+            if( NULL == memory._devArray )
+            {
+                // allocate device-memory 
+                if( !alloc( mapping ) )
+                    return NULL;
+
+                firstLoad = true;
+            }
+
+            //////////////////
+            // SETUP STREAM //
+            //////////////////
+            if( needsSetup )
+                if( !setup( mapping ) )
+                    return NULL;
+
+            /////////////////
+            // SYNC STREAM //
+            /////////////////
+            if( memory._syncOp & osgCompute::SYNC_ARRAY )
+                if( !sync( mapping ) )
+                    return NULL;
+
+            ptr = memory._devArray;
+        }
+
         else if( (memory._mapping & osgCompute::MAP_DEVICE) )
         {
+            /////////////////////
+            // ALLOCATE STREAM //
+            /////////////////////
             if( NULL == memory._devPtr )
             {
                 // allocate device-memory 
@@ -185,12 +252,16 @@ namespace osgCuda
                 firstLoad = true;
             }
 
-            // setup stream 
+            //////////////////
+            // SETUP STREAM //
+            //////////////////
             if( needsSetup && !(memory._syncOp & osgCompute::SYNC_DEVICE) )
                 if( !setup( mapping ) )
                     return NULL;
 
-            // sync stream 
+            /////////////////
+            // SYNC STREAM //
+            /////////////////
             if( (memory._syncOp & osgCompute::SYNC_DEVICE) && 
                 NULL != memory._hostPtr )
                 if( !sync( mapping ) )
@@ -202,7 +273,7 @@ namespace osgCuda
         {
             osg::notify(osg::WARN)
                 << getName() << " [osgCuda::Buffer::map()] \""<<getName()<<"\": Wrong mapping. Use one of the following: "
-                << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
+                << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET,  DEVICE_ARRAY, DEVICE."
                 << std::endl;
 
             return NULL;
@@ -230,10 +301,15 @@ namespace osgCuda
 
         // check sync
         if( (mapping & osgCompute::MAP_DEVICE_TARGET) == osgCompute::MAP_DEVICE_TARGET )
+        {
+            memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._syncOp |= osgCompute::SYNC_HOST;
-
-        if( (mapping & osgCompute::MAP_HOST_TARGET) == osgCompute::MAP_HOST_TARGET )
+        }
+        else if( (mapping & osgCompute::MAP_HOST_TARGET) == osgCompute::MAP_HOST_TARGET )
+        {
+            memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._syncOp |= osgCompute::SYNC_DEVICE;
+        }
 
         return &static_cast<char*>(ptr)[offset];
     }
@@ -357,6 +433,7 @@ namespace osgCuda
         case osgCompute::MAP_DEVICE:
         case osgCompute::MAP_DEVICE_SOURCE:
         case osgCompute::MAP_DEVICE_TARGET:
+        case osgCompute::MAP_DEVICE_ARRAY:
             return true;
         default:
             return false;
@@ -379,7 +456,90 @@ namespace osgCuda
         //////////////////
         // SETUP MEMORY //
         //////////////////
-        if( mapping & osgCompute::MAP_DEVICE )
+        if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
+        {
+            const void* data = NULL;
+            if( _image.valid() )
+            {
+                data = _image->data();
+            }
+
+            if( _array.valid() )
+            {
+                data = reinterpret_cast<const void*>(_array->getDataPointer());
+            }
+
+            if( data == NULL )
+            {
+                osg::notify(osg::FATAL)
+                    << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": Cannot receive valid data pointer."
+                    << std::endl;
+
+                return false;
+            }
+
+            if( getNumDimensions() == 3 )
+            {
+                cudaMemcpy3DParms memCpyParams = {0};
+                memCpyParams.dstArray = memory._devArray;
+                memCpyParams.kind = cudaMemcpyHostToDevice;
+                memCpyParams.srcPtr = make_cudaPitchedPtr((void*)data, getDimension(0)*getElementSize(), getDimension(0), getDimension(1));
+
+                cudaExtent arrayExtent = {0};
+                arrayExtent.width = getDimension(0);
+                arrayExtent.height = getDimension(1);
+                arrayExtent.depth = getDimension(2);
+
+                memCpyParams.extent = arrayExtent;
+
+                res = cudaMemcpy3D( &memCpyParams );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": cudaMemcpy3D() failed."
+                        << " " << cudaGetErrorString( res ) <<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else if( getNumDimensions() == 2 )
+            {
+                cudaError res = cudaMemcpy2DToArray( memory._devArray, 0, 0, data, getDimension(0)*getElementSize(), getDimension(0)*getElementSize(), getDimension(1), cudaMemcpyHostToDevice );  
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << getName() << " [osgCuda::Buffer::set()] \""<<getName()<<"\": cudaMemcpy2DToArray() failed."
+                        << " " << cudaGetErrorString( res ) << "."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else
+            {
+                res = cudaMemcpyToArray(memory._devArray, 0, 0, data, getByteSize(), cudaMemcpyHostToDevice);
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": cudaMemcpyToArray() failed."
+                        << " " << cudaGetErrorString( res ) << "."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+
+
+            // host must be synchronized
+            // because device memory has been modified
+            memory._syncOp |= osgCompute::SYNC_DEVICE;
+            memory._syncOp |= osgCompute::SYNC_HOST;
+
+            memory._modifyCount = _image.valid()? _image->getModifiedCount() : _array->getModifiedCount();
+            return true;
+        }
+        else if( mapping & osgCompute::MAP_DEVICE )
         {
             void* data = NULL;
             if( _image.valid() )
@@ -450,7 +610,9 @@ namespace osgCuda
 
             // host must be synchronized
             // because device memory has been modified
-            memory._syncOp = osgCompute::SYNC_HOST;
+            memory._syncOp |= osgCompute::SYNC_ARRAY;
+            memory._syncOp |= osgCompute::SYNC_HOST;
+
             memory._modifyCount = _image.valid()? _image->getModifiedCount() : UINT_MAX;
             memory._modifyCount = _array.valid()? _array->getModifiedCount() : UINT_MAX;
 
@@ -489,9 +651,11 @@ namespace osgCuda
                 return false;
             }
 
-            // device must be synchronized
+            // Device must be synchronized
             // because host memory has been modified
-            memory._syncOp = osgCompute::SYNC_DEVICE;
+            memory._syncOp |= osgCompute::SYNC_ARRAY;
+            memory._syncOp |= osgCompute::SYNC_DEVICE;
+
             memory._modifyCount = _image.valid()? _image->getModifiedCount() : UINT_MAX;
             memory._modifyCount = _array.valid()? _array->getModifiedCount() : UINT_MAX;
 
@@ -533,8 +697,74 @@ namespace osgCuda
             // clear memory
             memset( memory._hostPtr, 0x0, getByteSize() );
 
-            if( memory._devPtr != NULL )
+            if( memory._devPtr != NULL || memory._devArray != NULL )
                 memory._syncOp |= osgCompute::SYNC_HOST;
+
+            return true;
+        }
+        else if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
+        {
+            if( memory._devArray != NULL )
+                return true;
+
+            const cudaChannelFormatDesc& desc = getChannelFormatDesc();
+            if( desc.x == INT_MAX && desc.y == INT_MAX && desc.z == INT_MAX )
+            {
+                osg::notify(osg::FATAL)
+                    << getName() << " [osgCuda::Buffer::allocStream()] \""<<getName()<<"\": no valid ChannelFormatDesc found."
+                    << std::endl;
+
+                return false;
+            }
+
+            if( getNumDimensions() == 3 )
+            {
+                cudaExtent extent;
+                extent.width = getDimension(0);
+                extent.height = (getDimension(1) <= 1)? 0 : getDimension(1);
+                extent.depth = (getDimension(2) <= 1)? 0 : getDimension(2);
+
+                // allocate memory
+                cudaError res = cudaMalloc3DArray( &memory._devArray, &desc, extent );
+                if( cudaSuccess != res || NULL ==  memory._devArray )
+                {
+                    osg::notify(osg::FATAL)
+                        << getName() << " [osgCuda::Buffer::allocStream()] \""<<getName()<<"\": something goes wrong within cudaMalloc3DArray()."
+                        << " " << cudaGetErrorString( res ) <<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else if( getNumDimensions() == 2 )
+            {
+                cudaError res = cudaMallocArray( &memory._devArray, &desc, getDimension(0), (getDimension(1) <= 1)? 0 : getDimension(1) );
+                if( cudaSuccess != res || NULL ==  memory._devArray )
+                {
+                    osg::notify(osg::FATAL)
+                        << getName() << " [osgCuda::Buffer::allocStream()] \""<<getName()<<"\": something goes wrong within mallocDevice2DArray()."
+                        << " " << cudaGetErrorString( res ) <<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else
+            {
+                cudaError res = cudaMallocArray( &memory._devArray, &desc, getDimension(0), 1 );
+                if( cudaSuccess != res || NULL ==  memory._devArray )
+                {
+                    osg::notify(osg::FATAL)
+                        << getName() << " [osgCuda::Buffer::allocStream()] \""<<getName()<<"\": something goes wrong within mallocDeviceArray()."
+                        << " " << cudaGetErrorString( res ) <<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+
+            if( memory._hostPtr != NULL || memory._devPtr != NULL )
+                memory._syncOp |= osgCompute::SYNC_ARRAY;
 
             return true;
         }
@@ -620,11 +850,12 @@ namespace osgCuda
                     << std::endl;
             }
 
-            if( memory._hostPtr != NULL )
+            if( memory._hostPtr != NULL || memory._devArray != NULL )
                 memory._syncOp |= osgCompute::SYNC_DEVICE;
 
             return true;
         }
+
 
         return false;
     }
@@ -645,63 +876,280 @@ namespace osgCuda
         /////////////////
         // SYNC MEMORY //
         /////////////////
-        if( mapping & osgCompute::MAP_DEVICE )
+        /////////////////
+        // SYNC MEMORY //
+        /////////////////
+        if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
         {
-            if( !(memory._syncOp & osgCompute::SYNC_DEVICE) )
+            if( !(memory._syncOp & osgCompute::SYNC_ARRAY) )
                 return true;
 
-            if( getNumDimensions() == 3 )
+            if( ((memory._syncOp & osgCompute::SYNC_DEVICE) && memory._hostPtr == NULL) ||
+                ((memory._syncOp & osgCompute::SYNC_HOST) && memory._devPtr == NULL) ||
+                ((memory._syncOp & osgCompute::SYNC_DEVICE) && (memory._syncOp & osgCompute::SYNC_HOST)) )
             {
-                cudaMemcpy3DParms memCpyParams = {0};
-                memCpyParams.dstPtr = make_cudaPitchedPtr(memory._devPtr,memory._pitch, getDimension(0), getDimension(1));
-                memCpyParams.kind = cudaMemcpyHostToDevice;
-                memCpyParams.srcPtr = make_cudaPitchedPtr(memory._hostPtr,getElementSize()*getDimension(0), getDimension(0), getDimension(1));
+                osg::notify(osg::FATAL)
+                    << getName() << " [osgCuda::Buffer::sync()]: no current memory found."
+                    << std::endl;
 
-                cudaExtent arrayExtent = {0};
-                arrayExtent.width = getElementSize()*getDimension(0);
-                arrayExtent.height = getDimension(1);
-                arrayExtent.depth = getDimension(2);
-
-                memCpyParams.extent = arrayExtent;
-
-                res = cudaMemcpy3D( &memCpyParams );
-                if( cudaSuccess != res )
-                {
-                    osg::notify(osg::FATAL)
-                        << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() to device failed."
-                        << " " << cudaGetErrorString( res ) <<"."
-                        << std::endl;
-
-                    return false;
-                }
+                return false;
             }
-            else if( getNumDimensions() == 2 )
-            {
-                res = cudaMemcpy2D( memory._devPtr, memory._pitch, memory._hostPtr, getElementSize()*getDimension(0), 
-                    getDimension(0)*getElementSize(), getDimension(1), cudaMemcpyHostToDevice );
-                if( cudaSuccess != res )
-                {
-                    osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2D() to device failed."
-                        << " " << cudaGetErrorString( res ) << "."
-                        << std::endl;
 
-                    return false;
+            if( (memory._syncOp & osgCompute::SYNC_DEVICE) )
+            {
+                // Copy from host memory
+                if( getNumDimensions() < 2 )
+                {
+                    res = cudaMemcpyToArray( memory._devArray, 0, 0, memory._hostPtr, getByteSize(), cudaMemcpyHostToDevice);
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpyToArray() failed."
+                            << " " << cudaGetErrorString( res ) << "."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                if( getNumDimensions() == 2 ) 
+                {
+                    res = cudaMemcpy2DToArray( memory._devArray, 0, 0, memory._hostPtr, 
+                        getDimension(0)*getElementSize(), getDimension(0)*getElementSize(), getDimension(1), 
+                        cudaMemcpyHostToDevice );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2DToArray() failed."
+                            << " " << cudaGetErrorString( res ) << "."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else
+                {
+                    cudaMemcpy3DParms memCpyParams = {0};
+                    memCpyParams.dstArray = memory._devArray;
+                    memCpyParams.kind = cudaMemcpyHostToDevice;
+                    memCpyParams.srcPtr = make_cudaPitchedPtr(memory._hostPtr, getDimension(0)*getElementSize(), getDimension(0), getDimension(1));
+
+                    cudaExtent arrayExtent = {0};
+                    arrayExtent.width = getDimension(0);
+                    arrayExtent.height = getDimension(1);
+                    arrayExtent.depth = getDimension(2);
+
+                    memCpyParams.extent = arrayExtent;
+
+                    res = cudaMemcpy3D( &memCpyParams );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() failed."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
                 }
             }
             else
             {
-                res = cudaMemcpy( memory._devPtr, memory._hostPtr, getByteSize(), cudaMemcpyHostToDevice );
-                if( cudaSuccess != res )
+                // Copy from device memory
+                if( getNumDimensions() < 2 )
                 {
-                    osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::Buffer::sync()] \""<<getName()<<"\": cudaMemcpy() to device failed."
-                        << " " << cudaGetErrorString( res ) <<"."
-                        << std::endl;
-                    return false;
+                    res = cudaMemcpyToArray( memory._devArray, 0, 0, memory._devPtr, getByteSize(), cudaMemcpyDeviceToDevice);
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpyToArray() failed."
+                            << " " << cudaGetErrorString( res ) << "."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else if( getNumDimensions() == 2 ) 
+                {
+                    res = cudaMemcpy2DToArray( memory._devArray, 0, 0, memory._devPtr, 
+                                               memory._pitch,  getDimension(0)*getElementSize(), getDimension(1), 
+                                               cudaMemcpyDeviceToDevice );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2DToArray() failed."
+                            << " " << cudaGetErrorString( res ) << "."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else
+                {
+                    cudaMemcpy3DParms memCpyParams = {0};
+                    memCpyParams.dstArray = memory._devArray;
+                    memCpyParams.kind = cudaMemcpyDeviceToDevice;
+                    memCpyParams.srcPtr = make_cudaPitchedPtr(memory._devPtr, memory._pitch, getDimension(0), getDimension(1));
+
+                    cudaExtent arrayExtent = {0};
+                    arrayExtent.width = getDimension(0);
+                    arrayExtent.height = getDimension(1);
+                    arrayExtent.depth = getDimension(2);
+
+                    memCpyParams.extent = arrayExtent;
+
+                    res = cudaMemcpy3D( &memCpyParams );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() failed."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
                 }
             }
 
+            memory._syncOp = memory._syncOp ^ osgCompute::SYNC_ARRAY;
+            return true;
+        }
+        else if( mapping & osgCompute::MAP_DEVICE )
+        {
+            if( !(memory._syncOp & osgCompute::SYNC_DEVICE) )
+                return true;
+
+            if( ((memory._syncOp & osgCompute::SYNC_ARRAY) && memory._hostPtr == NULL) ||
+                ((memory._syncOp & osgCompute::SYNC_HOST) && memory._devArray == NULL) ||
+                ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_HOST)) )
+            {
+                osg::notify(osg::FATAL)
+                    << getName() << " [osgCuda::Buffer::sync()]: no current memory found."
+                    << std::endl;
+
+                return false;
+            }
+
+            if( (memory._syncOp & osgCompute::SYNC_HOST) )
+            {
+                // Copy from array
+                if( getNumDimensions() == 1 )
+                {
+                    res = cudaMemcpyFromArray( memory._devPtr, memory._devArray, 0, 0, getByteSize(), cudaMemcpyDeviceToDevice );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]:  error during cudaMemcpyFromArray() to host memory."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else if( getNumDimensions() == 2 )
+                {
+                    res = cudaMemcpy2DFromArray(
+                        memory._devPtr,
+                        memory._pitch,
+                        memory._devArray,
+                        0, 0,
+                        getDimension(0)* getElementSize(),
+                        getDimension(1),
+                        cudaMemcpyDeviceToDevice );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: error during cudaMemcpy2DFromArray() to host memory."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else
+                {
+                    cudaPitchedPtr pitchPtr = {0};
+                    pitchPtr.pitch = memory._pitch;
+                    pitchPtr.ptr = memory._devPtr;
+                    pitchPtr.xsize = getDimension(0);
+                    pitchPtr.ysize = getDimension(1);
+
+                    cudaExtent extent = {0};
+                    extent.width = getDimension(0);
+                    extent.height = getDimension(1);
+                    extent.depth = getDimension(2);
+
+                    cudaMemcpy3DParms copyParams = {0};
+                    copyParams.srcArray = memory._devArray;
+                    copyParams.dstPtr = pitchPtr;
+                    copyParams.extent = extent;
+                    copyParams.kind = cudaMemcpyDeviceToDevice;
+
+                    res = cudaMemcpy3D( &copyParams );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: error during cudaMemcpy3D() to host memory."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                if( getNumDimensions() == 3 )
+                {
+                    cudaMemcpy3DParms memCpyParams = {0};
+                    memCpyParams.dstPtr = make_cudaPitchedPtr(memory._devPtr,memory._pitch, getDimension(0), getDimension(1));
+                    memCpyParams.kind = cudaMemcpyHostToDevice;
+                    memCpyParams.srcPtr = make_cudaPitchedPtr(memory._hostPtr,getElementSize()*getDimension(0), getDimension(0), getDimension(1));
+
+                    cudaExtent arrayExtent = {0};
+                    arrayExtent.width = getElementSize()*getDimension(0);
+                    arrayExtent.height = getDimension(1);
+                    arrayExtent.depth = getDimension(2);
+
+                    memCpyParams.extent = arrayExtent;
+
+                    res = cudaMemcpy3D( &memCpyParams );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() to device failed."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else if( getNumDimensions() == 2 )
+                {
+                    res = cudaMemcpy2D( memory._devPtr, memory._pitch, memory._hostPtr, getElementSize()*getDimension(0), 
+                        getDimension(0)*getElementSize(), getDimension(1), cudaMemcpyHostToDevice );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2D() to device failed."
+                            << " " << cudaGetErrorString( res ) << "."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else
+                {
+                    res = cudaMemcpy( memory._devPtr, memory._hostPtr, getByteSize(), cudaMemcpyHostToDevice );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::WARN)
+                            << getName() << " [osgCuda::Buffer::sync()] \""<<getName()<<"\": cudaMemcpy() to device failed."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+                        return false;
+                    }
+                }
+            }
 
             memory._syncOp = memory._syncOp ^ osgCompute::SYNC_DEVICE;
             return true;
@@ -711,55 +1159,137 @@ namespace osgCuda
             if( !(memory._syncOp & osgCompute::SYNC_HOST) )
                 return true;
 
-            if( getNumDimensions() == 3 )
+            if( ((memory._syncOp & osgCompute::SYNC_ARRAY) && memory._devPtr == NULL) ||
+                ((memory._syncOp & osgCompute::SYNC_DEVICE) && memory._devArray == NULL) ||
+                ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_DEVICE)) )
             {
-                cudaMemcpy3DParms memCpyParams = {0};
-                memCpyParams.dstPtr = make_cudaPitchedPtr(memory._hostPtr,getElementSize()*getDimension(0), getDimension(0), getDimension(1));
-                memCpyParams.kind = cudaMemcpyDeviceToHost;
-                memCpyParams.srcPtr = make_cudaPitchedPtr(memory._devPtr,memory._pitch, getDimension(0), getDimension(1));
+                osg::notify(osg::FATAL)
+                    << getName() << " [osgCuda::Buffer::sync()]: no current memory found."
+                    << std::endl;
 
-                cudaExtent arrayExtent = {0};
-                arrayExtent.width = getElementSize()*getDimension(0);
-                arrayExtent.height = getDimension(1);
-                arrayExtent.depth = getDimension(2);
-
-                memCpyParams.extent = arrayExtent;
-
-                res = cudaMemcpy3D( &memCpyParams );
-                if( cudaSuccess != res )
-                {
-                    osg::notify(osg::FATAL)
-                        << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() to host failed."
-                        << " " << cudaGetErrorString( res ) <<"."
-                        << std::endl;
-
-                    return false;
-                }
+                return false;
             }
-            else if( getNumDimensions() == 2 )
-            {
-                res = cudaMemcpy2D( memory._hostPtr, getElementSize()*getDimension(0), memory._devPtr, memory._pitch, 
-                    getDimension(0)*getElementSize(), getDimension(1), cudaMemcpyDeviceToHost );
-                if( cudaSuccess != res )
-                {
-                    osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2D() to host failed."
-                        << " " << cudaGetErrorString( res ) << "."
-                        << std::endl;
 
-                    return false;
+            if( (memory._syncOp & osgCompute::SYNC_DEVICE) )
+            {
+                // Copy from array
+                if( getNumDimensions() == 1 )
+                {
+                    res = cudaMemcpyFromArray( memory._hostPtr, memory._devArray, 0, 0, getByteSize(), cudaMemcpyDeviceToHost );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]:  error during cudaMemcpyFromArray() to host memory."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else if( getNumDimensions() == 2 )
+                {
+                    res = cudaMemcpy2DFromArray(
+                        memory._hostPtr,
+                        getDimension(0) * getElementSize(),
+                        memory._devArray,
+                        0, 0,
+                        getDimension(0)*getElementSize(),
+                        getDimension(1),
+                        cudaMemcpyDeviceToHost );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: error during cudaMemcpy2DFromArray() to host memory."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else
+                {
+                    cudaPitchedPtr pitchPtr = {0};
+                    pitchPtr.pitch = getDimension(0)*getElementSize();
+                    pitchPtr.ptr = memory._hostPtr;
+                    pitchPtr.xsize = getDimension(0);
+                    pitchPtr.ysize = getDimension(1);
+
+                    cudaExtent extent = {0};
+                    extent.width = getDimension(0);
+                    extent.height = getDimension(1);
+                    extent.depth = getDimension(2);
+
+                    cudaMemcpy3DParms copyParams = {0};
+                    copyParams.srcArray = memory._devArray;
+                    copyParams.dstPtr = pitchPtr;
+                    copyParams.extent = extent;
+                    copyParams.kind = cudaMemcpyDeviceToHost;
+
+                    res = cudaMemcpy3D( &copyParams );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: error during cudaMemcpy3D() to host memory."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+
+                    }
                 }
             }
             else
             {
-                res = cudaMemcpy( memory._hostPtr, memory._devPtr, getByteSize(), cudaMemcpyDeviceToHost );
-                if( cudaSuccess != res )
+                if( getNumDimensions() == 3 )
                 {
-                    osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::Buffer::sync()] \""<<getName()<<"\": cudaMemcpy() to host failed."
-                        << " " << cudaGetErrorString( res ) <<"."
-                        << std::endl;
-                    return false;
+                    cudaMemcpy3DParms memCpyParams = {0};
+                    memCpyParams.dstPtr = make_cudaPitchedPtr(memory._hostPtr,getElementSize()*getDimension(0), getDimension(0), getDimension(1));
+                    memCpyParams.kind = cudaMemcpyDeviceToHost;
+                    memCpyParams.srcPtr = make_cudaPitchedPtr(memory._devPtr,memory._pitch, getDimension(0), getDimension(1));
+
+                    cudaExtent arrayExtent = {0};
+                    arrayExtent.width = getElementSize()*getDimension(0);
+                    arrayExtent.height = getDimension(1);
+                    arrayExtent.depth = getDimension(2);
+
+                    memCpyParams.extent = arrayExtent;
+
+                    res = cudaMemcpy3D( &memCpyParams );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() to host failed."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else if( getNumDimensions() == 2 )
+                {
+                    res = cudaMemcpy2D( memory._hostPtr, getElementSize()*getDimension(0), memory._devPtr, memory._pitch, 
+                        getDimension(0)*getElementSize(), getDimension(1), cudaMemcpyDeviceToHost );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::FATAL)
+                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2D() to host failed."
+                            << " " << cudaGetErrorString( res ) << "."
+                            << std::endl;
+
+                        return false;
+                    }
+                }
+                else
+                {
+                    res = cudaMemcpy( memory._hostPtr, memory._devPtr, getByteSize(), cudaMemcpyDeviceToHost );
+                    if( cudaSuccess != res )
+                    {
+                        osg::notify(osg::WARN)
+                            << getName() << " [osgCuda::Buffer::sync()] \""<<getName()<<"\": cudaMemcpy() to host failed."
+                            << " " << cudaGetErrorString( res ) <<"."
+                            << std::endl;
+                        return false;
+                    }
                 }
             }
 
@@ -848,6 +1378,27 @@ namespace osgCuda
         return _array.get();
     }
 
+    //------------------------------------------------------------------------------
+    cudaChannelFormatDesc& Buffer::getChannelFormatDesc()
+    {
+        return _formatDesc;
+    }
+
+    //------------------------------------------------------------------------------
+    const cudaChannelFormatDesc& Buffer::getChannelFormatDesc() const
+    {
+        return _formatDesc;
+    }
+
+    //------------------------------------------------------------------------------
+    void Buffer::setChannelFormatDesc(cudaChannelFormatDesc& formatDesc)
+    {
+        if( !osgCompute::Resource::isClear() )
+            return;
+
+        _formatDesc = formatDesc;
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -856,6 +1407,7 @@ namespace osgCuda
     {
         _array = NULL;
         _image = NULL;
+        memset( &_formatDesc, 0x0, sizeof(cudaChannelFormatDesc) );
     }
 
     //------------------------------------------------------------------------------

@@ -246,10 +246,12 @@ namespace osgCompute
 		* Will set the memory to a clear state. This method will release all allocated memory blocks.
 		*/
         virtual void clear();
-		/**
-		* Release the memory block associated with the current context.
-		*/
-        virtual void clearCurrent();
+
+        /**
+        * Will release all allocated host and device memory for this object. Is implicitly called during Resource::clear().
+        */
+        virtual void clearObject();
+
     protected:
         virtual ~Memory();
         void clearLocal();
@@ -265,8 +267,7 @@ namespace osgCompute
         unsigned int									    _elementSize;
         mutable unsigned int                                _pitch;
         osg::ref_ptr<SubloadCallback>                       _subloadCallback;
-
-        mutable std::vector< osg::ref_ptr<MemoryObject> >   _objects;
+        mutable osg::ref_ptr<MemoryObject>                  _object;
 
     private:
         // copy constructor and operator should not be called
