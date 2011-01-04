@@ -796,9 +796,30 @@ namespace osgCompute
         }
         _resourceVisitor->setupForTraversal();
 
+        // Collect resource form modules
+        for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+        {
+            if( (*itr).valid() )
+            {
+                ResourceList resList;
+                (*itr)->getAllResources(resList);
+                for( ResourceListItr resItr = resList.begin(); resItr != resList.end(); ++resItr )
+                {
+                    if( (*resItr).valid() && !hasResource(*(*resItr)) )
+                    {
+                        ResourceHandle newHandle;
+                        newHandle._resource = (*resItr).get();
+                        newHandle._attached = false;
+                        _resources.push_back( newHandle );
+                    }
+                }
+            }
+        }
+
         // collect resources and setup parent computations 
         // in the subgraph
         _resourceVisitor->traverse( *this );
+
 
         // setup resources for this computation
         _resourceVisitor->updateComputation();

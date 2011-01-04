@@ -182,7 +182,8 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ResourceVisitor::addResource( Resource& resource )
     {
-        _ptrResources->insert( &resource );
+        //if( !hasResource(resource) )
+            _ptrResources->insert( &resource );
     }
 
     //------------------------------------------------------------------------------
