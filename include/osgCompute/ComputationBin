@@ -54,20 +54,10 @@ namespace osgCompute
         virtual void drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
         virtual unsigned int computeNumberOfDynamicRenderLeaves() const;
 
-        virtual bool hasModule( const std::string& moduleName ) const;
-        virtual bool hasModule( Module& module ) const;
-        virtual bool hasModules() const;
-        virtual Module* getModule( const std::string& moduleName );
-        virtual const Module* getModule( const std::string& moduleName ) const;
-        virtual ModuleList* getModules();
-        virtual const ModuleList* getModules() const;
-        virtual unsigned int getNumModules() const;
 
         virtual bool isClear() const;
         virtual Computation* getComputation();
         virtual const Computation* getComputation() const;
-        virtual LaunchCallback* getLaunchCallback();
-        virtual const LaunchCallback* getLaunchCallback() const;
 
         virtual void clear();
 
@@ -81,10 +71,7 @@ namespace osgCompute
 
         // members
         Computation*                         _computation; 
-        unsigned int                         _computeOrder; 
         bool                                 _clear;
-        LaunchCallback*                      _launchCallback;
-        ModuleList                           _modules;             
 
     private:
         // copy constructor and operator should not be called

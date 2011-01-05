@@ -535,12 +535,12 @@ namespace osgCompute
         {
             if( state->getContextID() == Resource::getContextID() )
             {
-                osg::GraphicsContext* context = osg::GraphicsContext::getCompileContext(Resource::getContextID());
-                if( context != NULL && context->isRealized() )
+                osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(Resource::getContextID());
+                if( !contexts.empty() && contexts.front() != NULL && contexts.front()->isRealized() )
                 {     
                     // Make context the current context
-                    if( !context->isCurrent() )
-                        context->makeCurrent();
+                    if( !contexts.front()->isCurrent() )
+                        contexts.front()->makeCurrent();
 
                     // Release all resources associated with the current context
                     for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )

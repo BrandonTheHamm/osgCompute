@@ -84,10 +84,10 @@ namespace osgCompute
         }
 
 
-        if( (_computeOrder & OSGCOMPUTE_BEFORECHILDREN ) == OSGCOMPUTE_BEFORECHILDREN )
+        if( (_computation->getComputeOrder() & OSGCOMPUTE_BEFORECHILDREN ) == OSGCOMPUTE_BEFORECHILDREN )
         {
-            if( _launchCallback ) 
-                (*_launchCallback)( *_computation ); 
+            if( _computation->getLaunchCallback() ) 
+                (*_computation->getLaunchCallback())( *_computation ); 
             else launch(); 
 
             // don't forget to decrement dynamic object count
@@ -95,13 +95,13 @@ namespace osgCompute
         }
 
         // render sub-graph leafs
-		if( (_computeOrder & OSGCOMPUTE_NOCHILDREN ) != OSGCOMPUTE_NOCHILDREN )
+		if( (_computation->getComputeOrder() & OSGCOMPUTE_NOCHILDREN ) != OSGCOMPUTE_NOCHILDREN )
 			drawLeafs(renderInfo, previous );
 
-        if( (_computeOrder & OSGCOMPUTE_BEFORECHILDREN ) != OSGCOMPUTE_BEFORECHILDREN )
+        if( (_computation->getComputeOrder() & OSGCOMPUTE_BEFORECHILDREN ) != OSGCOMPUTE_BEFORECHILDREN )
         {
-            if( _launchCallback ) 
-                (*_launchCallback)( *_computation ); 
+            if( _computation->getLaunchCallback() ) 
+                (*_computation->getLaunchCallback())( *_computation ); 
             else launch();  
 
             // don't forget to decrement dynamic object count
@@ -137,20 +137,10 @@ namespace osgCompute
     {
         // COMPUTATION 
         _computation = &computation;
-        _computeOrder = computation.getComputeOrder();
-
-        // MODULES 
-        if( _computation->hasModules())
-        {
-            _modules = _computation->getModules();
-        }
 
         // OBJECT 
         setName( _computation->getName() );
         setDataVariance( _computation->getDataVariance() );
-
-        // CALLBACK 
-        _launchCallback = _computation->getLaunchCallback();
 
         _clear = false;
         return true;
@@ -160,70 +150,6 @@ namespace osgCompute
     void ComputationBin::reset()
     {
         clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    bool ComputationBin::hasModule( const std::string& moduleName ) const
-    {
-        for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isIdentifiedBy(moduleName)  )
-                return true;
-
-        return false;
-    }
-
-    //------------------------------------------------------------------------------
-    bool ComputationBin::hasModule( Module& module ) const
-    {
-        for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr) == &module )
-                return true;
-
-        return false;
-    }
-
-    //------------------------------------------------------------------------------
-    bool ComputationBin::hasModules() const 
-    { 
-        return !_modules.empty(); 
-    }
-
-    //-----------------------------------------------------------------------------
-    Module* ComputationBin::getModule( const std::string& moduleName )
-    {
-        for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isIdentifiedBy(moduleName) && (*itr).valid() )
-                return (*itr).get();
-
-        return NULL;
-    }
-
-    //-----------------------------------------------------------------------------
-    const Module* ComputationBin::getModule( const std::string& moduleName ) const
-    {
-        for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            if( (*itr)->isIdentifiedBy(moduleName) && (*itr).valid() )
-                return (*itr).get();
-
-        return NULL;
-    }
-
-    //------------------------------------------------------------------------------
-    ModuleList* ComputationBin::getModules() 
-    { 
-        return &_modules; 
-    }
-
-    //------------------------------------------------------------------------------
-    const ModuleList* ComputationBin::getModules() const 
-    { 
-        return &_modules; 
-    }
-
-    //------------------------------------------------------------------------------
-    unsigned int ComputationBin::getNumModules() const 
-    { 
-        return _modules.size(); 
     }
 
     //------------------------------------------------------------------------------
@@ -244,18 +170,6 @@ namespace osgCompute
         return _computation; 
     }
 
-    //------------------------------------------------------------------------------
-    LaunchCallback* ComputationBin::getLaunchCallback()
-    { 
-        return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    const LaunchCallback* ComputationBin::getLaunchCallback() const
-    { 
-        return _launchCallback; 
-    }
-
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -263,10 +177,7 @@ namespace osgCompute
     void ComputationBin::clearLocal()
     {
         _computation = NULL;
-        _computeOrder = osgCompute::Computation::PRERENDER_BEFORECHILDREN;
         _clear = true;
-        _launchCallback = NULL;
-        _modules.clear();
 
         osgUtil::RenderBin::reset();
     }
@@ -278,7 +189,8 @@ namespace osgCompute
             return;
 
         // Launch modules
-        for( ModuleListCnstItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+        ModuleList& modules = _computation->getModules();
+        for( ModuleListCnstItr itr = modules.begin(); itr != modules.end(); ++itr )
         {
             if( (*itr)->isEnabled() )
             {
