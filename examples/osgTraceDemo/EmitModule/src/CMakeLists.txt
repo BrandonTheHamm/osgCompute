@@ -17,7 +17,6 @@ SET(LIB_NAME_LABEL "Module ${LIB_NAME}")
 INCLUDE(FindOpenThreads)
 INCLUDE(Findosg)
 INCLUDE(FindosgDB)
-INCLUDE(Findmatlab)
 INCLUDE(FindCuda)
 
 #########################################################################
