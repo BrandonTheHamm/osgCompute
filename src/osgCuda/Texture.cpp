@@ -449,7 +449,12 @@ namespace osgCuda
             }
         }
 
-        if( (mapping & osgCompute::MAP_DEVICE_TARGET) == osgCompute::MAP_DEVICE_TARGET )
+        if( (mapping & osgCompute::MAP_DEVICE_ARRAY_TARGET) == osgCompute::MAP_DEVICE_ARRAY_TARGET )
+        {
+            memory._syncOp |= osgCompute::SYNC_DEVICE;
+            memory._syncOp |= osgCompute::SYNC_HOST;
+        }
+        else if( (mapping & osgCompute::MAP_DEVICE_TARGET) == osgCompute::MAP_DEVICE_TARGET )
         {
             memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._syncOp |= osgCompute::SYNC_HOST;

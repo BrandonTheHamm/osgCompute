@@ -200,8 +200,7 @@ namespace osgCuda
             /////////////////
             // SYNC STREAM //
             /////////////////
-            if( (memory._syncOp & osgCompute::SYNC_HOST) && 
-                NULL != memory._devPtr )
+            if( (memory._syncOp & osgCompute::SYNC_HOST) )
                 if( !sync( mapping ) )
                     return NULL;
 
@@ -262,8 +261,7 @@ namespace osgCuda
             /////////////////
             // SYNC STREAM //
             /////////////////
-            if( (memory._syncOp & osgCompute::SYNC_DEVICE) && 
-                NULL != memory._hostPtr )
+            if( (memory._syncOp & osgCompute::SYNC_DEVICE) )
                 if( !sync( mapping ) )
                     return NULL;
 
@@ -300,7 +298,12 @@ namespace osgCuda
         }
 
         // check sync
-        if( (mapping & osgCompute::MAP_DEVICE_TARGET) == osgCompute::MAP_DEVICE_TARGET )
+        if( (mapping & osgCompute::MAP_DEVICE_ARRAY_TARGET) == osgCompute::MAP_DEVICE_ARRAY_TARGET )
+        {
+            memory._syncOp |= osgCompute::SYNC_DEVICE;
+            memory._syncOp |= osgCompute::SYNC_HOST;
+        }
+        else if( (mapping & osgCompute::MAP_DEVICE_TARGET) == osgCompute::MAP_DEVICE_TARGET )
         {
             memory._syncOp |= osgCompute::SYNC_ARRAY;
             memory._syncOp |= osgCompute::SYNC_HOST;
@@ -708,7 +711,7 @@ namespace osgCuda
                 return true;
 
             const cudaChannelFormatDesc& desc = getChannelFormatDesc();
-            if( desc.x == INT_MAX && desc.y == INT_MAX && desc.z == INT_MAX )
+            if( (desc.x == 0 && desc.y == 0 && desc.z == 0 && desc.w == 0) || desc.f == cudaChannelFormatKindNone )
             {
                 osg::notify(osg::FATAL)
                     << getName() << " [osgCuda::Buffer::allocStream()] \""<<getName()<<"\": no valid ChannelFormatDesc found."

@@ -48,6 +48,7 @@ namespace osgCompute
         MAP_DEVICE_SOURCE           = 0x00010000,
         MAP_DEVICE_TARGET           = 0x00100000,
         MAP_DEVICE_ARRAY            = 0x00001000,
+        MAP_DEVICE_ARRAY_TARGET     = 0x00101000,
     }; 
 
     // A MemoryObject provides internal information about the memory resources of a memory area on the device.
