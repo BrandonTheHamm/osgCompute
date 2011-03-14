@@ -27,8 +27,8 @@ void reseed( unsigned int numBlocks,
             void* seeds,
             unsigned int seedCount,
             unsigned int seedIdx,
-            float3 bbmin,
-            float3 bbmax );
+            osg::Vec3f bbmin,
+            osg::Vec3f bbmax );
 
 
 namespace PtclDemo
@@ -42,26 +42,14 @@ namespace PtclDemo
     //------------------------------------------------------------------------------
     bool PtclEmitter::init()
     {
-        if( !_ptcls.valid() )
+        if( !_ptcls.valid() || !_box.valid() )
         {
             osg::notify( osg::WARN )
-                << "ParticleDemo::ParticleMover::init(): buffers are missing."
+                << "ParticleDemo::ParticleMover::init(): resources are missing."
                 << std::endl;
 
             return false;
         }
-
-        osg::Vec3Array* minMaxArray = (osg::Vec3Array*) getUserData();
-        if( !minMaxArray )
-        {
-            osg::notify( osg::WARN )
-                << "ParticleDemo::PtclEmitter::init(): min/max values are missing."
-                << std::endl;
-
-            return false;
-        }
-        _seedBoxMin = (*minMaxArray).at(0);
-        _seedBoxMax = (*minMaxArray).at(1);
 
         /////////////////////////
         // COMPUTE KERNEL SIZE //
@@ -80,32 +68,15 @@ namespace PtclDemo
         if( isClear() )
             return;
 
-        ////////////
-        // PARAMS //
-        ////////////
-        unsigned int seedIdx = static_cast<unsigned int>(rand());
-        float3 bbmin;
-        bbmin.x = _seedBoxMin.x();
-        bbmin.y = _seedBoxMin.y();
-        bbmin.z = _seedBoxMin.z();
-
-        float3 bbmax;
-        bbmax.x = _seedBoxMax.x();
-        bbmax.y = _seedBoxMax.y();
-        bbmax.z = _seedBoxMax.z();
-
-        ////////////
-        // RESEED //
-        ////////////
         reseed(
             _numBlocks,
             _numThreads,
             _ptcls->map(),
             _seeds->map(),
             _seeds->getDimension(0),
-            seedIdx,
-            bbmin,
-            bbmax );
+            static_cast<unsigned int>(rand()),
+            _box->_min,
+            _box->_max );
     }
 
     //------------------------------------------------------------------------------
@@ -115,6 +86,8 @@ namespace PtclDemo
             _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
         if( resource.isIdentifiedBy("PTCL_SEEDS") )
             _seeds = dynamic_cast<osgCompute::Memory*>( &resource );
+        if( resource.isIdentifiedBy("EMITTER_BOX") )
+            _box = dynamic_cast<EmitterBox*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -127,7 +100,6 @@ namespace PtclDemo
         _numThreads = 1;
         _ptcls = NULL;
         _seeds = NULL;
-        _seedBoxMin = osg::Vec3f(0,0,0);
-        _seedBoxMax = osg::Vec3f(0,0,0);
+        _box = NULL;
     }
 }

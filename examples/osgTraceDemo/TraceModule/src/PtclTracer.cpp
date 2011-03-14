@@ -37,8 +37,6 @@ namespace PtclDemo
 
         META_Object( PtclDemo, PtclTracer )
 
-        // Modules have to implement at least this
-        // three methods:
         virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
@@ -47,9 +45,6 @@ namespace PtclDemo
     protected:
         virtual ~PtclTracer() {clearLocal();}
         void clearLocal();
-
-        double                              _lastTime;
-        bool						        _firstFrame;
 
         unsigned int                        _numBlocks;
         unsigned int                        _numThreads;
@@ -76,16 +71,6 @@ namespace PtclDemo
             return false;
         }
 
-        osg::FrameStamp* fs = (osg::FrameStamp*) getUserData();
-        if( !fs )
-        {
-            osg::notify( osg::WARN )
-                << "PtclDemo::PtclTracer::init(): frame stamp is missing."
-                << std::endl;
-
-            return false;
-        }
-
         /////////////////////////
         // COMPUTE KERNEL SIZE //
         /////////////////////////
@@ -106,20 +91,11 @@ namespace PtclDemo
         /////////////
         // ADVANCE //
         /////////////
-        float time = (float)((osg::FrameStamp*) getUserData())->getSimulationTime();
-        if( _firstFrame )
-        {
-            _lastTime = time;
-            _firstFrame = false;
-        }
-
-        float elapsedtime = static_cast<float>(time - _lastTime);
-        _lastTime = time;
 
         ////////////////////
         // MOVE PARTICLES //
         ////////////////////
-        trace( _numBlocks, _numThreads, _ptcls->map(), elapsedtime );
+        trace( _numBlocks, _numThreads, _ptcls->map(), 0.04f );
     }
 
     //------------------------------------------------------------------------------
@@ -140,9 +116,6 @@ namespace PtclDemo
         _numThreads = 1;
 
         _ptcls = NULL;
-
-        _lastTime = 0.0;
-        _firstFrame = true;
     }
 }
 

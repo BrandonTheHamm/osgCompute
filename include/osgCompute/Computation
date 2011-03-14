@@ -19,7 +19,6 @@
 #include <set>
 #include <osg/Group>
 #include <osgCompute/Resource>
-#include <osgCompute/Visitor>
 #include <osgCompute/ComputationBin>
 
 #define OSGCOMPUTE_AFTERCHILDREN			0x1
@@ -41,13 +40,10 @@ namespace osgUtil
     class CullVisitor;
 }
 
-#define META_Computation( libraryname, classname, binlibrary, binclass, visitorlibrary, visitorclass )  \
+#define META_Computation( libraryname, classname, binlibrary, binclass )                                \
     META_Object( libraryname, classname )                                                       		\
     virtual std::string                  binLibraryName() const { return #binlibrary; }          		\
     virtual std::string                  binClassName() const { return #binclass; }              		\
-    virtual std::string                  visitorLibraryName() const { return #visitorlibrary; }      	\
-    virtual std::string                  visitorClassName() const { return #visitorclass; }          	\
-    virtual osgCompute::ResourceVisitor* newVisitor() const { return new visitorlibrary::visitorclass; }
 
 
 namespace osgCompute
@@ -175,12 +171,6 @@ namespace osgCompute
 		virtual std::string binLibraryName() const = 0;
 		/** The derived class must provide a valid class name of the required computation bin. */
 		virtual std::string binClassName() const = 0;
-		/** The derived class must provide a valid library name of the required computation bin. */
-		virtual std::string visitorLibraryName() const = 0;
-		/** The derived class must provide a valid class name of the required computation bin. */
-		virtual std::string visitorClassName() const = 0;
-		/** The derived class must provide a method which allows to create new bins*/
-		virtual osgCompute::ResourceVisitor* newVisitor() const = 0;
 
         /** Add a module to the computation. */
         virtual void addModule( Module& module );
@@ -208,7 +198,9 @@ namespace osgCompute
         virtual void removeModules();
 
         /** Adds a resource to all currently or later attached modules. */
-		virtual void addResource( Resource& resource, bool attach = true );
+        virtual void addResource( Resource& resource, bool attach = true );
+        /** Exchanges a resource with other resources */
+        virtual void exchangeResource( Resource& resource, bool attach = true );
 		/** Remove resource by identifier. Does nothing if no module with that identifier can be found.*/
         virtual void removeResource( const std::string& identifier );
 		/** Remove resource by reference. Does nothing if no module with that identifier can be found. */
@@ -225,14 +217,6 @@ namespace osgCompute
         virtual const ResourceHandleList& getResources() const;
 		/** Remove all resources. */
         virtual void removeResources();
-		/** Notify computation that subgraph has changed. The computation will collect all resources of the new sub-graph during 
-		* the next update traversal.
- 		*/
-        virtual void subgraphChanged();
-		/**
-		* Return a pointer to the parent computation node and NULL if there is none.
-		*/
-        virtual Computation* getParentComputation() const;
 		/**
 		* Set a launch callback. You can use a launch callback to define a different execution order for the modules. This callback
 		* replaces the internal default launch() function. 
@@ -252,13 +236,6 @@ namespace osgCompute
         /** Returns the compute order */
         virtual ComputeOrder getComputeOrder() const;
 
-		/** 
-		* Set this flag to true if the computation's sub-graph changes very often. 
-		* The computation will search for resources in each update traversal.
-		*/
-        virtual void setAutoCheckSubgraph( bool autoCheckSubgraph );
-		/** Returns true if the AutoCheckSubgraph flag is activated.*/
-        virtual bool getAutoCheckSubgraph() const;
         /** Activates the computation (a computation is enabled by default) */
         virtual void enable();
 
@@ -289,23 +266,15 @@ namespace osgCompute
         virtual void checkDevice();
         virtual void setupContext( osg::State& state );
         virtual void update( osg::NodeVisitor& uv );
-        virtual void collectResources();
         virtual void launch();
         virtual void addBin( osgUtil::CullVisitor& cv );
         virtual void handleevent( osg::NodeVisitor& ev );
-
-        virtual void setParentComputation( Computation* parentComputation );
 
         bool                                	_enabled;
         osg::ref_ptr<LaunchCallback>            _launchCallback; 
         mutable ModuleList                      _modules;
         mutable ResourceHandleList              _resources;
         ComputeOrder                        	_computeOrder;
-        bool                                	_subgraphChanged;
-        osg::ref_ptr<ResourceVisitor>       	_resourceVisitor;
-        Computation*                        	_parentComputation; 
-        bool                                	_resourcesCollected;
-        bool                                	_autoCheckSubgraph;
 
         static bool isDeviceReady();
         static void setDeviceReady();

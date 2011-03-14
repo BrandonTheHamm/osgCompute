@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
     module->setBuffer( buffer.get() );
     module->init();
 
-    // instead of attaching a osg::Array you can map the buffer to the
+    // Instead of attaching an osg::Array you can map the buffer to the
     // CPU memory and fill it directly. The TARGET specifier in MAP_HOST_TARGET
     // tells osgCompute that the buffer is updated on the CPU. This has an effect
     // on later mappings of the GPU memory (e.g. MAP_DEVICE): before a pointer

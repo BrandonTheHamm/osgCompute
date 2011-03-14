@@ -533,6 +533,8 @@ namespace osgCuda
                 }
             }
 
+            if( (memory._syncOp & osgCompute::SYNC_ARRAY) == osgCompute::SYNC_ARRAY )
+                memory._syncOp ^= osgCompute::SYNC_ARRAY;
 
             // host must be synchronized
             // because device memory has been modified
@@ -611,6 +613,9 @@ namespace osgCuda
                 }
             }
 
+            if( (memory._syncOp & osgCompute::SYNC_DEVICE) == osgCompute::SYNC_DEVICE )
+                memory._syncOp ^= osgCompute::SYNC_DEVICE;
+
             // host must be synchronized
             // because device memory has been modified
             memory._syncOp |= osgCompute::SYNC_ARRAY;
@@ -653,6 +658,9 @@ namespace osgCuda
 
                 return false;
             }
+
+            if( (memory._syncOp & osgCompute::SYNC_HOST) == osgCompute::SYNC_HOST )
+                memory._syncOp ^= osgCompute::SYNC_HOST;
 
             // Device must be synchronized
             // because host memory has been modified

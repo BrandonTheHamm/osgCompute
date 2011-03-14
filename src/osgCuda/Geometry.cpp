@@ -653,6 +653,9 @@ namespace osgCuda
                 }
             }
 
+            if( (memory._syncOp & osgCompute::SYNC_DEVICE) == osgCompute::SYNC_DEVICE )
+                memory._syncOp ^= osgCompute::SYNC_DEVICE;
+
             memory._syncOp = osgCompute::SYNC_HOST;
         }
         else //  mapping & osgCompute::MAP_HOST
@@ -686,6 +689,9 @@ namespace osgCuda
                 }
                 curOffset += curData->getTotalDataSize();
             }
+
+            if( (memory._syncOp & osgCompute::SYNC_HOST) == osgCompute::SYNC_HOST )
+                memory._syncOp ^= osgCompute::SYNC_HOST;
 
             memory._syncOp = osgCompute::SYNC_DEVICE;
         }

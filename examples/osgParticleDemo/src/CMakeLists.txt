@@ -90,8 +90,6 @@ SOURCE_GROUP(
 
 # collect shader files
 SET(MY_SHADER_FILES
-	${TARGET_DATA_PATH}/shader/PtclSprite.fsh
-	${TARGET_DATA_PATH}/shader/PtclSprite.vsh
 )
 
 # finally, use module to build groups
@@ -100,7 +98,7 @@ INCLUDE(GroupInstall)
 
 # now set up the ADDITIONAL_FILES variable to ensure that the files will be visible in the project
 SET(ADDITIONAL_FILES
-	${MY_SHADER_FILES}
+	#${MY_SHADER_FILES}
 )
 
 

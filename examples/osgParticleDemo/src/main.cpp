@@ -37,19 +37,24 @@
 #include "PtclMover"
 #include "PtclEmitter"
 
+const osg::Vec3f   bbmin = osg::Vec3f(0,0,0);
+const osg::Vec3f   bbmax = osg::Vec3f(4,4,4);
+const unsigned int numParticles = 64000;
+
 //------------------------------------------------------------------------------
-osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
+osg::Geode* getBoundingBox()
 {
     osg::Geometry* bbgeom = new osg::Geometry;
 
+    /////////////////////
+    // CREATE GEOMETRY //
+    /////////////////////
     // vertices
     osg::Vec3Array* vertices = new osg::Vec3Array();
-
     osg::Vec3 center = (bbmin + bbmax) * 0.5f;
     osg::Vec3 radiusX( bbmax.x() - center.x(), 0, 0 );
     osg::Vec3 radiusY( 0, bbmax.y() - center.y(), 0 );
     osg::Vec3 radiusZ( 0, 0, bbmax.z() - center.z() );
-
     vertices->push_back( center - radiusX - radiusY - radiusZ ); // 0
     vertices->push_back( center + radiusX - radiusY - radiusZ ); // 1
     vertices->push_back( center + radiusX + radiusY - radiusZ ); // 2
@@ -62,7 +67,6 @@ osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
 
     // indices
     osg::DrawElementsUShort* indices = new osg::DrawElementsUShort(GL_LINES);
-
     indices->push_back(0);
     indices->push_back(1);
     indices->push_back(1);
@@ -102,15 +106,13 @@ osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     ////////////////
     osg::Geode* bbox = new osg::Geode;
     bbox->addDrawable( bbgeom );
-
-    // Disable lighting
     bbox->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 
     return bbox;
 }
 
 //------------------------------------------------------------------------------
-osg::Geode* getGeode( unsigned int numParticles )
+osg::Geode* getGeode()
 {
     osg::Geode* geode = new osg::Geode;
 
@@ -127,29 +129,65 @@ osg::Geode* getGeode( unsigned int numParticles )
     ptclGeom->setVertexArray(coords);
     ptclGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
     ptclGeom->addIdentifier( "PTCL_BUFFER" );
-
-    // Add particles
     geode->addDrawable( ptclGeom.get() );
 
     ////////////
     // SPRITE //
     ////////////
-    // increase point size within shader
     geode->getOrCreateStateSet()->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
-
-    osg::PointSprite* sprite = new osg::PointSprite();
-    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, sprite, osg::StateAttribute::ON);
-
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
 
     ////////////
     // SHADER //
     ////////////
-    // Add program
     osg::Program* program = new osg::Program;
-    program->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile("osgParticleDemo/shader/PtclSprite.vsh")));
-    program->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile("osgParticleDemo/shader/PtclSprite.fsh")));
+
+    const std::string vtxShader=
+    "uniform vec2 pixelsize;                                                                \n"
+    "                                                                                       \n"
+    "void main(void)                                                                        \n"
+    "{                                                                                      \n"
+    "   vec4 worldPos = vec4(gl_Vertex.x,gl_Vertex.y,gl_Vertex.z,1.0);                      \n"
+    "   vec4 projPos = gl_ModelViewProjectionMatrix * worldPos;                             \n"
+    "                                                                                       \n"
+    "   float dist = projPos.z / projPos.w;                                                 \n"
+    "   float distAlpha = (dist+1.0)/2.0;                                                   \n"
+    "   gl_PointSize = pixelsize.y - distAlpha * (pixelsize.y - pixelsize.x);               \n"
+    "                                                                                       \n"
+    "   gl_Position = projPos;                                                              \n"
+    "}                                                                                      \n";
+    program->addShader( new osg::Shader(osg::Shader::VERTEX, vtxShader ) );
+
+    const std::string frgShader=
+    "void main (void)                                                                       \n"
+    "{                                                                                      \n"
+    "   vec4 result;                                                                        \n"
+    "                                                                                       \n"
+    "   vec2 tex_coord = gl_TexCoord[0].xy;                                                 \n"
+    "   tex_coord.y = 1.0-tex_coord.y;                                                      \n"
+    "   float d = 2.0*distance(tex_coord.xy, vec2(0.5, 0.5));                               \n"
+    "   result.a = step(d, 1.0);                                                            \n"
+    "                                                                                       \n"
+    "   vec3 eye_vector = normalize(vec3(0.0, 0.0, 1.0));                                   \n"
+    "   vec3 light_vector = normalize(vec3(2.0, 2.0, 1.0));                                 \n"
+    "   vec3 surface_normal = normalize(vec3(2.0*                                           \n"
+    "           (tex_coord.xy-vec2(0.5, 0.5)), sqrt(1.0-d)));                               \n"
+    "   vec3 half_vector = normalize(eye_vector+light_vector);                              \n"
+    "                                                                                       \n"
+    "   float specular = dot(surface_normal, half_vector);                                  \n"
+    "   float diffuse  = dot(surface_normal, light_vector);                                 \n"
+    "                                                                                       \n"
+    "   vec4 lighting = vec4(0.75, max(diffuse, 0.0), pow(max(specular, 0.0), 40.0), 0.0);  \n"
+    "                                                                                       \n"
+    "   result.rgb = lighting.x*vec3(0.2, 0.8, 0.2)+lighting.y*vec3(0.6, 0.6, 0.6)+         \n"
+    "   lighting.z*vec3(0.25, 0.25, 0.25);                                                  \n"
+    "                                                                                       \n"
+    "   gl_FragColor = result;                                                              \n"
+    "}                                                                                      \n";
+
+    program->addShader( new osg::Shader( osg::Shader::FRAGMENT, frgShader ) );
     geode->getOrCreateStateSet()->setAttribute(program);
 
     // Screen resolution for particle sprite
@@ -164,58 +202,56 @@ osg::Geode* getGeode( unsigned int numParticles )
 }
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Computation> setupComputation()
+osg::ref_ptr<osgCompute::Computation> getComputation()
 {
     osg::ref_ptr<osgCompute::Computation> computationEmitter = new osgCuda::Computation;
-    computationEmitter->setName( "emit particles computation" );
+    computationEmitter->addModule( *new PtclDemo::PtclEmitter );  
     osg::ref_ptr<osgCompute::Computation> computationMover = new osgCuda::Computation;
-    computationMover->setName( "move particles computation" );
+    computationMover->addModule( *new PtclDemo::PtclMover );
+    computationMover->addChild( computationEmitter );
 
-    // Execute the computation during the update traversal before the subgraph is handled. 
-    // This is the default behaviour. Use the following line to execute the computation in
-    // the rendering traversal after the subgraph has been rendered.
-    //osgCompute::Computation::ComputeOrder order = osgCompute::Computation::PRERENDER_AFTERCHILDREN;
-    osgCompute::Computation::ComputeOrder order = osgCompute::Computation::UPDATE_BEFORECHILDREN;
-    computationEmitter->setComputeOrder( order );
-    computationMover->setComputeOrder( order );
+    return computationMover;
+}
 
-    ///////////////
-    // RESOURCES //
-    ///////////////
-    unsigned int numParticles = 64000;
-    // Seeds
+//------------------------------------------------------------------------------
+osg::ref_ptr<osgCompute::ResourceVisitor> getVisitor( osg::FrameStamp* fs )
+{
+    osg::ref_ptr<osgCompute::ResourceVisitor> rv = new osgCompute::ResourceVisitor;
+    
+    //////////////////////
+    // GLOBAL RESOURCES //
+    //////////////////////
+    // You can add resources directly to resource visitor.
+    // Each resource will be distributed to all computations
+    // located in the graph.
+
+    // EMITTER BOX
+    osg::ref_ptr<PtclDemo::EmitterBox> emitterBox = new PtclDemo::EmitterBox;
+    emitterBox->addIdentifier( "EMITTER_BOX" );
+    emitterBox->_min = bbmin;
+    emitterBox->_max = bbmax;
+    rv->addResource( *emitterBox );
+
+    // FRAME STAMP
+    osg::ref_ptr<PtclDemo::AdvanceTime> advanceTime = new PtclDemo::AdvanceTime;
+    advanceTime->addIdentifier( "PTCL_ADVANCETIME" );
+    advanceTime->_fs = fs;
+    rv->addResource( *advanceTime );
+
+    // SEED POSITIONS
     osg::FloatArray* seedValues = new osg::FloatArray();
     for( unsigned int s=0; s<numParticles; ++s )
         seedValues->push_back( float(rand()) / RAND_MAX );
 
-    osgCuda::Buffer* seedBuffer = new osgCuda::Buffer;
+    osg::ref_ptr<osgCuda::Buffer> seedBuffer = new osgCuda::Buffer;
     seedBuffer->setElementSize( sizeof(float) );
     seedBuffer->setName( "ptclSeedBuffer" );
     seedBuffer->setDimension(0,numParticles);
     seedBuffer->setArray( seedValues );
     seedBuffer->addIdentifier( "PTCL_SEEDS" );
+    rv->addResource( *seedBuffer );
 
-    ////////////////////
-    // SETUP HIERACHY //
-    ////////////////////
-    PtclDemo::PtclMover* ptclMover = new PtclDemo::PtclMover;
-    ptclMover->addIdentifier("osgcuda_ptclmover");
-    ptclMover->setLibraryName("osgcuda_ptclmover");
-    PtclDemo::PtclEmitter* ptclEmitter = new PtclDemo::PtclEmitter;
-    ptclEmitter->addIdentifier("osgcuda_ptclemitter");
-    ptclEmitter->setLibraryName("osgcuda_ptclemitter");
-
-    computationEmitter->addModule( *ptclEmitter );  
-    computationEmitter->addResource( *seedBuffer );
-    // The particle buffer is a leaf of the computation graph
-    computationEmitter->addChild( getGeode( numParticles ) );
-    computationMover->addModule( *ptclMover );
-    computationMover->addChild( computationEmitter );
-
-    // Write this computation to file
-    //osgDB::writeNodeFile( *computationMover, "ptcldemo.osgt" );
-
-    return computationMover;
+    return rv;
 }
 
 //------------------------------------------------------------------------------
@@ -225,40 +261,32 @@ int main(int argc, char *argv[])
     osg::ArgumentParser arguments(&argc, argv);
     osgViewer::Viewer viewer(arguments);
 
-    osg::Vec3 bbmin(0,0,0);
-    osg::Vec3 bbmax(4,4,4);
-
-    osg::ref_ptr<osg::Vec3Array> minMaxArray = new osg::Vec3Array(2);
-    minMaxArray->at(0) = bbmin;
-    minMaxArray->at(1) = bbmax;
-
-    /////////////////
-    // COMPUTATION //
-    /////////////////
-    osg::ref_ptr<osgCompute::Computation> computationMover = setupComputation();
-
-    // Setup dynamic variables
-    osg::ref_ptr<osgCompute::Module> ptclMover = computationMover->getModule( "osgcuda_ptclmover" );
-    ptclMover->setUserData( viewer.getFrameStamp()  );
-
-    osg::ref_ptr<osgCompute::Computation> computationEmitter = dynamic_cast<osgCompute::Computation*>( computationMover->getChild(0) );
-    osg::ref_ptr<osgCompute::Module> ptclEmitter = computationEmitter->getModule( "osgcuda_ptclemitter" );
-    ptclEmitter->setUserData( minMaxArray.get() );
-
     /////////////////
     // SETUP SCENE //
     /////////////////
-    osg::Group* scene = new osg::Group;
-    scene->addChild( computationMover );
-    scene->addChild(getBoundingBox( bbmin, bbmax ));
+    // Creat an arbitrary graph
+    osg::ref_ptr<osg::Group> scene = new osg::Group;
+    osg::ref_ptr<osg::Group> computation = getComputation();
+    scene->addChild( computation );
+    computation->addChild( getGeode() );
+    scene->addChild( getBoundingBox() );
+
+    //////////////////////
+    // RESOURCE VISITOR //
+    //////////////////////
+    // Use a resource visitor to collect and distribute
+    // resources among a sub-graph. Here it is applied 
+    // to the scene root. In the first pass it collects all resources
+    // and in a second traversal it distributes them to the
+    // computations in the graph.
+    osg::ref_ptr<osgCompute::ResourceVisitor> visitor = getVisitor( viewer.getFrameStamp() );
+    visitor->apply( *scene );
 
     //////////////////
     // SETUP VIEWER //
     //////////////////
     // You must use the single threaded version since osgCompute currently
-    // does only support single threaded applications. Please ask in the
-    // forum for the multi-threaded version if you need it.
-
+    // does only support single threaded applications. 
     viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
     viewer.setReleaseContextAtEndOfFrameHint(false);
     viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );

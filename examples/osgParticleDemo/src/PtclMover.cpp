@@ -39,17 +39,6 @@ namespace PtclDemo
             return false;
         }
 
-        osg::FrameStamp* fs = (osg::FrameStamp*) getUserData();
-        if( !fs )
-        {
-            osg::notify( osg::WARN )
-                << "PtclDemo::PtclMover::init(): frame stamp is missing."
-                << std::endl;
-
-            return false;
-        }
-
-
         /////////////////////////
         // COMPUTE KERNEL SIZE //
         /////////////////////////
@@ -70,7 +59,7 @@ namespace PtclDemo
         /////////////
         // ADVANCE //
         /////////////
-        float time = (float)((osg::FrameStamp*) getUserData())->getSimulationTime();
+        float time = (float)(_timer->_fs)->getSimulationTime();
         if( _firstFrame )
         {
             _lastTime = time;
@@ -95,6 +84,9 @@ namespace PtclDemo
         // Search for the particle buffer
         if( resource.isIdentifiedBy("PTCL_BUFFER") )
             _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
+
+        if( resource.isIdentifiedBy("PTCL_ADVANCETIME") )
+            _timer = dynamic_cast<AdvanceTime*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,9 +97,8 @@ namespace PtclDemo
     { 
         _numBlocks = 1;
         _numThreads = 1;
-
         _ptcls = NULL;
-
+        _timer = NULL;
         _lastTime = 0.0;
         _firstFrame = true;
     }

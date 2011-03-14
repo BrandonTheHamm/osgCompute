@@ -29,7 +29,7 @@ namespace osgCuda
     public:
         Computation();
 
-        META_Computation( osgCuda, Computation, osgCompute, ComputationBin, osgCompute, ResourceVisitor )
+        META_Computation( osgCuda, Computation, osgCompute, ComputationBin )
 
         static void setupDevice( int device );
         virtual void clear();

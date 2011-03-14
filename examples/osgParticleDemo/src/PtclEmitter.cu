@@ -79,6 +79,8 @@ void reseedKernel( float4* ptcls, float* seeds, unsigned int seedCount, unsigned
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // HOST FUNCTIONS ////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include <osg/Vec3f>
+
 //------------------------------------------------------------------------------
 extern "C" __host__
 void reseed(unsigned int numBlocks, 
@@ -87,17 +89,20 @@ void reseed(unsigned int numBlocks,
             void* seeds, 
             unsigned int seedCount, 
             unsigned int seedIdx, 
-            float3 bbmin, 
-            float3 bbmax )
+            osg::Vec3f bbmin, 
+            osg::Vec3f bbmax )
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );
+
+    float3 _bbmin = { bbmin.x(), bbmin.y(), bbmin.z() };
+    float3 _bbmax = { bbmax.x(), bbmax.y(), bbmax.z() };
 
     reseedKernel<<< blocks, threads >>>(
         reinterpret_cast<float4*>(ptcls),
         reinterpret_cast<float*>(seeds),
         seedCount,
         seedIdx,
-        bbmin,
-        bbmax );
+        _bbmin,
+        _bbmax );
 }

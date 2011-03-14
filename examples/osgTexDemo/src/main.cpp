@@ -106,8 +106,6 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     // MODULE SETUP //
     //////////////////
     osg::ref_ptr<TexDemo::TexFilter> texFilter = new TexDemo::TexFilter;
-    texFilter->addIdentifier( "osgcuda_texfilter" );
-    texFilter->setLibraryName( "osgcuda_texfilter" );
 
     // Execute the computation during the rendering, but before
     // the subgraph is rendered. Default is the execution during
@@ -115,6 +113,7 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     computationNode->setComputeOrder(  osgCompute::Computation::PRERENDER_BEFORECHILDREN );
     computationNode->addModule( *texFilter );
     computationNode->addResource( *srcArray );
+    computationNode->addResource( *trgTexture->getOrCreateInteropMemory() );
     // the target texture is located in the subgraph of the computation
     computationNode->addChild( getTexturedQuad( *trgTexture ) );
 

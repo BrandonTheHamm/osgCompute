@@ -143,10 +143,54 @@ osg::Geode* getGeode( unsigned int numParticles )
     ////////////
     // SHADER //
     ////////////
-    // Add program
     osg::Program* program = new osg::Program;
-    program->addShader(osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile("osgTraceDemo/shader/PtclSprite.vsh")));
-    program->addShader(osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile("osgTraceDemo/shader/PtclSprite.fsh")));
+
+    const std::string vtxShader=
+        "uniform vec2 pixelsize;                                                                \n"
+        "                                                                                       \n"
+        "void main(void)                                                                        \n"
+        "{                                                                                      \n"
+        "   vec4 worldPos = vec4(gl_Vertex.x,gl_Vertex.y,gl_Vertex.z,1.0);                      \n"
+        "   vec4 projPos = gl_ModelViewProjectionMatrix * worldPos;                             \n"
+        "                                                                                       \n"
+        "   float dist = projPos.z / projPos.w;                                                 \n"
+        "   float distAlpha = (dist+1.0)/2.0;                                                   \n"
+        "   gl_PointSize = pixelsize.y - distAlpha * (pixelsize.y - pixelsize.x);               \n"
+        "                                                                                       \n"
+        "   gl_Position = projPos;                                                              \n"
+        "}                                                                                      \n";
+    program->addShader( new osg::Shader(osg::Shader::VERTEX, vtxShader ) );
+
+    const std::string frgShader=
+        "void main (void)                                                                       \n"
+        "{                                                                                      \n"
+        "   vec4 result;                                                                        \n"
+        "                                                                                       \n"
+        "   vec2 tex_coord = gl_TexCoord[0].xy;                                                 \n"
+        "   tex_coord.y = 1.0-tex_coord.y;                                                      \n"
+        "   float d = 2.0*distance(tex_coord.xy, vec2(0.5, 0.5));                               \n"
+        "   result.a = step(d, 1.0);                                                            \n"
+        "                                                                                       \n"
+        "   vec3 eye_vector = normalize(vec3(0.0, 0.0, 1.0));                                   \n"
+        "   vec3 light_vector = normalize(vec3(2.0, 2.0, 1.0));                                 \n"
+        "   vec3 surface_normal = normalize(vec3(2.0*                                           \n"
+        "           (tex_coord.xy-vec2(0.5, 0.5)), sqrt(1.0-d)));                               \n"
+        "   vec3 half_vector = normalize(eye_vector+light_vector);                              \n"
+        "                                                                                       \n"
+        "   float specular = dot(surface_normal, half_vector);                                  \n"
+        "   float diffuse  = dot(surface_normal, light_vector);                                 \n"
+        "                                                                                       \n"
+        "   vec4 lighting = vec4(0.75, max(diffuse, 0.0), pow(max(specular, 0.0), 40.0), 0.0);  \n"
+        "                                                                                       \n"
+        "   result.rgb = lighting.x*vec3(0.2, 0.8, 0.2)+lighting.y*vec3(0.6, 0.6, 0.6)+         \n"
+        "   lighting.z*vec3(0.25, 0.25, 0.25);                                                  \n"
+        "                                                                                       \n"
+        "   gl_FragColor = result;                                                              \n"
+        "}                                                                                      \n";
+
+    program->addShader( new osg::Shader( osg::Shader::FRAGMENT, frgShader ) );
+
+
     geode->getOrCreateStateSet()->setAttribute(program);
 
     // Screen resolution for particle sprite
@@ -176,22 +220,6 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     computationEmitter->setComputeOrder( order );
     computationTracer->setComputeOrder( order );
 
-    ///////////////
-    // RESOURCES //
-    ///////////////
-    unsigned int numParticles = 64000;
-    // Seeds
-    osg::FloatArray* seedValues = new osg::FloatArray();
-    for( unsigned int s=0; s<numParticles; ++s )
-        seedValues->push_back( float(rand()) / RAND_MAX );
-
-    osgCuda::Buffer* seedBuffer = new osgCuda::Buffer;
-    seedBuffer->setElementSize( sizeof(float) );
-    seedBuffer->setName( "ptclSeedBuffer" );
-    seedBuffer->setDimension(0,numParticles);
-    seedBuffer->setArray( seedValues );
-    seedBuffer->addIdentifier( "PTCL_SEEDS" );
-
     ////////////////////
     // SETUP HIERACHY //
     ////////////////////
@@ -208,14 +236,10 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
         ptclEmitter->addIdentifier( "osgcuda_ptclemitter" );
         computationEmitter->addModule( *ptclEmitter );
     }
-
-    computationEmitter->addResource( *seedBuffer );
-    // The particle buffer is a leaf of the computation graph
-    computationEmitter->addChild( getGeode( numParticles ) );
     computationTracer->addChild( computationEmitter );
 
     // Write this computation to file
-    //osgDB::writeNodeFile( *computationTracer, "tracedemo.osgt" );
+    // osgDB::writeNodeFile( *computationTracer, "tracedemo.osgt" );
 
     return computationTracer;
 }
@@ -241,41 +265,34 @@ int main(int argc, char *argv[])
 
     osg::Vec3 bbmin(-1.f,-1.f,-1.f);
     osg::Vec3 bbmax(1.f,1.f,1.f);
-
-    osg::ref_ptr<osg::Vec3Array> minMaxArray = new osg::Vec3Array(2);
-    minMaxArray->at(0) = bbmin;
-    minMaxArray->at(1) = bbmax;
+    unsigned int numParticles = 64000;
 
     /////////////////
     // COMPUTATION //
     /////////////////
+    // Please note that loading need the modules to be
+    // INSTALLED first. Otherwise the serializer cannot
+    // find the respective modules.
     osg::ref_ptr<osgCompute::Computation> computation = loadComputation();
     if( !computation.valid() ) computation = setupComputation();
 
-    // Setup dynamic variables
-    osg::ref_ptr<osgCompute::Module> ptclTracer = computation->getModule( "osgcuda_ptcltracer" );
-    if( !ptclTracer.valid() )
-    {
-        osg::notify(osg::FATAL) << "Cannot find module identified by osgcuda_ptcltracer." << std::endl;
-        return -1;
-    }
-    ptclTracer->setUserData( viewer.getFrameStamp()  );
-
-    osg::ref_ptr<osgCompute::Computation> computationEmitter = dynamic_cast<osgCompute::Computation*>( computation->getChild(0) );
-    osg::ref_ptr<osgCompute::Module> ptclEmitter = computationEmitter->getModule( "osgcuda_ptclemitter" );
-    if( !ptclEmitter.valid() )
-    {
-        osg::notify(osg::FATAL) << "Cannot find module identified by osgcuda_ptclemitter." << std::endl;
-        return -1;
-    }
-    ptclEmitter->setUserData( minMaxArray.get() );
 
     /////////////////
     // SETUP SCENE //
     /////////////////
     osg::Group* scene = new osg::Group;
     scene->addChild( computation );
-    scene->addChild(getBoundingBox( bbmin, bbmax ));
+    scene->addChild( getBoundingBox( bbmin, bbmax ) );
+    scene->addChild( getGeode( numParticles ) );
+
+
+    //////////////////////
+    // RESOURCE VISITOR //
+    //////////////////////
+    // The resource-visitor will distribute all resources over
+    // the scene.
+    osg::ref_ptr<osgCompute::ResourceVisitor> rv = new osgCompute::ResourceVisitor;
+    rv->apply( *scene );
 
     //////////////////
     // SETUP VIEWER //

@@ -24,6 +24,26 @@ namespace PtclDemo
 {
     /**
     */
+    class EmitterBox : public osgCompute::Resource
+    {
+    public:
+        EmitterBox() : osgCompute::Resource() {}
+
+        META_Object(PtclDemo,EmitterBox)
+
+        osg::Vec3f _min;
+        osg::Vec3f _max;
+
+    protected:
+        virtual ~EmitterBox() {}
+
+    private:
+        EmitterBox(const EmitterBox&, const osg::CopyOp& ) {} 
+        inline EmitterBox &operator=(const EmitterBox &) { return *this; }
+    };
+        
+    /**
+    */
     class PtclEmitter : public osgCompute::Module 
     {
     public:
@@ -42,9 +62,8 @@ namespace PtclDemo
 
         unsigned int                                      _numBlocks;
         unsigned int                                      _numThreads;
-
-        osg::Vec3f                                        _seedBoxMin;
-        osg::Vec3f                                        _seedBoxMax;
+    
+        osg::ref_ptr<EmitterBox>                          _box;
         osg::ref_ptr<osgCompute::Memory>                  _ptcls;
         osg::ref_ptr<osgCompute::Memory>                  _seeds;
 

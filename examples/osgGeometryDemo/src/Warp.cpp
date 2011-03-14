@@ -44,16 +44,6 @@ namespace GeometryDemo
             return false;
         }
 
-        osg::FrameStamp* fs = (osg::FrameStamp*) getUserData();
-        if( !fs )
-        {
-            osg::notify( osg::WARN )
-                << "GeometryDemo::Warp::init(): frame stamp is missing."
-                << std::endl;
-
-            return false;
-        }
-
         // We need to read the geometry information.
         osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::InteropMemory*)_vertices.get())->getInteropObject() );
         if( !geometry )
@@ -105,7 +95,7 @@ namespace GeometryDemo
         if( isClear() )
             return;
 
-        float time = (float)((osg::FrameStamp*) getUserData())->getSimulationTime();
+        _simulationTime += 0.04f;
 
         ///////////////////
         // MOVE VERTICES //
@@ -116,7 +106,7 @@ namespace GeometryDemo
             _vertices->getNumElements(),
             _initPos->map(),
             _initNormals->map(),
-            time );
+            _simulationTime );
 
         // Read out new vertex position on the CPU or change the values with
         // osgCompute::MAP_HOST_TARGET
@@ -143,5 +133,6 @@ namespace GeometryDemo
         _vertices = NULL;
         _initNormals = NULL;
         _initPos = NULL;
+        _simulationTime = 0.0f;
     }
 }

@@ -46,6 +46,7 @@ namespace GeometryDemo
         osg::ref_ptr<osgCompute::Memory>                  _vertices;
         osg::ref_ptr<osgCompute::Memory>				  _initNormals;
         osg::ref_ptr<osgCompute::Memory>				  _initPos;
+        float                                             _simulationTime;
 
     private:
         Warp(const Warp&, const osg::CopyOp& ) {} 

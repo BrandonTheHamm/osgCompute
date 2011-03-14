@@ -17,9 +17,11 @@
 #include <math.h>
 #include <cstdlib>
 #include <osg/Notify>
+#include <osg/Array>
 #include <osg/ref_ptr>
 #include <osgCompute/Module>
 #include <osgCompute/Memory>
+#include <osgCuda/Buffer>
 
 //------------------------------------------------------------------------------
 extern "C"
@@ -44,7 +46,7 @@ namespace PtclDemo
 
         META_Object( PtclDemo, PtclEmitter )
 
-            virtual bool init();
+        virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
@@ -85,17 +87,21 @@ namespace PtclDemo
             return false;
         }
 
-        osg::Vec3Array* minMaxArray = (osg::Vec3Array*) getUserData();
-        if( !minMaxArray )
-        {
-            osg::notify( osg::WARN )
-                << "ParticleDemo::PtclEmitter::init(): min/max values are missing."
-                << std::endl;
+        _seedBoxMin = osg::Vec3f(-1.f,-1.f,-1.f);
+        _seedBoxMax = osg::Vec3f(1.f,1.f,1.f);
 
-            return false;
-        }
-        _seedBoxMin = (*minMaxArray).at(0);
-        _seedBoxMax = (*minMaxArray).at(1);
+        ////////////////////////
+        // CREATE SEED BUFFER //
+        ////////////////////////
+        osg::FloatArray* seedValues = new osg::FloatArray();
+        for( unsigned int s=0; s<_ptcls->getNumElements(); ++s )
+            seedValues->push_back( float(rand()) / RAND_MAX );
+
+        osg::ref_ptr<osgCuda::Buffer> seedBuffer = new osgCuda::Buffer;
+        seedBuffer->setElementSize( sizeof(float) );
+        seedBuffer->setDimension(0,_ptcls->getNumElements());
+        seedBuffer->setArray( seedValues );
+        _seeds = seedBuffer;
 
         /////////////////////////
         // COMPUTE KERNEL SIZE //
@@ -147,8 +153,6 @@ namespace PtclDemo
     {
         if( resource.isIdentifiedBy("PTCL_BUFFER") )
             _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
-        if( resource.isIdentifiedBy("PTCL_SEEDS") )
-            _seeds = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////

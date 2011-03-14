@@ -752,6 +752,9 @@ namespace osgCuda
                 return false;
             }
 
+            if( (memory._syncOp & osgCompute::SYNC_ARRAY) == osgCompute::SYNC_ARRAY )
+                memory._syncOp ^= osgCompute::SYNC_ARRAY;
+
             memory._syncOp |= osgCompute::SYNC_DEVICE;
             memory._syncOp |= osgCompute::SYNC_HOST;
             memory._lastModifiedCount = _texref->getImage(0)->getModifiedCount();
@@ -801,6 +804,9 @@ namespace osgCuda
                 }
             }
 
+            if( (memory._syncOp & osgCompute::SYNC_DEVICE) == osgCompute::SYNC_DEVICE )
+                memory._syncOp ^= osgCompute::SYNC_DEVICE;
+
             // device must be synchronized
             memory._syncOp |= osgCompute::SYNC_HOST;
             memory._syncOp |= osgCompute::SYNC_ARRAY;
@@ -830,6 +836,9 @@ namespace osgCuda
 
                 return false;
             }
+
+            if( (memory._syncOp & osgCompute::SYNC_HOST) == osgCompute::SYNC_HOST )
+                memory._syncOp ^= osgCompute::SYNC_HOST;
 
             // device must be synchronized
             memory._syncOp |= osgCompute::SYNC_DEVICE;

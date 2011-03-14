@@ -86,8 +86,8 @@ SOURCE_GROUP(
 
 # collect shader files
 SET(MY_SHADER_FILES
-    ${TARGET_DATA_PATH}/shader/WarpMe.vsh
-    ${TARGET_DATA_PATH}/shader/WarpMe.fsh
+    #${TARGET_DATA_PATH}/shader/WarpMe.vsh
+    #${TARGET_DATA_PATH}/shader/WarpMe.fsh
 )
 
 # finally, use module to build groups
