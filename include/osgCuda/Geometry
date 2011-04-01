@@ -77,7 +77,7 @@ namespace osgCuda
 	\code
 	osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::Geometry;
 	...
-	osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getOrCreateMemory();
+	osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getMemory();
 	void* devPtr = memory->map();
 	\endcode
 	<br />
@@ -90,7 +90,7 @@ namespace osgCuda
 	In order to access the normals use the map function with an offset to the first normal. Its assumed 
 	that a vertex position is of size osg::Vec4f:
 	\code
-	osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getOrCreateMemory();
+	osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getMemory();
 	osg::Vec3f* devNrm = (osg::Vec3f*) memory->map( osgCompute::MAP_DEVICE_SOURCE, 
 					sizeof(osg::Vec4f)*memory->getNumElements() );
 	\endcode
@@ -99,7 +99,7 @@ namespace osgCuda
 	by calling osgCompute::Memory::supportsMapping(). A geometrie's index buffer can 
 	be mapped as well: 
 	\code
-	osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getOrCreateMemory();
+	osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getMemory();
 	void* devInd = memory->map( osgCompute::MAP_DEVICE_INDICES );
 	\endcode
 	Please note that this is possible only if the geometry is utilizing an index buffer, 

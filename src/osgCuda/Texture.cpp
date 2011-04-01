@@ -284,7 +284,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void* TextureMemory::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
     {
-		if( !_texref.valid() || osgCompute::GLMemory::getContext() == NULL )
+		if( !_texref.valid() )
 			return NULL;
 
         if( osgCompute::Resource::isClear() )
@@ -306,7 +306,7 @@ namespace osgCuda
         TextureObject& memory = *memoryPtr;
 
         if( _usage & osgCompute::GL_TARGET &&
-            !(memory._syncOp & osgCompute::SYNC_ARRAY))
+            !(memory._syncOp & osgCompute::SYNC_ARRAY) && osgCompute::GLMemory::getContext() != NULL)
         {
             if( memory._graphicsResource == NULL )
             {
@@ -398,6 +398,9 @@ namespace osgCuda
         }
         else if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
         {
+            if( osgCompute::GLMemory::getContext() == NULL )
+                return NULL;
+
             //////////////////////
             // MAP ARRAY-MEMORY //
             //////////////////////
@@ -535,7 +538,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureMemory::unmap( unsigned int )
     {
-		if( !_texref.valid() || osgCompute::GLMemory::getContext() == NULL )
+		if( !_texref.valid() )
 			return;
 
         if( osgCompute::Resource::isClear() )
@@ -554,7 +557,7 @@ namespace osgCuda
         // UNMAP MEMORY //
         //////////////////
         // Copy current memory to texture memory
-        if( memory._syncOp & osgCompute::SYNC_ARRAY )
+        if( memory._syncOp & osgCompute::SYNC_ARRAY && osgCompute::GLMemory::getContext() != NULL )
         {
             if( NULL == map( osgCompute::MAP_DEVICE_ARRAY, 0 ) )
             {
@@ -596,7 +599,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     bool TextureMemory::reset( unsigned int  )
     {
-        if( !_texref.valid() || osgCompute::GLMemory::getContext() == NULL )
+        if( !_texref.valid()  )
 			return false;
 
         if( osgCompute::Resource::isClear() )

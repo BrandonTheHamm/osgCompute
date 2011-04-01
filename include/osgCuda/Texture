@@ -33,7 +33,7 @@ namespace osgCuda
     osg::ref_ptr<osgCuda::Texture2D> tex = new osgCuda::Texture2D;
     someNode->getOrCreateStateSet()->setAttribute(tex);
     ...
-    osg::ref_ptr<osgCompute::Memory> memory = tex->getOrCreateMemory();
+    osg::ref_ptr<osgCompute::Memory> memory = tex->getMemory();
     void* devPtr = memory->map();
     \endcode
     <br />
@@ -47,7 +47,7 @@ namespace osgCuda
     \code
     osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::Texture2D;
     ...
-    osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getOrCreateMemory();
+    osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getMemory();
     cudaArray* devAry = (cudaArray*) memory->map( osgCompute::MAP_DEVICE_ARRAY );
     \endcode
     <br />
@@ -165,7 +165,7 @@ namespace osgCuda
     \code
     osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::Texture3D;
     ...
-    osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getOrCreateMemory();
+    osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getMemory();
     void* devPtr = memory->map();
     \endcode
     <br />
@@ -181,7 +181,7 @@ namespace osgCuda
     osg::ref_ptr<osgCuda::Texture3D> tex = new osgCuda::Texture3D;
     someNode->getOrCreateStateSet()->setAttribute(tex);
     ...
-    osg::ref_ptr<osgCompute::Memory> memory = tex->getOrCreateMemory();
+    osg::ref_ptr<osgCompute::Memory> memory = tex->getMemory();
     cudaArray* devAry = (cudaArray*) memory->map( osgCompute::MAP_DEVICE_ARRAY );
     \endcode
     <br />
@@ -300,7 +300,7 @@ namespace osgCuda
     osg::ref_ptr<osgCuda::TextureRectangle> tex = new osgCuda::TextureRectangle;
     someNode->getOrCreateStateSet()->setAttribute(tex);
     ...
-    osg::ref_ptr<osgCompute::Memory> memory = tex->getOrCreateMemory();
+    osg::ref_ptr<osgCompute::Memory> memory = tex->getMemory();
     void* devPtr = memory->map();
     \endcode
     <br />
@@ -315,7 +315,7 @@ namespace osgCuda
     \code
     osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::TextureRectangle;
     ...
-    osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getOrCreateMemory();
+    osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getMemory();
     cudaArray* devAry = (cudaArray*) memory->map( osgCompute::MAP_DEVICE_ARRAY );
     \endcode
     <br />

@@ -393,6 +393,9 @@ namespace osgCuda
         }
         else if( (mapping & osgCompute::MAP_DEVICE) )
         {
+            if( osgCompute::GLMemory::getContext() == NULL )
+                return NULL;
+
             osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
             if( !glBO )
                 return NULL;
