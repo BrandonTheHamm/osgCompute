@@ -41,7 +41,7 @@ SET(TARGET_H
 SET(TARGET_SRC
 	Util.cpp
 	Computation.cpp
-	Buffer.cpp
+	CudaMemory.cpp
 	Memory.cpp
 	Resource.cpp
 	Geometry.cpp

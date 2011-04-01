@@ -46,10 +46,8 @@ SET(TARGET_H
 	${HEADER_PATH}/Callback
 	${HEADER_PATH}/Export	
 	${HEADER_PATH}/Module
-	${HEADER_PATH}/Interoperability
 	${HEADER_PATH}/Resource
 	${HEADER_PATH}/Computation
-	${HEADER_PATH}/ComputationBin
 	${HEADER_PATH}/Visitor
 )
 
@@ -59,9 +57,7 @@ SET(TARGET_SRC
 	Memory.cpp
 	Module.cpp
 	Resource.cpp
-	Computation.cpp
-	Interoperability.cpp
-	ComputationBin.cpp	
+	Computation.cpp	
 	Visitor.cpp
 )
 

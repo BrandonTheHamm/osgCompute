@@ -5,7 +5,7 @@
 #include <osg/StateAttribute>
 #include <osgCompute/Visitor>
 #include <osgCompute/Computation>
-#include <osgCompute/Interoperability>
+#include <osgCompute/Memory>
 
 namespace osgCompute
 {   
@@ -90,10 +90,10 @@ namespace osgCompute
         {
             osg::StateSet::AttributeList& attr = ss->getAttributeList();
             for( osg::StateSet::AttributeList::iterator itr = attr.begin(); itr != attr.end(); ++itr )
-                if( InteropObject* res = dynamic_cast<InteropObject*>( (*itr).second.first.get() ) )
+                if( GLMemoryAdapter* res = dynamic_cast<GLMemoryAdapter*>( (*itr).second.first.get() ) )
                 {
-                    osg::ref_ptr<Resource> resource = res->getOrCreateInteropMemory();
-                    addResource( *res->getOrCreateInteropMemory() );
+                    osg::ref_ptr<Resource> resource = res->getMemory();
+                    addResource( *res->getMemory() );
                 }
 
             osg::StateSet::TextureAttributeList& texAttrList = ss->getTextureAttributeList();
@@ -102,9 +102,9 @@ namespace osgCompute
                 osg::StateSet::AttributeList& texAttr = (*itr);
                 for( osg::StateSet::AttributeList::iterator texitr = texAttr.begin(); texitr != texAttr.end(); ++texitr )
                 {
-                    if( InteropObject* res = dynamic_cast<InteropObject*>( (*texitr).second.first.get() ) )
+                    if( GLMemoryAdapter* res = dynamic_cast<GLMemoryAdapter*>( (*texitr).second.first.get() ) )
                     {
-                        osg::ref_ptr<Resource> resource = res->getOrCreateInteropMemory();
+                        osg::ref_ptr<Resource> resource = res->getMemory();
                         addResource( *resource );
                     }
                 }
@@ -119,9 +119,9 @@ namespace osgCompute
         {
             for( unsigned int d=0; d<geode->getNumDrawables(); ++d )
             {
-                if( InteropObject* res = dynamic_cast<InteropObject*>( geode->getDrawable(d) ) )
+                if( GLMemoryAdapter* res = dynamic_cast<GLMemoryAdapter*>( geode->getDrawable(d) ) )
                 {
-                    osg::ref_ptr<Resource> resource = res->getOrCreateInteropMemory();
+                    osg::ref_ptr<Resource> resource = res->getMemory();
                     addResource( *resource );
                 }
             }

@@ -81,7 +81,7 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     warpModule->setLibraryName("osgcuda_warp");
 	warpModule->addIdentifier("osgcuda_warp");
 	computationNode->addModule( *warpModule );
-    computationNode->addResource( *geometry->getOrCreateInteropMemory() );
+    computationNode->addResource( *geometry->getMemory() );
 
 	// Write this computation to file
 	//osgDB::writeNodeFile( *computationNode, "geomdemo.osgt" );

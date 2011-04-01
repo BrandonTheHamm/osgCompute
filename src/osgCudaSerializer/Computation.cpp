@@ -2,7 +2,7 @@
 #include <osgDB/Input>
 #include <osgDB/Output>
 #include <osgCompute/Module>
-#include <osgCompute/Interoperability>
+#include <osgCompute/Memory>
 #include <osgCuda/Computation>
 #include "Util.h"
 
@@ -24,7 +24,7 @@ static bool writeResources( osgDB::OutputStream& os, const osgCuda::Computation&
 	for( osgCompute::ResourceHandleListCnstItr resItr = resList.begin();
 		resItr != resList.end();
 		++resItr )
-		if( resItr->_attached )
+		if( resItr->_serialize )
 			numRes++;
 
 	// Write attached resources
@@ -34,12 +34,12 @@ static bool writeResources( osgDB::OutputStream& os, const osgCuda::Computation&
 		resItr != resList.end();
 		++resItr )
     {
-		if( resItr->_attached )
+		if( resItr->_serialize )
         {
-            osgCompute::InteropMemory* iom = dynamic_cast<osgCompute::InteropMemory*>( (*resItr)._resource.get() );
+            osgCompute::GLMemory* iom = dynamic_cast<osgCompute::GLMemory*>( (*resItr)._resource.get() );
             if( iom != NULL )
             { // if layered interoperability object then store the interoperability object
-                osg::Object* ioo = dynamic_cast<osg::Object*>( iom->getInteropObject() );
+                osg::Object* ioo = dynamic_cast<osg::Object*>( iom->getAdapter() );
                 if( ioo ) os.writeObject( ioo );
             }
             else
@@ -64,10 +64,10 @@ static bool readResources( osgDB::InputStream& is, osgCuda::Computation& computa
         osg::Object* newRes = is.readObject();
         if( newRes != NULL )
         {
-            osgCompute::InteropObject* ioo = dynamic_cast<osgCompute::InteropObject*>( newRes );
+            osgCompute::GLMemoryAdapter* ioo = dynamic_cast<osgCompute::GLMemoryAdapter*>( newRes );
             if( ioo != NULL )
             {
-                computation.addResource( *ioo->getOrCreateInteropMemory() );
+                computation.addResource( *ioo->getMemory() );
             }
             else
             {

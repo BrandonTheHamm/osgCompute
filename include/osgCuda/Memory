@@ -1,0 +1,165 @@
+/* osgCompute - Copyright (C) 2008-2009 SVT Group
+*
+* This library is free software; you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as
+* published by the Free Software Foundation; either version 3 of
+* the License, or (at your option) any later version.
+*
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesse General Public License for more details.
+*
+* The full license is in LICENSE file included with this distribution.
+*/
+
+#ifndef OSGCUDA_MEMORY
+#define OSGCUDA_MEMORY 1
+
+
+#include <driver_types.h>
+#include <osg/Image>
+#include <osgCompute/Memory>
+#include <osgCuda/Export>
+
+namespace osgCuda
+{
+	//! Class extends osgCompute::Memory by CUDA functionality.
+	/** osgCuda::Memory objects allow developers to utilize 
+	all types of CUDA memory.
+	<br />
+	\code
+	osg::ref_ptr<osgCompute::Memory> memory = new osgCuda::Memory();
+	void* devPtr = memory->map();
+	\endcode
+	<br />
+	<br />
+	The map function will allocate the respective memory during the first call to map(). A call to map() 
+	with paramter osgCompute::MAP_DEVICE as in the above code sample will allocate a linear memory area on 
+	the device (see cudaMalloc(), cudaMallocPitch(), cudaMalloc3D()). Which malloc operation is used depends
+	on the number of dimensions specified (see setDimension()). Please note that in case of 2D and 3D memory a 
+	additional pitch might be allocated if the memory alignment is not met (see cudaMallocPitch()). If 
+	osgCompute::MAP_HOST_XXX is used memory is allocated on the host. In case of osgCompute::MAP_DEVICE_ARRAY 
+	the function will return a cudaArray pointer. Please note that you have to provide a valid ChannelFormatDesc 
+	to use cudaArrays (see cudaMallocArray()). Please use osgCompute::Memory::supportsMapping() first to check if 
+	mapping is supported.
+	\code
+	cudaChannelFormatDesc desc = {8,8,8,8,cudaChannelFormatKindFloat};
+	osg::ref_ptr<osgCompute::Memory> memory = new osgCuda::Memory();
+	memory->setChannelFormatDesc( desc );
+	...
+	cudaArray* devAry = (cudaArray*) memory->map( osgCompute::MAP_DEVICE_ARRAY );
+	\endcode
+	<br />
+	<br />
+	You can initialize a memory object with setImage(). This function is to be called
+	with a valid image pointer. The image memory is then copied during the next call to map().
+    */
+    class LIBRARY_EXPORT Memory : public osgCompute::Memory
+    {
+    public:
+		/** Constructor. 
+		*/
+        Memory();
+
+        META_Object(osgCuda,Memory);
+
+		/** Method proofs applied parameters to be valid. Function is called automatically in map(). 
+		No memory will be allocated.
+		@return Returns true on success
+		*/
+        virtual bool init();
+
+		/**  Will release all allocated memory and resources. Calls osgCompute::clear().
+		*/
+        virtual void clear();
+
+		/** Map will return a pointer to the respective memory space, e.g. device memory or host memory. 
+		If the memory space differs from the last call to map() the
+		function will check if synchronization between memory spaces is required. Before using 
+		osgCompute::MAP_DEVICE_ARRAY make sure you have set a valid cudaChannelFormatDesc (see setChannelFormatDesc()).
+		@param[in] mapping specifies the memory space and type of the mapping (see osgCompute::Mapping).
+		@param[in] offset byte offset of the returned memory pointer.
+		@param[in] hint [unused] reserved.
+		@return Returns a pointer to the respective memory area with the specified offset.
+		*/
+        virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
+        
+		/** Unmap() invalidates the previously mapped pointer. 
+		@param[in] hint [unused] reserved.
+		*/
+		virtual void unmap( unsigned int hint = 0 );
+
+		/** Clears the all memory spaces and resets it to the default state. However, memory stays allocated.
+		@return Returns true on success.
+		*/
+        virtual bool reset( unsigned int hint = 0 );
+
+		/** Returns true if the memory object can allocate memory in the
+		specific memory space and is allowed to execute the type of mapping
+		(see osgCompute::Mapping for more details). In general osgCuda::Memory
+		can be mapped in all memory spaces provided by osgCompute::Mapping.
+		@param[in] mapping specifies the memory space and type of the mapping.
+		@param[in] hint [unused] reserved.
+		@return Returns true if mapping is possible and false otherwise.
+		*/
+        virtual bool supportsMapping( unsigned int mapping, unsigned int hint = 0 ) const;
+
+		/** Image will be copied during the next call of map(). It is only copied once, since
+		other memory spaces will be synchronized. However, a call to osg::Image::dirty() will
+		enforce a new copy operation.
+		@param[in] image image pointer.
+		*/
+        virtual void setImage( osg::Image* image );
+
+		/** Returns the image connected with this memory object.
+		@return Returns a pointer to the connected image. NULL if it does not exist.
+		*/
+        virtual osg::Image* getImage();
+
+		/** Returns the image connected with this memory object.
+		@return Returns a pointer to the connected image.
+		*/
+        virtual const osg::Image* getImage() const;
+
+		/** The channel format description is necessary to allocate a cudaArray (see cudaMalloyArray()).
+		@param[in] formatDesc a reference to the format description.
+		*/
+        virtual void setChannelFormatDesc(cudaChannelFormatDesc& formatDesc);
+
+		/** Returns the channel format description.
+		@return Returns a reference to the format description.
+		*/
+        virtual cudaChannelFormatDesc& getChannelFormatDesc();
+
+		/** Returns the channel format description.
+		@return Returns a reference to the format description.
+		*/
+        virtual const cudaChannelFormatDesc& getChannelFormatDesc() const;
+
+    protected:
+		/** Destructor.
+		*/
+        virtual ~Memory() { clearLocal(); }
+
+    private:
+        // Copy constructor and operator should not be called
+        Memory( const Memory&, const osg::CopyOp& ) {}
+		Memory& operator=( const Memory& copy ) { return (*this); }
+
+		void clearLocal();
+
+		bool setup( unsigned int mapping );
+		bool alloc( unsigned int mapping );
+		bool sync( unsigned int mapping );
+
+		virtual osgCompute::MemoryObject* createObject() const;
+		virtual unsigned int computePitch() const;
+		void resetModifiedCounts() const;
+
+		mutable osg::ref_ptr<osg::Image>     _image;
+		cudaChannelFormatDesc                _formatDesc;
+    };
+}
+
+#endif //OSGCUDA_MEMORY

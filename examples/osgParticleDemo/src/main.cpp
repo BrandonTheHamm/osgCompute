@@ -31,7 +31,7 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Computation>
-#include <osgCuda/Buffer>
+#include <osgCuda/Memory>
 #include <osgCuda/Geometry>
 
 #include "PtclMover"
@@ -239,15 +239,18 @@ osg::ref_ptr<osgCompute::ResourceVisitor> getVisitor( osg::FrameStamp* fs )
     rv->addResource( *advanceTime );
 
     // SEED POSITIONS
-    osg::FloatArray* seedValues = new osg::FloatArray();
-    for( unsigned int s=0; s<numParticles; ++s )
-        seedValues->push_back( float(rand()) / RAND_MAX );
+    osg::Image* seedValues = new osg::Image();
+	seedValues->allocateImage(numParticles,1,1,GL_LUMINANCE,GL_FLOAT);
+    
+	float* seeds = (float*)seedValues->data();
+	for( unsigned int s=0; s<numParticles; ++s )
+        seeds[s] = ( float(rand()) / RAND_MAX );
 
-    osg::ref_ptr<osgCuda::Buffer> seedBuffer = new osgCuda::Buffer;
+    osg::ref_ptr<osgCuda::Memory> seedBuffer = new osgCuda::Memory;
     seedBuffer->setElementSize( sizeof(float) );
     seedBuffer->setName( "ptclSeedBuffer" );
     seedBuffer->setDimension(0,numParticles);
-    seedBuffer->setArray( seedValues );
+    seedBuffer->setImage( seedValues );
     seedBuffer->addIdentifier( "PTCL_SEEDS" );
     rv->addResource( *seedBuffer );
 

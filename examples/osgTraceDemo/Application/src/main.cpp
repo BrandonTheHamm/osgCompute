@@ -31,7 +31,7 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Computation>
-#include <osgCuda/Buffer>
+#include <osgCuda/Memory>
 #include <osgCuda/Geometry>
 
 //------------------------------------------------------------------------------

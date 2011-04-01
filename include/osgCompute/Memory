@@ -13,14 +13,15 @@
 * The full license is in LICENSE file included with this distribution.
 */
 
-#ifndef OSGCOMPUTE_BUFFER
-#define OSGCOMPUTE_BUFFER 1
+#ifndef OSGCOMPUTE_MEMORY
+#define OSGCOMPUTE_MEMORY 1
 
-#include <osgCompute/Resource>                 
+#include <osgCompute/Resource>                
 
 namespace osgCompute
 {
     class Memory;
+    class GLMemory;
 
     enum SyncOperation
     {
@@ -30,14 +31,6 @@ namespace osgCompute
         SYNC_ARRAY  = 0x100,
     };
 
-	/**
-	* During the map() function a memory resource expects a flag
-	* where to map the data. If MAP_HOST_XXX the data can be used on the 
-	* CPU side. If MAP_DEVICE_XXX a pointer to the device memory is returned.
-	* If the data is mapped as MAP_XXX_SOURCE then the memory object is utilized as
-	* read only and is not used for writing. Otherwise if 
-	* MAP_XXX_TARGET is specified, the data is accessed for writing.
-	*/
     enum Mapping
     {
         UNMAP                       = 0x00000000,
@@ -49,14 +42,55 @@ namespace osgCompute
         MAP_DEVICE_TARGET           = 0x00100000,
         MAP_DEVICE_ARRAY            = 0x00001000,
         MAP_DEVICE_ARRAY_TARGET     = 0x00101000,
-    }; 
+    };
+	/** \enum Mapping 
+		The mapping flag is used in combination with osgCompute::Memory.
+		It defines the memory space which should be mapped by using the 
+		osgCompute::Memory::map() function. If MAP_HOST_XXX the data can be used on the 
+		* CPU side. If MAP_DEVICE_XXX a pointer to the device memory 
+		is returned. If the data is mapped as MAP_XXX_SOURCE then 
+		the memory object is utilized as read only and is not used 
+		for writing. Otherwise if MAP_XXX_TARGET is specified, the 
+		data is accessed for writing. For example to map the meory on
+		the device for writing use the following mapping.
+		\code
+		void* devPtr = memory->map( osgCompute::MAP_DEVICE_TARGET );
+		\endcode
+		<br />
+		<br />
+		The following table shows which memory types are available for osgCuda 
+		memory objects, textures and geometries:
 
-    // A MemoryObject provides internal information about the memory resources of a memory area on the device.
+		\image html "MappingTable.png"
+
+	*/
+	/** \var Mapping MAP_HOST 
+		Map memory on host for reading and writing
+	*/
+	/** \var Mapping MAP_HOST_SOURCE 
+		Map memory on host for reading only.
+	*/
+	/** \var Mapping MAP_HOST_TARGET 
+		Map memory on host for writing.
+	*/					
+	/** \var Mapping MAP_DEVICE 
+		Map memory on device for reading and writing
+	*/
+	/** \var Mapping MAP_DEVICE_SOURCE 
+		Map memory on device for reading and writing
+	*/		
+	/** \var Mapping MAP_DEVICE_TARGET 
+		Map memory on device for writing
+	*/
+	/** \var Mapping MAP_DEVICE_ARRAY 
+		Map memory on device as array for reading only
+	*/		
+	/** \var Mapping MAP_DEVICE_ARRAY_TARGET 
+		Map memory on device as array for writing
+	*/
+
+    // Base class for memory objects connected to a compute device.
     /* 
-    Every time a buffer is mapped an object of this type is created. All allocations are done lazily
-    at the time Memory::map is called. You can remove the handle by calling Memory::clear(). However, as a 
-    normal user you should never get into contact with MemoryObjects. Such objects are hidden from application developers. 
-    MemoryObjects are created on the heap.
     */
     class LIBRARY_EXPORT MemoryObject : public osg::Referenced
     {
@@ -82,185 +116,254 @@ namespace osgCompute
         MemoryObject& operator=( const MemoryObject& ) { return *this; }
     };
 
-//! Memory objects allow developers to deal with memory resources on an abstract level.
+	//! Base class for memory resources.
     /**
-    * A memory object handles device memory as well as host memory. At least you have to specify the dimensions of a buffer and
-    * the size of a single element. The following example shows how to setup a 1D CUDA buffer with 125000 floats: 
-
-    \code
-	osg::ref_ptr<osgCompute::Memory> someMemory = new osgCuda::Buffer;
-    someMemory->setDimension( 0, 125000 );
-    someMemory->setElementSize( sizeof(float) );
-    \endcode
-    
-	<br />
-
-	* At any time when you call the mapping function (Memory::map) the respective memory block then is allocated lazily 
-    * within the desired memory space. So in order to allocate the buffer on the device memory just use one of the following
-    * function calls:
-
-    \code
-	// first call to map() will allocate the required memory
-    void* devPtr = someMemory->map( osgCompute::MAP_DEVICE );
-    // or as osgCompute::MAP_DEVICE is the default paramter...
-    void* devPtr = someMemory->map();
-    // or access the buffer with an offset of 120000 bytes
-    void* devPtr = someMemory->map( osgCompute::MAP_DEVICE, 120000 );
-    \endcode
-
-	<br />
-
-	* Whenever you have mapped a memory with MAP_HOST_TARGET the memory will be copied to the device if you use MAP_DEVICE_XXX afterwards:
-	
+	A memory object manages device memory as well as 
+	host memory and synchronizes between both memory spaces. 
+	The following example shows how to setup a 1D CUDA buffer with
+	space for 125000 floats. However the memory is not allocated at
+	this point: 
 	\code
-	// we are going to write to the host memory
-	void* hostPtr = someMemory->map( osgCompute::MAP_HOST_TARGET );
+	osg::ref_ptr<osgCompute::Memory> myData = new osgCuda::Buffer;
+	myData->setDimension( 0, 125000 );
+    myData->setElementSize( sizeof(float) );
+    myData->addIdentifier("My Data Identifier");
+	\endcode
+	<br />
+	<br />
+	All allocations are done lazily at the first time memory 
+	is mapped within a memory space.
+	E.g. calling the mapping function map() 
+	with parameter osgCompute::MAP_DEVICE the first time 
+	will allocate the respective memory block on the compute 
+	device.
+	\code
+	void* devPtr = myData->map( osgCompute::MAP_DEVICE );
+	// As osgCompute::MAP_DEVICE is the default paramter you can
+	// simply call it with no parameter.
+	void* devPtr = myData->map();
+	\endcode
+	Use the osgCompute::MAP_HOST parameter to allocate 
+	memory on the host:
+	\code
+	void* hostPtr = myData->map( osgCompute::MAP_HOST );
+	\endcode
+	<br />
+	<br />
+	A memory object will synchronize between the memory spaces 
+	whenever synchronization is required. Memory objects will 
+	be notified with the "TARGET" parameters. "TARGET" in the mapping 
+	parameter tells the memory object that the memory will be changed. 
+	A new call to map() will then synchronize the respective memory space 
+	before returning the memory pointer. However, this is only true if the 
+	new memory spaces differs from the old one:
+	\code
+	// We are going to write to the host memory
+	void* hostPtr = myData->map( osgCompute::MAP_HOST_TARGET );
 	memset( hostPtr, 0x0, someMemory->getByteSize() );
-
-	// With the following call the initialized host data is copied to the device memory ...
-	void* devPtr = someMemory->map( osgCompute::MAP_DEVICE_SOURCE );
-    \endcode
-	
-
+	// osgCompute will copy the host data to the device memory 
+	// before returning the device pointer.
+	void* devPtr = myData->map( osgCompute::MAP_DEVICE_SOURCE );
+	\endcode
 	*/
     class LIBRARY_EXPORT Memory : public Resource
     {  
     public:
-        //! calls clearLocal() which initializes the default values
+        /** Constructor. Initialize default values.
+        */
         Memory();
 
+        /** Init will check for memory parameters. However init will not allocate
+        any memory as this is done during the first call to map().
+        @return Returns true on success.
+        */
         virtual bool init();
 
-        /**
-		* Will return a pointer to the respective memory. If the mapping context differs from the last call to this
-		* function the memory object will check if synchronization between contexts is required. If the memory is
-		* used within OpenGL then the memory is mapped from the OpenGL context to the current compute context (e.g. CUDA context).
-		*/
+        /** Map will return a pointer to the respective memory space, e.g. device memory or host memory. 
+        If the memory space differs from the last call to map() the
+        function will check if synchronization between memory spaces is required. If the memory is 
+        utilized by OpenGL then the memory is mapped from the OpenGL context to the current compute 
+        context (e.g. CUDA context) before returning the device pointer.
+        @param[in] mapping specifies the memory space and type of the mapping (see osgCompute::Mapping).
+        @param[in] offset byte offset of the returned memory pointer.
+        @param[in] hint [unused] reserved.
+        @return Returns a pointer to the respective memory area with the specified offset.
+        */
         virtual void* map( unsigned int mapping = MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 ) = 0;
-        /**
-		* Unmap() makes the previously mapped pointer invalid. If the memory exists in the OpenGL context
-		* the respective memory is mapped back to OpenGL. The function is automatically called whenever the object will be used for rendering.
-		*/
-		virtual void unmap( unsigned int hint = 0 ) = 0;
-		/**
-		* This method clears the current memory and resets it to the state which has been before the first call to map(). 
-		*/
+
+        /** Unmap() invalidates the previously mapped pointer. If the memory pointer points to OpenGL allocated
+        memory it is mapped back to the OpenGL context. The function is automatically called whenever the 
+        object is applied for rendering.
+        @param[in] hint [unused] reserved.
+        */
+        virtual void unmap( unsigned int hint = 0 ) = 0;
+
+        /** Clears the current memory and resets it to the default state. However, memory stays allocated.
+        @return Returns true on success.
+        */
         virtual bool reset( unsigned int hint = 0  ) = 0;
 
-        virtual bool isMappingAllowed( unsigned int mapping, unsigned int hint = 0 ) const = 0;
-		/**
-		* Returns the current mapping state.
-		*/
+        /** Returns true if the memory object can allocate memory in the
+        specific memory space and is allowed to execute the type of mapping
+        (see osgCompute::Mapping for more details).
+        @param[in] mapping specifies the memory space and type of the mapping.
+        @param[in] hint [unused] reserved.
+        @return Returns true if mapping is possible and false otherwise.
+        */
+        virtual bool supportsMapping( unsigned int mapping, unsigned int hint = 0 ) const = 0;
+
+        /** Returns the current mapping. 
+        @return Returns the current mapping or UNMAPPED if it is not mapped.
+        */
         virtual unsigned int getMapping( unsigned int hint = 0 ) const;
-		/**
-		* 2D or 3D memory objects have to allocate some additional memory in order to fulfill the
-		* alignment requirements of the underlying hardware. With getPitch() the number of Bytes for 
-		* a single row of memory is returned. This byte count might be different to getDimension(0)*getElementSize().
-		* Use this function to determine the offset to each new row whenever your memory is two dimensional or three dimensional. 
-		*/
+
+        /** 2D or 3D memory objects have to allocate some additional memory in order to fulfill the
+        alignment requirements of the underlying hardware. With getPitch() the number of Bytes for 
+        a single row of memory is returned. This byte count might be different to getDimension(0)*getElementSize().
+        Use this function to determine the offset to each new row whenever your memory is two dimensional or three dimensional. 
+        @param[in] hint [unused] reserved.
+        @return Returns the current memory pitch in bytes.
+        */
         virtual unsigned int getPitch( unsigned int hint = 0 ) const;
 
-		/**
-		* Set the byte size of one element.
-		*/
+        /** Set the byte size of a single element. Can only be set before init. 
+        Use clear() before you change the element size.
+        @param[in] elementSize Size of a single element in bytes.
+        */
         virtual void setElementSize( unsigned int elementSize );
-		/**
-		* Returns the byte size of one element.
-		*/
+
+        /** Returns the byte size of a singe element.
+        @return Returns the byte size of a single element.
+        */
         virtual unsigned int getElementSize() const;
-		/**
-		* Returns the overall logical byte size. For 2D or 3D memory blocks this might be 
-		* not the same as the allocated byte size, because the allocated pitch might differ from getDimension(0)*getElementSize().
-		*/
+
+        /** Returns the overall byte size. For 2D or 3D memory blocks this might be 
+        not the same as the allocated memory size, because the allocated pitch might differ from 
+        getDimension(0)*getElementSize() (see cudaMallocPitch()). 
+        @return Returns the byte size required by all elements.
+        */
         virtual unsigned int getByteSize() const;
-		/**
-		* Set the number of elements for the specified dimension.
-		*/
+
+        /** Set the number of elements for the specified dimension.
+        @param[in] dimIdx index of dimension.
+        @param[in] dimSize number of elements for dimension dimIdx.
+        */
         virtual void setDimension( unsigned int dimIdx, unsigned int dimSize );
-		/**
-		* Returns the number of elements for the specified dimension.
-		*/
+
+        /** Returns the number of elements for the specified dimension.
+        @param[in] dimIdx index of dimension.
+        @return Returns the number of elements for dimension dimIdx.
+        */
         virtual unsigned int getDimension( unsigned int dimIdx ) const;
-		/**
-		* Returns the number of dimensions for a memory block
-		*/
+
+        /** Returns the number of dimensions for a memory block
+        @return Returns the number of dimensions.
+        */
         virtual unsigned int getNumDimensions() const;
-		/**
-		* Returns the overall number of elements.
-		*/
+
+        /** Returns the total number of elements.
+        @return Returns the total number of elements.
+        */
         virtual unsigned int getNumElements() const;
 
-		/**
-		* Set specific allocation hints.
-		*/
+        /** Sets a specific allocation hint. Allocation hints are applied
+        during the first call to map().
+        @param[in] allocHint the allocation hint.
+        */
         virtual void setAllocHint( unsigned int allocHint );
-		/**
-		* Returns the allocation hints.
-		*/
+
+        /** Returns the allocation hints.
+        @return Returns the allocation hints.
+        */
         virtual unsigned int getAllocHint() const;
-		
-		/**
-		* Set a subload callback to initialize the memory after allocation. Allocation is done lazily during
-		* the first call to map(). The subload callback is called whenever map() is called.
-		*/
+
+        /** Set a subload callback to initialize the memory after allocation. Allocation is done lazily during
+        the first call to map(). The subload callback is called at the end of each call to map() 
+        (see osgCompute::SubloadCallback for further information).
+        @param[in] sc pointer to the subload callback.
+        */
         virtual void setSubloadCallback( SubloadCallback* sc );
-		/**
-		* Returns the attached subload callback and NULL if no callback is attached.
-		*/
+
+        /** Returns the attached subload callback and NULL if no callback is attached.
+        @return Returns a pointer to the subload callback.
+        */
         virtual SubloadCallback* getSubloadCallback();
-		/**
-		* Returns the attached subload callback and NULL if no callback is attached.
-		*/
+
+        /** Returns the attached subload callback and NULL if no callback is attached.
+        @return Returns a pointer to the subload callback.
+        */
         virtual const SubloadCallback* getSubloadCallback() const;
 
-		/**
-		* If the memory objects consist of more than one block, swap() will switch
-		* the current block. The increment parameter is used to swap the block by incr number of times.
-		* Blocks are utilized e.g. by pingpong buffers. By default only one block is expected.
-		*/
+        /** If the memory objects consist of more than one block, swap() will switch
+        the current block. The increment parameter is used to swap the block by incr number of times.
+        Blocks/Targets are utilized e.g. by pingpong buffers. By default only one block is expected.
+        @param[in] incr increment of blocks.
+        */
         virtual void swap( unsigned int incr = 1 );
-		/**
-		* Setup the current active block index.
-		* Blocks are utilized e.g. by pingpong buffers. By default there is only one block.
-		*/
+
+        /** Setup the current active blocks/target index.
+        Blocks are utilized e.g. by pingpong buffers. By default there is only one block/target.
+        @param[in] sIdx current swap index.
+        */
         virtual void setSwapIdx( unsigned int sIdx );
 
-		/**
-		* Returns the current active block index.
-		* Blocks are utilized e.g. by pingpong buffers. By default there is only one block.
-		*/
+        /** Returns the current active block index.
+        Blocks are utilized e.g. by pingpong buffers. By default there is only one block.
+        @return Returns the current swap index.
+        */
         virtual unsigned int getSwapIdx() const;
 
-
-        /**
-        * Set the number of blocks. Only affects specialized objects and has no effect here by default.
+        /** Setup the number of blocks/targets. Cannot be set after init() is called. You need to call
+        clear first.
+        @param[in] sc number of swap blocks/targets.
         */
         virtual void setSwapCount( unsigned int sc = 1 );
 
-		/**
-		* Returns the number of blocks.
-		* Blocks are utilized e.g. by pingpong buffers. By default there is only one block.
-		*/
+        /** Returns the number of blocks/targets.
+        Blocks are utilized e.g. by pingpong buffers. By default there is only one blocks/targets.
+        @return Returns the number of swap blocks/targets.
+        */
         virtual unsigned int getSwapCount() const;
 
-		/**
-		* Will set the memory to a clear state. This method will release all allocated memory blocks.
-		*/
+        /** Will release all allocated memory and resources. Calls releaseObjects().
+        */
         virtual void clear();
 
-        /**
-        * Will release all allocated host and device memory for this object. Is implicitly called during Resource::clear().
+        /** Will release all allocated host and device memory for this object. 
+        Is implicitly called during Resource::clear().
         */
-        virtual void clearObject();
+        virtual void releaseObjects();
 
     protected:
+        /** Destructor
+        */
         virtual ~Memory();
-        void clearLocal();
 
+        /** Returns the memory resource and allocates it when it does not exist.
+        @return Returns the current memory resource.
+        */
         virtual MemoryObject* object();
+        /** Returns the memory resource and allocates it when it does not exist.
+        @return Returns the current memory resource.
+        */
         virtual const MemoryObject* object() const;
+
+        /** Allocates the memory resource.
+        @return Returns a pointer to the resource on success and NULL otherwise.
+        */
         virtual MemoryObject* createObject() const;
+
+        /** Computes the pitch of the memory resource.
+        @return Returns the memory bitch in bytes.
+        */
         virtual unsigned int computePitch() const = 0;
+
+    private:
+        // Copy constructor and operator should not be called
+        Memory( const Memory&, const osg::CopyOp& ) {}
+        Memory& operator=( const Memory& copy ) { return (*this); }
+
+        void clearLocal();
 
         unsigned int                                        _allocHint;
         std::vector<unsigned int>                           _dimensions;
@@ -269,12 +372,263 @@ namespace osgCompute
         mutable unsigned int                                _pitch;
         osg::ref_ptr<SubloadCallback>                       _subloadCallback;
         mutable osg::ref_ptr<MemoryObject>                  _object;
+    };
+
+
+    enum InteropUsage
+    {
+        COMPUTE_TARGET				= 0x01,
+        GL_TARGET					= 0x10,
+        GL_SOURCE_COMPUTE_SOURCE	= 0x00,
+        GL_SOURCE_COMPUTE_TARGET	= 0x01,
+        GL_TARGET_COMPUTE_SOURCE	= 0x10,
+        GL_TARGET_COMPUTE_TARGET	= 0x11,
+    };
+	/** \enum InteropUsage 
+		The usage flag of a GLMemoryAdapter defines where a GLMemory
+		object is frequently updated. Default is GL_SOURCE_COMPUTE_TARGET which
+		tells osgCompute that the memory is frequently changed during
+		the execution of modules. Use osgCompute::GLMemoryAdapter::setUsage()
+		to change the default behavior:
+		\code
+		osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::Texture2D;
+		memoryAdapter->setUsage( osgCompute::GL_TARGET_COMPUTE_SOURCE );
+		\endcode
+		Be carefull by using GL_TARGET, GL_TARGET_COMPUTE_SOURCE or GL_TARGET_COMPUTE_TARGET.
+		Whenever a resource is defined as GL_TARGET it is synchronized each time 
+		osgCompute::Memory::map() is called. This is due to the fact that OSG does not notice a
+		Texture object when it is set as a render target. So to be safe the GL memory is copied
+		each time map() is called.
+	*/
+	/** \var InteropUsage COMPUTE_TARGET 
+		GLMemory is updated while mapped to the compute memory space
+	*/
+	/** \var InteropUsage GL_TARGET 
+		GLMemory is updated during rendering while mapped to the GL memory space
+	*/
+	/** \var InteropUsage GL_SOURCE_COMPUTE_SOURCE 
+		GLMemory is not mapped as a TARGET.
+	*/					
+	/** \var InteropUsage GL_SOURCE_COMPUTE_TARGET 
+		GLMemory is updated in the compute memory space and is read only during rendering.
+	*/
+	/** \var InteropUsage GL_TARGET_COMPUTE_SOURCE 
+		GLMemory is updated during rendering and is read only in the compute memory space.
+	*/		
+	/** \var InteropUsage GL_TARGET_COMPUTE_TARGET 
+		GLMemory is updated in both memory spaces
+	*/	
+
+    
+	//! Interface for all interoperability (OpenGL-based) objects.
+	/** OpenGL interoperability is implemented by layering using an 
+	adapter design pattern. 
+	<br />
+	<br />
+	Each object implementing GLMemoryAdapter can create a GLMemory 
+	resource which has access to the internal OpenGL handles.
+	\code
+	osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::Geometry;
+	...
+	osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getMemory();
+	void* devPtr = memory->map();
+	\endcode
+	<br />
+	<br />
+	The GLMemory object then is able to map the OpenGL-memory in the respective 
+	compute context (e.g. CUDA context). When it maps the memory resource in 
+	the compute context the OpenGL memory is bound to the compute context before 
+	returning a pointer to the device data.
+	<br />
+	<br />
+	The usage flag of a GLMemoryAdapter helps osgCompute to better synchronize 
+	between the different contexts.
+	\code
+	osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::Geometry;
+	memoryAdapter->setUsage( osgCompute::GL_TARGET_COMPUTE_SOURCE );
+	\endcode
+	E.g. with the GL_TARGET_COMPUTE_SOURCE flag you tell the GLMemory object that it is
+	frequently updated in the OpenGL context as a render target.
+	<br />
+	<br />
+	Please note that this adapter is designed to avoid multiple inheritance of the osg::Object 
+	class. With multiple inheritance a GLMemory object would be the case by deriving from both 
+	e.g. osg::Geometry and osgCompute::Resource. However this is possible but would restrict 
+	reference counting to OSG classes.
+	*/
+    class LIBRARY_EXPORT GLMemoryAdapter
+    {
+    public:
+        /** Constructor. Does not create a GLMemory object by default.
+        */
+        GLMemoryAdapter() {}
+
+        /** Returns a pointer to a GLMemory object which has access to the internal 
+        OpenGL handles. 
+        @return Returns a pointer to the GLMemory resource. NULL if it does not exist.
+        */
+        virtual Memory* getMemory() = 0;
+
+        /** Returns a pointer to a GLMemory object which has access to the 
+        internal OpenGL handles. 
+        @return Returns a pointer to the GLMemory resource. NULL if it does not exist.
+        */
+        virtual const Memory* getMemory() const = 0;
+
+        /** Adds an identifier to the GLMemory object. GLMemoryAdapters will share these identifiers 
+        with its GLMemory adaptees.
+        @param[in] identifier new string identifier of the resource.
+        */
+        virtual void addIdentifier( const std::string& identifier ) = 0;
+
+        /** Removes identifier from the GLMemory resource
+        @param[in] identifier string identifier of the resource to remove.
+        */
+        virtual void removeIdentifier( const std::string& identifier ) = 0;
+
+        /** Returns true if the GLMemory resource is identified by the 
+        identifier.
+        @return Returns true if identifier is found. Returns false if 
+        it is not.
+        */
+        virtual bool isIdentifiedBy( const std::string& identifier ) const = 0;
+
+        /** Returns all identifiers of the GLMemory resource.
+        @return Returns a reference to the list with all identifiers.
+        */ 	
+        virtual IdentifierSet& getIdentifiers() = 0;
+
+        /** Returns all identifiers of the GLMemory resource.
+        @return Returns a reference to the list with all identifiers.
+        */ 	
+        virtual const IdentifierSet& getIdentifiers() const = 0;
+
+        /** The usage hint specifies in which context a GLMemory resource
+        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
+        you tell osgCompute that the resource is a render target in the OpenGL context.
+        @param[in] usage usage hint for interoperability.
+        */
+        virtual void setUsage( unsigned int usage ) = 0;
+
+        /** The usage hint specifies in which context a GLMemory resource
+        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
+        you tell osgCompute that the resource is a render target in the OpenGL context.
+        @return Returns the usage hint of an GLMemoryAdapter.
+        */
+        virtual unsigned int getUsage() const = 0;
+
+    protected:
+        friend class GLMemory;
+
+        /** Destructor.
+        */
+        virtual ~GLMemoryAdapter() {}
 
     private:
         // copy constructor and operator should not be called
-        Memory( const Memory&, const osg::CopyOp& ) {}
-        Memory& operator=( const Memory& copy ) { return (*this); }
+        GLMemoryAdapter( const GLMemoryAdapter& , const osg::CopyOp& ) {}
+        GLMemoryAdapter& operator=(const GLMemoryAdapter&) { return (*this); }
+
+    };
+
+	//! Interface for OpenGL memory interoperability.
+	/** A GLMemory object is connected to a GLMemoryAdapter. 
+	The adapter builds a GLMemorie's connection to the scene graph 
+	structure. E.g. a osgCuda::Geometry implements the GLMemoryAdapter 
+	interface methods and provides access to the geometrie's memory 
+	via an object which implements the GLMemory interface methods.
+	\code
+	osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::Geometry;
+	...
+	osg::ref_ptr<osgCompute::Memory> memory = memoryAdapter->getMemory();
+	void* devPtr = memory->map();
+	\endcode
+	<br />
+	<br />
+	A GLMemory object registers the OpenGL memory handles in the compute
+	context and does the synchronization between the respective memory
+	spaces. If the adapters usage flag is set to GL_TARGET_COMPUTE_SOURCE
+	then each time map() is called the GL memory is copied to the mapped
+	memory space first as it might have been changed during rendering.
+	<br />
+	<br />
+	Please note that we currently support only single OpenGL context.
+	*/
+    class LIBRARY_EXPORT GLMemory : public Memory
+    {
+    public:
+        /** Constructor. 
+        */
+        GLMemory() {}
+
+        /**
+        A GLMemory object is connected with an memory adapter. This method
+        returns a pointer to the adapter.
+        @return Returns a pointer to the adapter this object is connected
+        with.
+        */
+        virtual GLMemoryAdapter* getAdapter() = 0;
+
+        /** A GLMemory object is connected with an memory adapter. This method
+        returns a pointer to the adapter.
+        @return Returns a pointer to the adapter this object is connected
+        with.
+        */
+        virtual const GLMemoryAdapter* getAdapter() const = 0;
+
+        /** The usage hint specifies in which context a GLMemory resource
+        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
+        you tell osgCompute that the resource is a render target in the OpenGL context.
+        @param[in] usage usage hint for interoperability.
+        */
+        virtual void setUsage( unsigned int usage ) {}
+
+        /** The usage hint specifies in which context a GLMemory resource
+        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
+        you tell osgCompute that the resource is a render target in the OpenGL context.
+        @return Returns the usage hint of an GLMemoryAdapter.
+        */
+        virtual unsigned int getUsage() const { return GL_SOURCE_COMPUTE_SOURCE; }
+
+        /** Clears this memory object. Calls releaseObjects().
+        */
+        virtual void clear();
+
+        /** Release all memory. Each GL memory handle is registered in the
+        respective compute context is unregistered and allocations on the 
+        CPU are deallocated.
+        */
+        virtual void releaseObjects();
+
+        /** Sets the OpenGL context ID for all GLMemory resources. Please note that
+        GL interoperability can only use a single GL context. 
+        @param[in] contextID OpenGL context for all resources.
+        */
+        static void bindToContextID( unsigned int contextID );
+
+        /** Clear the OpenGL context ID.
+        */	
+        static void clearContextID();
+
+        /** Returns the OpenGL context ID of all GLMemory resources.
+        @return Returns the OpenGL context ID.
+        */
+        static unsigned int getContextID();
+
+    protected:
+        /** Destructor. Unregisters all GL handles.
+        */
+        virtual ~GLMemory() {clearLocal();}
+
+    private:
+        // Copy constructor and operator should not be called
+        GLMemory( const GLMemory& , const osg::CopyOp& ) {}
+        GLMemory& operator=(const GLMemory&) { return (*this); }
+
+        void clearLocal();
+
+        static unsigned int                 s_contextID;
     };
 }
 
-#endif //OSGCOMPUTE_BUFFER
+#endif //OSGCOMPUTE_MEMORY

@@ -18,12 +18,52 @@
 #include <osg/OperationThread>
 #include <osgDB/Registry>
 #include <osgUtil/CullVisitor>
+#include <osgUtil/RenderBin>
 #include <osgUtil/GLObjectsVisitor>
 #include <osgCompute/Visitor>
+#include <osgCompute/Memory>
 #include <osgCompute/Computation>
 
 namespace osgCompute
 {
+    class LIBRARY_EXPORT ComputationBin : public osgUtil::RenderBin 
+    {
+    public:
+        ComputationBin(); 
+        ComputationBin(osgUtil::RenderBin::SortMode mode);
+
+        META_Object( osgCompute, ComputationBin );
+
+        virtual bool init( Computation& computation );
+        virtual void reset();
+
+        virtual void drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
+        virtual unsigned int computeNumberOfDynamicRenderLeaves() const;
+
+
+        virtual bool isClear() const;
+        virtual Computation* getComputation();
+        virtual const Computation* getComputation() const;
+
+        virtual void clear();
+
+    protected:
+        friend class Computation;
+        virtual ~ComputationBin() { clearLocal(); }
+        void clearLocal();
+
+        virtual void launch();
+        virtual void drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
+
+        Computation*                         _computation; 
+        bool                                 _clear;
+
+    private:
+        // copy constructor and operator should not be called
+        ComputationBin(const ComputationBin&, const osg::CopyOp& ) {}
+        ComputationBin &operator=(const ComputationBin &) { return *this; }
+    };
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -305,7 +345,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void osgCompute::Computation::addResource( Resource& resource, bool attach )
+    void osgCompute::Computation::addResource( Resource& resource, bool serialize )
     {
         if( hasResource(resource) )
             return;
@@ -315,12 +355,14 @@ namespace osgCompute
 
 		ResourceHandle newHandle;
 		newHandle._resource = &resource;
-		newHandle._attached = attach;
+		newHandle._serialize = serialize;
 		_resources.push_back( newHandle );
+
+		if( resource.isClear() ) resource.init();
     }
 
     //------------------------------------------------------------------------------
-    void Computation::exchangeResource( Resource& newResource, bool attach /*= true */ )
+    void Computation::exchangeResource( Resource& newResource, bool serialize /*= true */ )
     {
         IdentifierSet& ids = newResource.getIdentifiers();
         for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
@@ -350,8 +392,10 @@ namespace osgCompute
         // Add new resource
         ResourceHandle newHandle;
         newHandle._resource = &newResource;
-        newHandle._attached = attach;
+        newHandle._serialize = serialize;
         _resources.push_back( newHandle );
+
+		if( newResource.isClear() ) newResource.init();
     }
 
 
@@ -432,14 +476,14 @@ namespace osgCompute
     }
 
 	//------------------------------------------------------------------------------
-	bool Computation::isResourceAttached( Resource& resource ) const
+	bool Computation::isResourceSerialized( Resource& resource ) const
 	{
 		for( ResourceHandleListCnstItr itr = _resources.begin();
 			itr != _resources.end();
 			++itr )
 		{
 			if( (*itr)._resource == &resource )
-				return (*itr)._attached;
+				return (*itr)._serialize;
 		}
 
 		return false;
@@ -512,9 +556,9 @@ namespace osgCompute
     {
         if( state != NULL )
         {
-            if( state->getContextID() == Resource::getContextID() )
+            if( state->getContextID() == GLMemory::getContextID() )
             {
-                osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(Resource::getContextID());
+                osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(GLMemory::getContextID());
                 if( !contexts.empty() && contexts.front() != NULL && contexts.front()->isRealized() )
                 {     
                     // Make context the current context
@@ -523,10 +567,10 @@ namespace osgCompute
 
                     // Release all resources associated with the current context
                     for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-                        (*itr)->clearObject();
+                        (*itr)->releaseObjects();
 
                     for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-                        (*itr)._resource->clearObject();
+                        (*itr)._resource->releaseObjects();
                 }
             }
         }
@@ -574,8 +618,8 @@ namespace osgCompute
             return;
         }
 
-        if( UINT_MAX != Resource::getContextID() && 
-            Resource::getContextID() != state.getContextID() )
+        if( UINT_MAX != GLMemory::getContextID() && 
+            GLMemory::getContextID() != state.getContextID() )
         {
             osg::notify(osg::FATAL)  << "Computation::setupContext() for \""
                 << getName()<<"\": GLObjectsVisitor can handle only a single context."
@@ -586,8 +630,8 @@ namespace osgCompute
             return;
         }
 
-        if( Resource::getContextID() == UINT_MAX )
-            Resource::bindToContextID( state.getContextID() );
+        if( GLMemory::getContextID() == UINT_MAX )
+            GLMemory::bindToContextID( state.getContextID() );
     }
 
     
@@ -603,6 +647,9 @@ namespace osgCompute
 
             return;
         }
+
+		if( !cv.getState()->getContextID() == GLMemory::getContextID() )
+			return;
 
         ///////////////////////
         // SETUP REDIRECTION //
@@ -670,9 +717,9 @@ namespace osgCompute
     {            
         // Check if graphics context exist
         // or return otherwise
-        if( UINT_MAX != Resource::getContextID() )
+        if( UINT_MAX != GLMemory::getContextID() )
         {       
-            osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(Resource::getContextID());
+            osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(GLMemory::getContextID());
             if( contexts.empty() || !contexts.front()->isRealized() )
                 return;
                     
@@ -733,4 +780,219 @@ namespace osgCompute
             }
         }
     }  
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// BIN IMPLEMENTATION ///////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	class RegisterBinProxy
+	{
+	public:
+		RegisterBinProxy( const std::string& binName, osgUtil::RenderBin* proto )
+		{
+			_rb = proto;
+			osgUtil::RenderBin::addRenderBinPrototype( binName, _rb.get() );
+		}
+	protected:
+		osg::ref_ptr<osgUtil::RenderBin> _rb;
+	};
+
+	RegisterBinProxy registerComputationBinProxy("osgCompute::ComputationBin", new osgCompute::ComputationBin );
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	ComputationBin::ComputationBin()
+		: osgUtil::RenderBin()
+	{
+		clearLocal();
+	}
+
+	//------------------------------------------------------------------------------
+	ComputationBin::ComputationBin( osgUtil::RenderBin::SortMode mode )
+		: osgUtil::RenderBin( mode )
+	{
+		clearLocal();
+	}
+
+	//------------------------------------------------------------------------------
+	void ComputationBin::clear()
+	{
+		clearLocal();
+	}
+
+	//------------------------------------------------------------------------------
+	void ComputationBin::drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
+	{ 
+		osg::State& state = *renderInfo.getState();
+
+		unsigned int numToPop = (previous ? osgUtil::StateGraph::numToPop(previous->_parent) : 0);
+		if (numToPop>1) --numToPop;
+		unsigned int insertStateSetPosition = state.getStateSetStackSize() - numToPop;
+
+		if (_stateset.valid())
+		{
+			state.insertStateSet(insertStateSetPosition, _stateset.get());
+		}
+
+		///////////////////
+		// DRAW PRE BINS //
+		///////////////////
+		osgUtil::RenderBin::RenderBinList::iterator rbitr;
+		for(rbitr = _bins.begin();
+			rbitr!=_bins.end() && rbitr->first<0;
+			++rbitr)
+		{
+			rbitr->second->draw(renderInfo,previous);
+		}
+
+
+		if( (_computation->getComputeOrder() & OSGCOMPUTE_BEFORECHILDREN ) == OSGCOMPUTE_BEFORECHILDREN )
+		{
+			if( _computation->getLaunchCallback() ) 
+				(*_computation->getLaunchCallback())( *_computation ); 
+			else launch(); 
+
+			// don't forget to decrement dynamic object count
+			renderInfo.getState()->decrementDynamicObjectCount();
+		}
+
+		// render sub-graph leafs
+		if( (_computation->getComputeOrder() & OSGCOMPUTE_NOCHILDREN ) != OSGCOMPUTE_NOCHILDREN )
+			drawLeafs(renderInfo, previous );
+
+		if( (_computation->getComputeOrder() & OSGCOMPUTE_BEFORECHILDREN ) != OSGCOMPUTE_BEFORECHILDREN )
+		{
+			if( _computation->getLaunchCallback() ) 
+				(*_computation->getLaunchCallback())( *_computation ); 
+			else launch();  
+
+			// don't forget to decrement dynamic object count
+			renderInfo.getState()->decrementDynamicObjectCount();
+		}
+
+		////////////////////
+		// DRAW POST BINS //
+		////////////////////
+		for(;
+			rbitr!=_bins.end();
+			++rbitr)
+		{
+			rbitr->second->draw(renderInfo,previous);
+		}
+
+
+		if (_stateset.valid())
+		{
+			state.removeStateSet(insertStateSetPosition);
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int ComputationBin::computeNumberOfDynamicRenderLeaves() const
+	{
+		// increment dynamic object count to execute modules
+		return osgUtil::RenderBin::computeNumberOfDynamicRenderLeaves() + 1;
+	}
+
+	//------------------------------------------------------------------------------
+	bool ComputationBin::init( Computation& computation )
+	{
+		// COMPUTATION 
+		_computation = &computation;
+
+		// OBJECT 
+		setName( _computation->getName() );
+		setDataVariance( _computation->getDataVariance() );
+
+		_clear = false;
+		return true;
+	}
+
+	//------------------------------------------------------------------------------
+	void ComputationBin::reset()
+	{
+		clearLocal();
+	}
+
+	//------------------------------------------------------------------------------
+	bool ComputationBin::isClear() const
+	{ 
+		return _clear; 
+	}
+
+	//------------------------------------------------------------------------------
+	Computation* ComputationBin::getComputation()
+	{ 
+		return _computation; 
+	}
+
+	//------------------------------------------------------------------------------
+	const Computation* ComputationBin::getComputation() const
+	{ 
+		return _computation; 
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	void ComputationBin::clearLocal()
+	{
+		_computation = NULL;
+		_clear = true;
+
+		osgUtil::RenderBin::reset();
+	}
+
+	//------------------------------------------------------------------------------
+	void ComputationBin::launch()
+	{
+		if( _clear || !_computation  )
+			return;
+
+		// Launch modules
+		ModuleList& modules = _computation->getModules();
+		for( ModuleListCnstItr itr = modules.begin(); itr != modules.end(); ++itr )
+		{
+			if( (*itr)->isEnabled() )
+			{
+				if( (*itr)->isClear() )
+					(*itr)->init();
+
+				(*itr)->launch();
+			}
+		}
+	}
+
+	//------------------------------------------------------------------------------
+	void ComputationBin::drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
+	{
+		// draw fine grained ordering.
+		for(osgUtil::RenderBin::RenderLeafList::iterator rlitr= _renderLeafList.begin();
+			rlitr!= _renderLeafList.end();
+			++rlitr)
+		{
+			osgUtil::RenderLeaf* rl = *rlitr;
+			rl->render(renderInfo,previous);
+			previous = rl;
+		}
+
+		// draw coarse grained ordering.
+		for(osgUtil::RenderBin::StateGraphList::iterator oitr=_stateGraphList.begin();
+			oitr!=_stateGraphList.end();
+			++oitr)
+		{
+
+			for(osgUtil::StateGraph::LeafList::iterator dw_itr = (*oitr)->_leaves.begin();
+				dw_itr != (*oitr)->_leaves.end();
+				++dw_itr)
+			{
+				osgUtil::RenderLeaf* rl = dw_itr->get();
+				rl->render(renderInfo,previous);
+				previous = rl;
+
+			}
+		}
+	}
 } 

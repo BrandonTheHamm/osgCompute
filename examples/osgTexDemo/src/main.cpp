@@ -27,7 +27,7 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Computation>
-#include <osgCuda/Buffer>
+#include <osgCuda/Memory>
 #include <osgCuda/Texture>
 
 #include "TexFilter"
@@ -67,7 +67,7 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
         return NULL;
     }
 
-    // for arrays you have to provide 
+    // For arrays you have to provide 
     // a channel desc!!!!
     cudaChannelFormatDesc srcDesc;
     srcDesc.f = cudaChannelFormatKindUnsigned;
@@ -76,16 +76,17 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     srcDesc.z = 8;
     srcDesc.w = 8;
 
-    osg::ref_ptr<osgCuda::Buffer> srcArray = new osgCuda::Buffer;
+    osg::ref_ptr<osgCuda::Memory> srcArray = new osgCuda::Memory;
     srcArray->setElementSize( sizeof(osg::Vec4ub) );
     srcArray->setChannelFormatDesc( srcDesc );
     srcArray->setDimension( 0, srcImage->s() );
     srcArray->setDimension( 1, srcImage->t() );
     srcArray->setImage( srcImage );
-    // Mark this buffer as a sry array
+    // Mark this buffer as the source array of the module
     srcArray->addIdentifier( "SRC_ARRAY" );
 
     osg::ref_ptr< osgCuda::Texture2D > trgTexture = new osgCuda::Texture2D;  
+	trgTexture->setName("My Target Texture");
     // Note: GL_RGBA8 Bit format is not yet supported by CUDA, use GL_RGBA8UI_EXT instead.
     // GL_RGBA8UI_EXT requires the additional work of scaling the fragment shader
     // output from 0-1 to 0-255. 	
@@ -97,8 +98,6 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     // actual pitch (bytes of a single row) call osgCompute::Memory::getPitch()
     trgTexture->setTextureWidth( srcImage->s());
     trgTexture->setTextureHeight( srcImage->t() );
-    trgTexture->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
-    trgTexture->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
     // Mark this buffer as the target buffer of the module
     trgTexture->addIdentifier( "TRG_BUFFER" );
 
@@ -113,7 +112,7 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     computationNode->setComputeOrder(  osgCompute::Computation::PRERENDER_BEFORECHILDREN );
     computationNode->addModule( *texFilter );
     computationNode->addResource( *srcArray );
-    computationNode->addResource( *trgTexture->getOrCreateInteropMemory() );
+    computationNode->addResource( *trgTexture->getMemory() );
     // the target texture is located in the subgraph of the computation
     computationNode->addChild( getTexturedQuad( *trgTexture ) );
 

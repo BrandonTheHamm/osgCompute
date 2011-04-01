@@ -88,14 +88,10 @@ namespace PtclDemo
         if( isClear() )
             return;
 
-        /////////////
-        // ADVANCE //
-        /////////////
-
         ////////////////////
         // MOVE PARTICLES //
         ////////////////////
-        trace( _numBlocks, _numThreads, _ptcls->map(), 0.04f );
+        trace( _numBlocks, _numThreads, _ptcls->map(), 0.009f );
     }
 
     //------------------------------------------------------------------------------

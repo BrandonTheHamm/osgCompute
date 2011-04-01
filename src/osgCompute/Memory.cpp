@@ -15,6 +15,7 @@
 
 #include <osg/Notify>
 #include <osgCompute/Memory>
+#include <osg/GraphicsContext>
 
 namespace osgCompute
 {   
@@ -77,13 +78,6 @@ namespace osgCompute
             return false;
         }
 
-        ///////////////////////
-        // COMPUTE BYTE SIZE //
-        ///////////////////////
-        _numElements = 1;
-        for( unsigned int d=0; d<_dimensions.size(); ++d )
-            _numElements *= _dimensions[d];
-
         return Resource::init();
     }
 
@@ -118,12 +112,16 @@ namespace osgCompute
             _dimensions.resize(dimIdx+1,0);
 
         _dimensions[dimIdx] = dimSize;
+
+		_numElements = 1;
+		for( unsigned int d=0; d<_dimensions.size(); ++d )
+			_numElements *= _dimensions[dimIdx];
     }
 
     //------------------------------------------------------------------------------
     unsigned int Memory::getDimension( unsigned int dimIdx ) const
     { 
-        if( dimIdx > (_dimensions.size()-1) )
+        if( _dimensions.empty() || dimIdx > (_dimensions.size()-1) )
             return 0;
 
         return _dimensions[dimIdx];
@@ -232,10 +230,10 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Memory::clearObject()
+    void Memory::releaseObjects()
     {
         _object = NULL;
-        Resource::clearObject();
+        Resource::releaseObjects();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -257,7 +255,7 @@ namespace osgCompute
         _subloadCallback = NULL;
         _pitch = 0;
 
-        // clearObject() is called implicitly by Resource::clear()
+        // releaseObjects() is called implicitly by Resource::clear()
     }
 
 
@@ -314,4 +312,72 @@ namespace osgCompute
     {
         return NULL;
     }
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	unsigned int GLMemory::s_contextID = UINT_MAX;
+
+	//------------------------------------------------------------------------------
+	void GLMemory::bindToContextID( unsigned int contextID )
+	{
+		s_contextID = contextID;
+	}
+
+	//------------------------------------------------------------------------------
+	void GLMemory::clearContextID()
+	{
+		s_contextID = UINT_MAX;
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int GLMemory::getContextID()
+	{
+		return s_contextID;
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	void GLMemory::clear()
+	{
+		clearLocal();
+		osgCompute::Memory::clear();
+	}
+
+	//------------------------------------------------------------------------------
+	void GLMemory::releaseObjects()
+	{
+		if( getContextID() != UINT_MAX )
+		{
+			osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(GLMemory::getContextID());
+			if( !contexts.empty() && contexts.front()->isRealized() )
+			{      
+				// Make context the current context
+				if( !contexts.front()->isCurrent() )
+					contexts.front()->makeCurrent();
+			}
+			//else if( contexts.empty() )
+			//{
+			//	osg::notify(osg::FATAL) 
+			//		<< "[GLMemory::releaseObjects()]: "
+			//		<< "the associated graphics context is not available anymore."
+			//		<< "Check that you call releaseGLObjects(state) before removing the context."
+			//		<< "Maybe freeing OpenGL related resources is not possible."
+			//		<< std::endl;
+			//}
+		}
+
+		osgCompute::Memory::releaseObjects();
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	void GLMemory::clearLocal()
+	{
+		//GLMemory::releaseObjects() is called by Resource::clear()
+	}
 } 

@@ -21,7 +21,7 @@
 #include <osg/ref_ptr>
 #include <osgCompute/Module>
 #include <osgCompute/Memory>
-#include <osgCuda/Buffer>
+#include <osgCuda/Memory>
 
 //------------------------------------------------------------------------------
 extern "C"
@@ -93,14 +93,17 @@ namespace PtclDemo
         ////////////////////////
         // CREATE SEED BUFFER //
         ////////////////////////
-        osg::FloatArray* seedValues = new osg::FloatArray();
-        for( unsigned int s=0; s<_ptcls->getNumElements(); ++s )
-            seedValues->push_back( float(rand()) / RAND_MAX );
+		osg::Image* seedValues = new osg::Image();
+		seedValues->allocateImage(64000,1,1,GL_LUMINANCE,GL_FLOAT);
 
-        osg::ref_ptr<osgCuda::Buffer> seedBuffer = new osgCuda::Buffer;
+		float* seeds = (float*)seedValues->data();
+		for( unsigned int s=0; s<64000; ++s )
+			seeds[s] = ( float(rand()) / RAND_MAX );
+
+        osg::ref_ptr<osgCuda::Memory> seedBuffer = new osgCuda::Memory;
         seedBuffer->setElementSize( sizeof(float) );
         seedBuffer->setDimension(0,_ptcls->getNumElements());
-        seedBuffer->setArray( seedValues );
+        seedBuffer->setImage( seedValues );
         _seeds = seedBuffer;
 
         /////////////////////////

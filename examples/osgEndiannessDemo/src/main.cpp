@@ -14,8 +14,9 @@
 */
 #include <memory.h>
 #include <osg/Notify>
-#include <osgCuda/Buffer>
+#include <osgCuda/Memory>
 #include <osgCompute/Module>
+#include <cuda_runtime.h>
 
 //------------------------------------------------------------------------------
 extern "C" void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* bytes );
@@ -73,6 +74,7 @@ int main(int argc, char *argv[])
     // You can use modules and buffers in the update cycle or everywhere
     // you want. But please make sure that the context is still active at
     // computation time if you use osgCuda::Geometry or osgCuda::Texture objects!!!
+	cudaSetDevice(0);
 
     ///////////////////
     // BEFORE LAUNCH //
@@ -87,7 +89,7 @@ int main(int argc, char *argv[])
 
 
     // create a buffer
-    osg::ref_ptr<osgCuda::Buffer> buffer = new osgCuda::Buffer;
+    osg::ref_ptr<osgCuda::Memory> buffer = new osgCuda::Memory;
     buffer->setElementSize( sizeof(unsigned int) );
     buffer->setDimension(0, numEndians);
     buffer->init();

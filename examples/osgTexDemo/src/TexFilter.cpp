@@ -14,7 +14,7 @@
 */
 #include <cuda_runtime.h>
 #include <osg/Notify>
-#include <osgCuda/Buffer>
+#include <osgCuda/Memory>
 #include <osgCuda/Texture>
 #include "TexFilter"
 
@@ -45,7 +45,7 @@ namespace TexDemo
         }
 
         // Create an internal buffer
-        _tmpBuffer = new osgCuda::Buffer;
+        _tmpBuffer = new osgCuda::Memory;
         _tmpBuffer->setElementSize( sizeof(osg::Vec4ub) );
         _tmpBuffer->setName( "trgTmpBuffer" );
         _tmpBuffer->setDimension( 0, _srcArray->getDimension(0) );

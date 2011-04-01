@@ -228,7 +228,6 @@ namespace osgCompute
         _eventCallback = NULL;
         _updateCallback = NULL;
         _enabled = true;
-        _clear = true;
     }
 
 }

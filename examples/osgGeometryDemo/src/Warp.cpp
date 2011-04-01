@@ -13,7 +13,7 @@
 * The full license is in LICENSE file included with this distribution.
 */
 #include <osg/Array>
-#include <osgCuda/Buffer>
+#include <osgCuda/Memory>
 #include <osgCuda/Geometry>
 #include "Warp"
 
@@ -45,13 +45,12 @@ namespace GeometryDemo
         }
 
         // We need to read the geometry information.
-        osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::InteropMemory*)_vertices.get())->getInteropObject() );
+        osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::GLMemory*)_vertices.get())->getAdapter() );
         if( !geometry )
             return false;
 
         // Create the static reference buffers
-        osg::ref_ptr<osgCuda::Buffer> normals= new osgCuda::Buffer;
-        normals->setArray( geometry->getNormalArray() );
+        osg::ref_ptr<osgCuda::Memory> normals= new osgCuda::Memory;
         normals->setElementSize( geometry->getNormalArray()->getDataSize() * sizeof(float) );
         normals->setDimension( 0, geometry->getNormalArray()->getNumElements() );
         if( !normals->init() )
@@ -64,8 +63,7 @@ namespace GeometryDemo
         }
         _initNormals = normals;
 
-        osg::ref_ptr<osgCuda::Buffer> positions = new osgCuda::Buffer;
-        positions->setArray( geometry->getVertexArray() );
+        osg::ref_ptr<osgCuda::Memory> positions = new osgCuda::Memory;
         positions->setElementSize( geometry->getVertexArray()->getDataSize() * sizeof(float) );
         positions->setDimension( 0, geometry->getVertexArray()->getNumElements() );
         if( !positions->init() )
@@ -77,6 +75,16 @@ namespace GeometryDemo
             return false;
         }
         _initPos = positions;
+
+		// Map the initial buffers to host memory and
+		// copy the vertex data.
+		memcpy( _initNormals->map(osgCompute::MAP_HOST_TARGET),
+			    geometry->getNormalArray()->getDataPointer(),
+				_initNormals->getByteSize() );
+
+		memcpy( _initPos->map(osgCompute::MAP_HOST_TARGET),
+				geometry->getVertexArray()->getDataPointer(),
+				_initPos->getByteSize() );
 
         /////////////////////////
         // COMPUTE KERNEL SIZE //

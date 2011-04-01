@@ -24,7 +24,41 @@ namespace osgCompute
 {
     class Computation;
 
+	//! Default class for resource sharing
     /**
+	A resource visitor collects and distributes or exchanges resources in a graph-structure.
+	You can use a resource visitor to share resources among modules of different computation nodes.
+	\code
+	osg::ref_ptr<osgCompute::ResourceVisitor> visitor = new ResourceVisitor;
+	visitor->apply( *sceneNode );
+	\endcode
+	<br />
+	<br />
+	As any other node visitor the resource visitor traverses the graph and synchronizes resources between
+	different computation nodes. A resource visitor can run with different combinations of modes (see setMode()). To set the 
+	default mode of the resource visitor do the following:
+	\code
+	visitor->setMode( 
+		osgCompute::ResourceVisitor::COLLECT | 
+		osgCompute::ResourceVisitor::DISTRIBUTE | 
+		osgCompute::ResourceVisitor::RESET );
+	\endcode
+	First the visitor collects all resources (COLLECT) and in the second pass the resources are distributed to all 
+	computation nodes (DISTRIBUTE). After the second pass all resources are removed from the visitor's 
+	internal list (RESET). <br />
+	<br />
+	<br />
+	You can add resources before traversal in order to spread them over the graph. In the following example
+	the resource with identifier "PTCL_BUFFER" is exchanged in all computation nodes of the scene. Old resources
+	with this identifier are replaced by the new resource
+	\code
+	osg::ref_ptr<osgCompute::Resource> myResource = new osgCuda::Buffer;
+	myResource->addIdentifier("PTCL_BUFFER");
+	...
+	visitor->addResource( *myResource );
+	visitor->setMode( osgCompute::ResourceVisitor::EXCHANGE );
+	visitor->apply( *sceneNode );
+	\endcode
     */
     class LIBRARY_EXPORT ResourceVisitor : public osg::NodeVisitor
     {
@@ -38,39 +72,116 @@ namespace osgCompute
             RESET =         0x8,
         };
 
+		/** \enum Mode
+		Select from one of these modes to define the resource handling of a resource visitor.
+		Modes can be combined to traverse the graph several times executing each operation. However,
+		only several combinations make sense.
+		*/
+		/** \var Mode NONE 
+		Perform no operation. 
+		*/
+		/** \var Mode COLLECT 
+		Collect resources located in the graph. The resource list of visitor then contains all
+		resources that have been found. Can be combined with DISTRIBUTE and/or RESET
+		*/
+		/** \var Mode DISTRIBUTE 
+		Distribute resources among the graph. The resource list of a visitor will be distributed to all
+		computation nodes that will be found. Can be combined with COLLECT and/or RESET. 
+		*/
+		/** \var Mode EXCHANGE 
+		Exchange resources in the graph. Each computation node in the graph will exchange its resources 
+		with the resource of the visitor. Can be combined with RESET
+		*/
+		/** \var Mode RESET 
+		Resets the resource list after traversing the graph. Can be combined with all other modes.
+		*/
+
     public:
+		/** Constructor. Empty resource list and mode is set to COLLECT | DISTRIBUTE | RESET.
+		*/
         ResourceVisitor();
 
-        META_NodeVisitor( osgCompute, ResourceVisitor )
+        META_NodeVisitor( osgCompute, ResourceVisitor );
 
+		/** Apply node to visitor. Method will check for
+		the node type and applies the current operation to it.
+		@param[in] node A reference to the current node.
+		*/
         virtual void apply( osg::Node& node );
+
+		/** Collect a nodes resources.
+		@param[in] node A reference to the current node.
+		*/
         virtual void collect( osg::Node& node );
+
+		/** Distribute resource to the current node.
+		@param[in] node A reference to the current node.
+		*/
         virtual void distribute( osg::Node& node );
+
+		/** Exchange resources in the current node.
+		@param[in] node A reference to the current node.
+		*/
         virtual void exchange( osg::Node& node );
 
+		/** Set the mode of the resource visitor (see osgCompute::ResourceVisitor::Mode).
+		@param[in] mode The visitors mode.
+		*/
         virtual void setMode( unsigned int mode );
+
+		/** Returns the mode of the resource visitor (see Mode).
+		@return Returns the mode of the resource visitor.
+		*/
         virtual unsigned int getMode();
 
+		/** Add a resource to the visitor's resource list. Every resource
+		is applied to the traversed graph.
+		@param[in] resource A reference to the resource.
+		*/
         virtual void addResource( Resource& resource );
-        virtual void removeResource( Resource& resource );
+        
+		/** Remove a resource from the visitor's resource list.
+		@param[in] resource A reference to the resource.
+		*/
+		virtual void removeResource( Resource& resource );
+
+		/** Returns true if the resource visitor contains the resource.
+		@param[in] resource  A reference to the resource.
+		@return Returns true if the resource is in the visitor's resource list.
+		*/
         virtual bool hasResource( Resource& resource );
+
+		/** Returns the visitor's resource list.
+		@return Returns the visitor's resource list.
+		*/
         virtual ResourceSet& getResources();
+
+		/** Returns the visitor's resource list.
+		@return Returns the visitor's resource list.
+		*/
         virtual const ResourceSet& getResources() const;
 
+		/** Clears the resource list.
+		*/
         virtual void reset();
+
     protected:
         friend class Computation;
-        virtual ~ResourceVisitor() { clearLocal(); }
-        void clearLocal();
 
-        ResourceSet                       _collectedResources;
-        unsigned int                      _mode;
-        unsigned int                      _currentMode;
+		/** Destructor.
+		*/
+        virtual ~ResourceVisitor() { clearLocal(); }
 
     private:
         // copy constructor and operator should not be called
         ResourceVisitor( const ResourceVisitor&, const osg::CopyOp& ) {}
         ResourceVisitor& operator=( const ResourceVisitor& copy ) { return (*this); }
+
+		void clearLocal();
+
+		ResourceSet                       _collectedResources;
+		unsigned int                      _mode;
+		unsigned int                      _currentMode;
     };
 }
 

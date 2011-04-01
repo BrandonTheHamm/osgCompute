@@ -2,15 +2,146 @@
 #if defined(__linux)
 #include <malloc.h>
 #endif
+#include <driver_types.h>
 #include <osg/GL>
 #include <osg/RenderInfo>
 #include <cuda_runtime.h>
 #include <driver_types.h>
 #include <cuda_gl_interop.h>
+#include <osg/observer_ptr>
+#include <osgCompute/Memory>
 #include <osgCuda/Geometry>
 
 namespace osgCuda
 {
+    /**
+    */
+    class LIBRARY_EXPORT GeometryObject : public osgCompute::MemoryObject
+    {
+    public:
+        void*						_hostPtr;
+        void*						_devPtr;
+        cudaGraphicsResource*       _graphicsResource;
+        std::vector<unsigned int>	_lastModifiedCount;
+
+        GeometryObject();
+        virtual ~GeometryObject();
+
+
+    private:
+        // not allowed to call copy-constructor or copy-operator
+        GeometryObject( const GeometryObject& ) {}
+        GeometryObject& operator=( const GeometryObject& ) { return *this; }
+    };
+
+
+    /**
+    */
+    class LIBRARY_EXPORT IndexedGeometryObject : public GeometryObject
+    {
+    public:
+        void*						_hostIdxPtr;
+        void*						_devIdxPtr;
+        cudaGraphicsResource*       _graphicsIdxResource;
+        std::vector<unsigned int>	_lastIdxModifiedCount;
+        unsigned int                _syncIdxOp;
+        unsigned int                _idxMapping;
+
+
+        IndexedGeometryObject();
+        virtual ~IndexedGeometryObject();
+
+
+    private:
+        // not allowed to call copy-constructor or copy-operator
+        IndexedGeometryObject( const IndexedGeometryObject& ) {}
+        IndexedGeometryObject& operator=( const IndexedGeometryObject& ) { return *this; }
+    };
+
+
+    /**
+    */
+    class LIBRARY_EXPORT GeometryMemory : public osgCompute::GLMemory
+    {
+    public:
+        GeometryMemory();
+
+        META_Object(osgCuda,GeometryMemory)
+
+		virtual osgCompute::GLMemoryAdapter* getAdapter(); 
+		virtual const osgCompute::GLMemoryAdapter* getAdapter() const; 
+
+        virtual bool init();
+
+        virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
+        virtual void unmap( unsigned int hint = 0 );
+        virtual bool reset( unsigned int hint = 0 );
+        virtual bool supportsMapping( unsigned int mapping, unsigned int hint = 0 ) const;
+
+        virtual void clear();
+    protected:
+        friend class Geometry;
+        virtual ~GeometryMemory();
+        void clearLocal();
+
+
+        bool setup( unsigned int mapping );
+        bool alloc( unsigned int mapping );
+        bool sync( unsigned int mapping );
+
+        virtual osgCompute::MemoryObject* createObject() const;
+        virtual unsigned int computePitch() const;
+
+        osg::observer_ptr<osgCuda::Geometry>		_geomref;
+    private:
+        // copy constructor and operator should not be called
+        GeometryMemory( const GeometryMemory& , const osg::CopyOp& ) {}
+        GeometryMemory& operator=(const GeometryMemory&) { return (*this); }
+    };
+
+    /**
+    */
+    class LIBRARY_EXPORT IndexedGeometryMemory : public GeometryMemory
+    {
+    public:
+        IndexedGeometryMemory();
+
+        META_Object(osgCuda,IndexedGeometryMemory)
+
+        virtual bool init();
+
+        virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
+        virtual void unmap( unsigned int hint = 0 );
+        virtual bool reset( unsigned int hint = 0 );
+        virtual bool supportsMapping( unsigned int mapping, unsigned int hint = 0 ) const;
+
+        virtual void* mapIndices( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
+        virtual void unmapIndices( unsigned int hint = 0 );
+        virtual bool resetIndices( unsigned int hint = 0 );
+
+        virtual unsigned int getIndicesByteSize() const;
+
+        virtual void clear();
+    protected:
+        friend class Geometry;
+        virtual ~IndexedGeometryMemory();
+        void clearLocal();
+
+
+        bool setupIndices( unsigned int mapping );
+        bool allocIndices( unsigned int mapping );
+        bool syncIndices( unsigned int mapping );
+
+        unsigned int                        _indicesByteSize;
+
+        virtual osgCompute::MemoryObject* createObject() const;
+    private:
+        // copy constructor and operator should not be called
+        IndexedGeometryMemory( const IndexedGeometryMemory& , const osg::CopyOp& ) {}
+        IndexedGeometryMemory& operator=(const IndexedGeometryMemory&) { return (*this); }
+    };
+
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,46 +236,47 @@ namespace osgCuda
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    GeometryBuffer::GeometryBuffer()
-        :  osgCompute::InteropMemory()
+    GeometryMemory::GeometryMemory()
+        :  osgCompute::GLMemory()
     {
         clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    GeometryBuffer::~GeometryBuffer()
+    GeometryMemory::~GeometryMemory()
     {
         clearLocal();
 
-        // free this proxy object
-        getInteropObject()->freeProxy();
-        // decrease reference count of geometry reference
-        _geomref = NULL;
+        //// decrease reference count of geometry reference
+        //_geomref = NULL;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropObject* GeometryBuffer::getInteropObject()
+    osgCompute::GLMemoryAdapter* GeometryMemory::getAdapter()
     { 
         return _geomref.get(); 
     }
 
 	//------------------------------------------------------------------------------
-	const osgCompute::InteropObject* GeometryBuffer::getInteropObject() const
+	const osgCompute::GLMemoryAdapter* GeometryMemory::getAdapter() const
 	{ 
 		return _geomref.get(); 
 	}
 
     //------------------------------------------------------------------------------
-    void GeometryBuffer::clear()
+    void GeometryMemory::clear()
     {
-        osgCompute::InteropMemory::clear();
+        osgCompute::GLMemory::clear();
         clearLocal();
     }
 
 
     //------------------------------------------------------------------------------
-    bool GeometryBuffer::init()
+    bool GeometryMemory::init()
     {
+		if( !_geomref.valid() )
+			return false;
+
         if( !osgCompute::Resource::isClear() )
             return true;
 
@@ -154,7 +286,7 @@ namespace osgCuda
         if( _geomref->getVertexArray() == NULL || _geomref->getVertexArray()->getNumElements() == 0 )
         {
             osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::GeometryBuffer::init()]: no dimensions defined for geometry! setup vertex array first."
+                << _geomref->getName() << " [osgCuda::GeometryMemory::init()]: no dimensions defined for geometry! setup vertex array first."
                 << std::endl;
 
             return false;
@@ -177,12 +309,15 @@ namespace osgCuda
         }
         setElementSize( elementSize );
 
-        return osgCompute::InteropMemory::init();
+        return osgCompute::GLMemory::init();
     }
 
     //------------------------------------------------------------------------------
-    void* GeometryBuffer::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
+    void* GeometryMemory::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
     {
+		if( !_geomref.valid() )
+			return NULL;
+
         if( osgCompute::Resource::isClear() )
             if( !init() )
                 return NULL;
@@ -258,7 +393,7 @@ namespace osgCuda
         }
         else if( (mapping & osgCompute::MAP_DEVICE) )
         {
-            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
+            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
             if( !glBO )
                 return NULL;
 
@@ -286,7 +421,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::GeometryBuffer::map()]: error during cudaGraphicsMapResources(). "
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::map()]: error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -298,7 +433,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::GeometryBuffer::map()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::map()]: error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -325,7 +460,7 @@ namespace osgCuda
         else
         {
             osg::notify(osg::WARN)
-                << getName() << " [osgCuda::GeometryBuffer::map()]: Wrong mapping type specified. Use one of the following types: "
+                << _geomref->getName() << " [osgCuda::GeometryMemory::map()]: Wrong mapping type specified. Use one of the following types: "
                 << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
                 << std::endl;
 
@@ -361,8 +496,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    void GeometryBuffer::unmap( unsigned int )
+    void GeometryMemory::unmap( unsigned int )
     {
+		if( !_geomref.valid() )
+			return;
+
         if( osgCompute::Resource::isClear() )
             if( !init() )
                 return;
@@ -393,7 +531,7 @@ namespace osgCuda
             if( NULL == map( osgCompute::MAP_DEVICE_SOURCE, 0 ) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::GeometryBuffer::unmap()]: error during device memory synchronization (map())."
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::unmap()]: error during device memory synchronization (map())."
                     << std::endl;
 
                 return;
@@ -407,7 +545,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::GeometryBuffer::unmap()]: error during cudaGLUnmapBufferObject(). "
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::unmap()]: error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -418,8 +556,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool GeometryBuffer::reset( unsigned int  )
-    {
+    bool GeometryMemory::reset( unsigned int  )
+	{		
+		if( !_geomref.valid() )
+			return false;
+
         if( osgCompute::Resource::isClear() )
             if( !init() )
                 return false;
@@ -440,7 +581,7 @@ namespace osgCuda
             if( !memset( memory._hostPtr, 0x0, getByteSize() ) )
             {
                 osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during memset() for host memory."
+                    << _geomref->getName() << " [osgCuda::Buffer::reset()] : error during memset() for host memory."
                     << std::endl;
 
                 return false;
@@ -456,7 +597,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::GeometryBuffer::reset()]: error during cudaGraphicsMapResources(). "
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -468,7 +609,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::GeometryBuffer::reset()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -480,7 +621,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::GeometryBuffer::reset()]: error during cudaMemset(). "
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: error during cudaMemset(). "
                     << cudaGetErrorString( res )  <<"."
                     << std::endl;
 
@@ -497,7 +638,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
-                    << "[osgCuda::GeometryBuffer::reset()]: error during cudaGLUnmapBufferObject(). "
+                    << "[osgCuda::GeometryMemory::reset()]: error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return false;
@@ -512,7 +653,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    <<"[osgCuda::GeometryBuffer::reset()]: error during cudaGraphicsUnregisterResource()."
+                    <<"[osgCuda::GeometryMemory::reset()]: error during cudaGraphicsUnregisterResource()."
                     << cudaGetErrorString(res) << std::endl;
                 return false;
             }
@@ -532,7 +673,7 @@ namespace osgCuda
         if( !vbo )
         {
             osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::GeometryBuffer::reset()]: no buffer object found."
+                << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: no buffer object found."
                 << std::endl;
 
             return false;
@@ -541,11 +682,11 @@ namespace osgCuda
         vbo->dirty();
 
         // Compile vertex buffer
-        osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
+        osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
         if( NULL == glBO )
         {
             osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::GeometryBuffer::reset()]: no GL buffer object found."
+                << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: no GL buffer object found."
                 << std::endl;
 
             return false;
@@ -559,7 +700,7 @@ namespace osgCuda
 
 
     //------------------------------------------------------------------------------
-    bool GeometryBuffer::isMappingAllowed( unsigned int mapping, unsigned int ) const
+    bool GeometryMemory::supportsMapping( unsigned int mapping, unsigned int ) const
     {
         switch( mapping )
         {
@@ -579,19 +720,19 @@ namespace osgCuda
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void GeometryBuffer::clearLocal()
+    void GeometryMemory::clearLocal()
     {
         // Do not call _geomref = NULL;
     }
 
     //------------------------------------------------------------------------------
-    unsigned int GeometryBuffer::computePitch() const
+    unsigned int GeometryMemory::computePitch() const
     {
         return getDimension(0)*getElementSize();
     }
 
     //------------------------------------------------------------------------------
-    bool GeometryBuffer::setup( unsigned int mapping )
+    bool GeometryMemory::setup( unsigned int mapping )
     {
         ////////////////////
         // RECEIVE HANDLE //
@@ -608,7 +749,7 @@ namespace osgCuda
         osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
         if( mapping & osgCompute::MAP_DEVICE )
         {
-            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( Resource::getContextID() );
+            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
             if( !glBO->isDirty() )
                 return true;
 
@@ -623,7 +764,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::GeometryBuffer::setup()]: unable to unregister buffer object. "
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::setup()]: unable to unregister buffer object. "
                         << std::endl;
 
                     return false;
@@ -646,7 +787,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::GeometryBuffer::setup()]: unable to register buffer object again."
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::setup()]: unable to register buffer object again."
                         << std::endl;
 
                     return false;
@@ -673,7 +814,7 @@ namespace osgCuda
                 if( !curData )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::GeometryBuffer::setup()]: invalid buffer data found."
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::setup()]: invalid buffer data found."
                         << std::endl;
 
                     return false;
@@ -700,7 +841,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool GeometryBuffer::alloc( unsigned int mapping )
+    bool GeometryMemory::alloc( unsigned int mapping )
     {
         ////////////////////
         // RECEIVE HANDLE //
@@ -722,7 +863,7 @@ namespace osgCuda
             if( NULL == memory._hostPtr )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::GeometryBuffer::alloc()]: error during mallocHost()."
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: error during mallocHost()."
                     << std::endl;
 
                 return false;
@@ -756,18 +897,18 @@ namespace osgCuda
             if( !vbo )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::GeometryBuffer::alloc()]: no buffer object found."
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: no buffer object found."
                     << std::endl;
 
                 return false;
             }
 
             // Compile vertex buffer
-            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
+            osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
             if( !glBO )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::GeometryBuffer::alloc()]: no GL buffer object found."
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: no GL buffer object found."
                     << std::endl;
 
                 return false;
@@ -781,7 +922,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::GeometryBuffer::alloc()]: unable to register buffer object (cudaGraphicsGLRegisterBuffer)."
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: unable to register buffer object (cudaGraphicsGLRegisterBuffer)."
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -800,7 +941,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool GeometryBuffer::sync( unsigned int mapping )
+    bool GeometryMemory::sync( unsigned int mapping )
     {
         cudaError res;
 
@@ -824,7 +965,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::GeometryBuffer::syncStream()]: error during cudaMemcpy() to device. "
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::syncStream()]: error during cudaMemcpy() to device. "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -842,7 +983,7 @@ namespace osgCuda
             if( memory._graphicsResource == NULL )
             {
                 osg::VertexBufferObject* vbo = _geomref.get()->getOrCreateVertexBufferObject();
-                osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
+                osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
                 if( !glBO )
                     return false;
 
@@ -863,7 +1004,7 @@ namespace osgCuda
                     if( res != cudaSuccess )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::GeometryBuffer::sync()]: unable to register buffer object."
+                            << _geomref->getName() << " [osgCuda::GeometryMemory::sync()]: unable to register buffer object."
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -882,7 +1023,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::GeometryBuffer::sync()]: error during cudaGraphicsMapResources(). "
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::sync()]: error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -894,7 +1035,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::GeometryBuffer::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -909,7 +1050,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::GeometryBuffer::syncStream()]: error during cudaMemcpy() to host memory. "
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::syncStream()]: error during cudaMemcpy() to host memory. "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -924,7 +1065,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::MemoryObject* GeometryBuffer::createObject() const
+    osgCompute::MemoryObject* GeometryMemory::createObject() const
     {
         return new GeometryObject;
     }
@@ -934,28 +1075,31 @@ namespace osgCuda
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    IndexedGeometryBuffer::IndexedGeometryBuffer()
-        :  GeometryBuffer()
+    IndexedGeometryMemory::IndexedGeometryMemory()
+        :  GeometryMemory()
     {
         clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    IndexedGeometryBuffer::~IndexedGeometryBuffer()
+    IndexedGeometryMemory::~IndexedGeometryMemory()
     {
         clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    void IndexedGeometryBuffer::clear()
+    void IndexedGeometryMemory::clear()
     {
         clearLocal();
-        GeometryBuffer::clear();
+        GeometryMemory::clear();
     }
 
     //------------------------------------------------------------------------------
-    bool IndexedGeometryBuffer::init()
+    bool IndexedGeometryMemory::init()
     {
+		if( !_geomref.valid() )
+			return false;
+
         if( !osgCompute::Resource::isClear() )
             return true;
 
@@ -969,7 +1113,7 @@ namespace osgCuda
         if( drawElementsList.size() == 0 )
         {
             osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::IndexedGeometryBuffer::init()]: no indices defined! setup element array first."
+                << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::init()]: no indices defined! setup element array first."
                 << std::endl;
 
             return false;
@@ -982,21 +1126,24 @@ namespace osgCuda
         for( unsigned int a=0; a<drawElementsList.size(); ++a )
             _indicesByteSize += drawElementsList[a]->getTotalDataSize();
 
-        return GeometryBuffer::init();
+        return GeometryMemory::init();
     }
 
     //------------------------------------------------------------------------------
-    void* IndexedGeometryBuffer::map( unsigned int mapping /*= osgCompute::MAP_DEVICE*/, unsigned int offset /*= 0*/, unsigned int hint /*= 0 */ )
+    void* IndexedGeometryMemory::map( unsigned int mapping /*= osgCompute::MAP_DEVICE*/, unsigned int offset /*= 0*/, unsigned int hint /*= 0 */ )
     {
         if( (mapping & MAP_INDICES) == MAP_INDICES )
             return mapIndices( mapping, offset, hint );
         else
-            return GeometryBuffer::map( mapping, offset, hint );
+            return GeometryMemory::map( mapping, offset, hint );
     }
 
     //------------------------------------------------------------------------------
-    void* IndexedGeometryBuffer::mapIndices( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
+    void* IndexedGeometryMemory::mapIndices( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
     {
+		if( !_geomref.valid() )
+			return NULL;
+
         if( osgCompute::Resource::isClear() )
             if( !init() )
                 return NULL;
@@ -1073,7 +1220,7 @@ namespace osgCuda
         }
         else if( (mapping & osgCompute::MAP_DEVICE) )
         {
-            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
+            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
             if( !glBO )
                 return NULL;
 
@@ -1101,7 +1248,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::IndexedGeometryBuffer::mapIndices()]: error during cudaGraphicsMapResources(). "
+                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::mapIndices()]: error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1113,7 +1260,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::IndexedGeometryBuffer::mapIndices()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::mapIndices()]: error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1140,7 +1287,7 @@ namespace osgCuda
         else
         {
             osg::notify(osg::WARN)
-                << getName() << " [osgCuda::IndexedGeometryBuffer::mapIndices()]: Wrong mapping type specified. Use one of the following types: "
+                << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::mapIndices()]: Wrong mapping type specified. Use one of the following types: "
                 << "HOST_SOURCE_INDICES, HOST_TARGET_INDICES, HOST_INDICES, DEVICE_SOURCE_INDICES, DEVICE_TARGET_INDICES, DEVICE_INDICES."
                 << std::endl;
 
@@ -1160,15 +1307,18 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    void IndexedGeometryBuffer::unmap( unsigned int )
+    void IndexedGeometryMemory::unmap( unsigned int )
     {
-        GeometryBuffer::unmap();
+        GeometryMemory::unmap();
         unmapIndices();
     }
 
     //------------------------------------------------------------------------------
-    void IndexedGeometryBuffer::unmapIndices( unsigned int )
+    void IndexedGeometryMemory::unmapIndices( unsigned int )
     {
+		if( !_geomref.valid() )
+			return;
+
         if( osgCompute::Resource::isClear() )
             if( !init() )
                 return;
@@ -1199,7 +1349,7 @@ namespace osgCuda
             if( NULL == mapIndices( MAP_DEVICE_SOURCE_INDICES, 0 ) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::unmapIndices()]: error during device memory synchronization."
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::unmapIndices()]: error during device memory synchronization."
                     << std::endl;
 
                 return;
@@ -1213,7 +1363,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::unmapIndices()]: error during cudaGLUnmapBufferObject(). "
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::unmapIndices()]: error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -1224,17 +1374,20 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool IndexedGeometryBuffer::reset( unsigned int hint /*= 0 */ )
+    bool IndexedGeometryMemory::reset( unsigned int hint /*= 0 */ )
     {
         if( !resetIndices( hint ) )
             return false;
 
-        return GeometryBuffer::reset( hint );
+        return GeometryMemory::reset( hint );
     }
 
     //------------------------------------------------------------------------------
-    bool IndexedGeometryBuffer::resetIndices( unsigned int  )
+    bool IndexedGeometryMemory::resetIndices( unsigned int  )
     {
+		if( !_geomref.valid() )
+			return false;
+
         if( osgCompute::Resource::isClear() )
             if( !init() )
                 return false;
@@ -1255,7 +1408,7 @@ namespace osgCuda
             if( !memset( memory._hostIdxPtr, 0x0, getIndicesByteSize() ) )
             {
                 osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::resetIndices()] \"" << getName() << "\": error during memset() for host memory."
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()] \"" << getName() << "\": error during memset() for host memory."
                     << std::endl;
 
                 return false;
@@ -1271,7 +1424,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::IndexedGeometryBuffer::resetIndices()]: error during cudaGraphicsMapResources(). "
+                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1283,7 +1436,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::IndexedGeometryBuffer::resetIndices()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1295,7 +1448,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::resetIndices()]: error during cudaMemset(). "
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaMemset(). "
                     << cudaGetErrorString( res )  <<"."
                     << std::endl;
 
@@ -1312,7 +1465,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
-                    << "[osgCuda::IndexedGeometryBuffer::resetIndices()]: error during cudaGLUnmapBufferObject(). "
+                    << "[osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return false;
@@ -1327,7 +1480,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    <<"[osgCuda::IndexedGeometryBuffer::resetIndices()]: error during cudaGraphicsUnregisterResource()."
+                    << _geomref->getName() <<" [osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaGraphicsUnregisterResource()."
                     << cudaGetErrorString(res) << std::endl;
                 return false;
             }
@@ -1347,7 +1500,7 @@ namespace osgCuda
         if( !ebo )
         {
             osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::IndexedGeometryBuffer::resetIndices()]: no buffer object found."
+                << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: no buffer object found."
                 << std::endl;
 
             return false;
@@ -1356,11 +1509,11 @@ namespace osgCuda
         ebo->dirty();
 
         // Compile element buffer
-        osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
+        osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
         if( NULL == glBO )
         {
             osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::IndexedGeometryBuffer::resetIndices()]: no GL buffer object found."
+                << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: no GL buffer object found."
                 << std::endl;
 
             return false;
@@ -1372,7 +1525,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool IndexedGeometryBuffer::isMappingAllowed( unsigned int mapping, unsigned int ) const
+    bool IndexedGeometryMemory::supportsMapping( unsigned int mapping, unsigned int ) const
     {
         switch( mapping )
         {
@@ -1396,7 +1549,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    unsigned int IndexedGeometryBuffer::getIndicesByteSize() const
+    unsigned int IndexedGeometryMemory::getIndicesByteSize() const
     {
         return _indicesByteSize;
     }
@@ -1405,13 +1558,13 @@ namespace osgCuda
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void IndexedGeometryBuffer::clearLocal()
+    void IndexedGeometryMemory::clearLocal()
     {
         _indicesByteSize = 0;
     }
 
     //------------------------------------------------------------------------------
-    bool IndexedGeometryBuffer::setupIndices( unsigned int mapping )
+    bool IndexedGeometryMemory::setupIndices( unsigned int mapping )
     {
         ////////////////////
         // RECEIVE HANDLE //
@@ -1427,7 +1580,7 @@ namespace osgCuda
         osg::ElementBufferObject* ebo = _geomref.get()->getOrCreateElementBufferObject();
         if( mapping & osgCompute::MAP_DEVICE )
         {
-            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( Resource::getContextID() );
+			osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
             if( !glBO->isDirty() )
                 return true;
 
@@ -1442,7 +1595,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::IndexedGeometryBuffer::setupIndices()]: unable to unregister buffer object. "
+                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::setupIndices()]: unable to unregister buffer object. "
                         << std::endl;
 
                     return false;
@@ -1465,7 +1618,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::IndexedGeometryBuffer::setupIndices()]: unable to register buffer object again."
+                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::setupIndices()]: unable to register buffer object again."
                         << std::endl;
 
                     return false;
@@ -1489,7 +1642,7 @@ namespace osgCuda
                 if( !curData )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::IndexedGeometryBuffer::setupIndices()]: invalid buffer data found."
+                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::setupIndices()]: invalid buffer data found."
                         << std::endl;
 
                     return false;
@@ -1513,7 +1666,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool IndexedGeometryBuffer::allocIndices( unsigned int mapping )
+    bool IndexedGeometryMemory::allocIndices( unsigned int mapping )
     {
         ////////////////////
         // RECEIVE HANDLE //
@@ -1535,7 +1688,7 @@ namespace osgCuda
             if( NULL == memory._hostIdxPtr )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::allocIndices()]: error during mallocHost()."
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::allocIndices()]: error during mallocHost()."
                     << std::endl;
 
                 return false;
@@ -1569,18 +1722,18 @@ namespace osgCuda
             if( !ebo )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::allocIndices()]: no buffer object found."
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::allocIndices()]: no buffer object found."
                     << std::endl;
 
                 return false;
             }
 
             // Compile vertex buffer
-            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
+            osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
             if( !glBO )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::allocIndices()]: no GL buffer object found."
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::allocIndices()]: no GL buffer object found."
                     << std::endl;
 
                 return false;
@@ -1594,7 +1747,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::allocIndices()]: unable to register buffer object (cudaGraphicsGLRegisterBuffer)."
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::allocIndices()]: unable to register buffer object (cudaGraphicsGLRegisterBuffer)."
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1613,7 +1766,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool IndexedGeometryBuffer::syncIndices( unsigned int mapping )
+    bool IndexedGeometryMemory::syncIndices( unsigned int mapping )
     {
         cudaError res;
 
@@ -1637,7 +1790,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::syncIndices()]: error during cudaMemcpy() to device. "
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: error during cudaMemcpy() to device. "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1655,7 +1808,7 @@ namespace osgCuda
             if( memory._graphicsIdxResource == NULL )
             {
                 osg::ElementBufferObject* ebo = _geomref.get()->getOrCreateElementBufferObject();
-                osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::Resource::getContextID() );
+                osg::GLBufferObject* glBO = ebo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContextID() );
                 if( !glBO )
                     return false;
 
@@ -1675,7 +1828,7 @@ namespace osgCuda
                     if( res != cudaSuccess )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::IndexedGeometryBuffer::syncIndices()]: unable to register buffer object."
+                            << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: unable to register buffer object."
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1693,7 +1846,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::IndexedGeometryBuffer::syncIndices()]: error during cudaGraphicsMapResources(). "
+                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1705,7 +1858,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::IndexedGeometryBuffer::syncIndices()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1720,7 +1873,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::IndexedGeometryBuffer::syncIndices()]: error during cudaMemcpy() to host memory. "
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: error during cudaMemcpy() to host memory. "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1735,7 +1888,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::MemoryObject* IndexedGeometryBuffer::createObject() const
+    osgCompute::MemoryObject* IndexedGeometryMemory::createObject() const
     {
         return new IndexedGeometryObject;
     }
@@ -1747,147 +1900,66 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     Geometry::Geometry()
         : osg::Geometry(),
-          _proxy(NULL)
+		  osgCompute::GLMemoryAdapter()
     {
+		GeometryMemory* memory = new GeometryMemory;
+		memory->_geomref = this;
+		_memory = memory;
+		//_memory->addObserver( this );
+
         clearLocal();
         // geometry must use vertex buffer objects
         setUseVertexBufferObjects( true );
+
     }
 
     //------------------------------------------------------------------------------
-    bool Geometry::init()
+    osgCompute::Memory* Geometry::getMemory()
     {
-        if( NULL != _proxy )
-        {
-            _proxy->clear();
-            _proxy->init();
-        }
-
-        _clear = false;
-        return true;
+        return _memory;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Geometry::getInteropMemory()
+    const osgCompute::Memory* Geometry::getMemory() const
     {
-        return _proxy;
-    }
-
-    //------------------------------------------------------------------------------
-    const osgCompute::InteropMemory* Geometry::getInteropMemory() const
-    {
-        return _proxy;
-    }
-
-    //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Geometry::getOrCreateInteropMemory()
-    {
-        // create proxy buffer on demand
-        if( _proxy == NULL )
-        {
-            osg::Geometry::DrawElementsList drawElementsList;
-            bool allAreDrawElements = getDrawElementsList( drawElementsList );
-            if( !allAreDrawElements )
-            {
-                _proxy = new GeometryBuffer;
-            }
-            else
-            {
-                _proxy = new IndexedGeometryBuffer;
-            }
-
-            _proxy->setName( getName() );
-            _proxy->_geomref = this;
-            _proxy->setIdentifiers( _identifiers );
-            _identifiers.clear();
-            if( !_proxy->init() )
-            {
-                _proxy->unref();
-                _proxy = NULL;
-            }
-        }
-
-        return _proxy;
+        return _memory;
     }
 
     //------------------------------------------------------------------------------
     void Geometry::addIdentifier( const std::string& identifier )
     {
-        if( _proxy != NULL )
-        {
-            _proxy->addIdentifier( identifier );
-        }
-        else
-        {
-            if( !isIdentifiedBy(identifier) )
-                _identifiers.insert( identifier );
-        }
+        _memory->addIdentifier( identifier );
     }
 
     //------------------------------------------------------------------------------
     void Geometry::removeIdentifier( const std::string& identifier )
     {
-        if( _proxy != NULL )
-        {
-            _proxy->removeIdentifier( identifier );
-        }
-        else
-        {
-            osgCompute::IdentifierSetItr itr = _identifiers.find( identifier );
-            if( itr != _identifiers.end() )
-                _identifiers.erase( itr );
-
-        }
+        _memory->removeIdentifier( identifier );
     }
 
     //------------------------------------------------------------------------------
     bool Geometry::isIdentifiedBy( const std::string& identifier ) const
     {
-        if( _proxy != NULL )
-        {
-            return _proxy->isIdentifiedBy( identifier );
-        }
-        else
-        {
-            osgCompute::IdentifierSetCnstItr itr = _identifiers.find( identifier );
-            if( itr == _identifiers.end() )
-                return false;
-
-            return true;
-        }
+        return _memory->isIdentifiedBy( identifier );
     }
 
 	//------------------------------------------------------------------------------
 	osgCompute::IdentifierSet& Geometry::getIdentifiers()
 	{
-		if( _proxy != NULL )
-		{
-			return _proxy->getIdentifiers();
-		}
-		else
-		{
-			return _identifiers;
-		}
+		return _memory->getIdentifiers();
 	}
 
 	//------------------------------------------------------------------------------
 	const osgCompute::IdentifierSet& Geometry::getIdentifiers() const
 	{
-		if( _proxy != NULL )
-		{
-			return _proxy->getIdentifiers();
-		}
-		else
-		{
-			return _identifiers;
-		}
+		return _memory->getIdentifiers();
 	}
 
     //------------------------------------------------------------------------------
     void Geometry::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( NULL != _proxy && state != NULL && state->getContextID() == osgCompute::Resource::getContextID() )
-            _proxy->clearObject();
+        if( state != NULL && state->getContextID() == osgCompute::GLMemory::getContextID() )
+            _memory->releaseObjects();
 
         osg::Geometry::releaseGLObjects( state );
     }
@@ -1895,56 +1967,27 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Geometry::drawImplementation( osg::RenderInfo& renderInfo ) const
     {
-        if( NULL != _proxy && renderInfo.getContextID() == osgCompute::Resource::getContextID() )//&& renderInfo.getState()->getGraphicsContext() != osgCompute::Resource::getGraphicsContext() ) 
-            _proxy->unmap(); 
+        if( renderInfo.getContextID() == osgCompute::GLMemory::getContextID() )//&& renderInfo.getState()->getGraphicsContext() != osgCompute::Resource::getGraphicsContext() ) 
+            _memory->unmap(); 
 
         osg::Geometry::drawImplementation( renderInfo );
     }
 
-    //------------------------------------------------------------------------------
-    void Geometry::freeProxy()
-    {
-        if( NULL != _proxy )
-        {
-            // attach identifiers
-            _identifiers = _proxy->getIdentifiers();
-            // proxy is now deleted
-            _proxy = NULL;
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    bool Geometry::isClear()
-    {
-        return _clear;
-    }
-
-    //------------------------------------------------------------------------------
-    void Geometry::clear()
-    {
-        clearLocal();
-    }
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
     Geometry::~Geometry()
     {
-        if( _proxy != NULL )
-        {
-            osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::Geometry::destructor()]: proxy is still valid!!!."
-                << std::endl;
-        }
+		// _memory object is not deleted until this point
+		// as reference count is increased in constructor
+		_memory->clear();
+		_memory = NULL;
     }
 
     //------------------------------------------------------------------------------
     void Geometry::clearLocal()
     {
-        _clear = true;
-        if( NULL != _proxy )
-            _proxy->clear();
-
-        _identifiers.clear();
+        _memory->clear();
     }
 }

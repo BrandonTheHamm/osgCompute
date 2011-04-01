@@ -6,10 +6,82 @@
 #include <cuda_runtime.h>
 #include <driver_types.h>
 #include <cuda_gl_interop.h>
+#include <osg/observer_ptr>
+#include <osgCompute/Memory>
 #include <osgCuda/Texture>
 
 namespace osgCuda
 {
+    /**
+    */
+    class LIBRARY_EXPORT TextureObject : public osgCompute::MemoryObject
+    {
+    public:
+        void*						_hostPtr;
+        void*						_devPtr;
+        cudaArray*                  _graphicsArray;
+        cudaGraphicsResource*       _graphicsResource;
+        unsigned int	            _lastModifiedCount;
+		void*						_lastModifiedAddress;
+
+        TextureObject();
+        virtual ~TextureObject();
+
+
+    private:
+        // not allowed to call copy-constructor or copy-operator
+        TextureObject( const TextureObject& ) {}
+        TextureObject& operator=( const TextureObject& ) { return *this; }
+    };
+
+    /**
+    */
+    class LIBRARY_EXPORT TextureMemory : public osgCompute::GLMemory
+    {
+    public:
+        TextureMemory();
+
+        META_Object(osgCuda,TextureMemory)
+
+		virtual osgCompute::GLMemoryAdapter* getAdapter(); 
+		virtual const osgCompute::GLMemoryAdapter* getAdapter() const; 
+
+        virtual bool init();
+        virtual bool initDimension();
+        virtual bool initElementSize();
+
+        virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
+        virtual void unmap( unsigned int hint = 0 );
+        virtual bool reset( unsigned int hint = 0 );
+        virtual bool supportsMapping( unsigned int mapping, unsigned int hint = 0 ) const;
+
+		virtual void setUsage( unsigned int usage );
+		virtual unsigned int getUsage() const;
+
+        virtual void clear();
+    protected:
+        friend class Texture1D;
+        friend class Texture2D;
+        friend class Texture3D;
+        friend class TextureRectangle;
+        virtual ~TextureMemory();
+        void clearLocal();
+
+        bool setup( unsigned int mapping );
+        bool alloc( unsigned int mapping );
+        bool sync( unsigned int mapping );
+
+        virtual osgCompute::MemoryObject* createObject() const;
+        virtual unsigned int computePitch() const;
+
+        osg::observer_ptr<osg::Texture>	_texref; 
+        unsigned int                    _usage;
+    private:
+        // copy constructor and operator should not be called
+        TextureMemory( const TextureMemory& , const osg::CopyOp& ) {}
+        TextureMemory& operator=(const TextureMemory&) { return (*this); }
+    };
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -74,57 +146,43 @@ namespace osgCuda
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    TextureBuffer::TextureBuffer()
-        : osgCompute::InteropMemory()
+    TextureMemory::TextureMemory()
+		: osgCompute::GLMemory(),
+		  _usage(osgCompute::GL_SOURCE_COMPUTE_SOURCE)
     {
         clearLocal();
     }
 
     //------------------------------------------------------------------------------
-    TextureBuffer::~TextureBuffer()
+    TextureMemory::~TextureMemory()
     {
         clearLocal();
-
-        // free this proxy object
-        getInteropObject()->freeProxy();
-        // decrease the reference count of the geometry reference
-        _texref = NULL;
     }
 
     //------------------------------------------------------------------------------
-    void TextureBuffer::clear()
+    void TextureMemory::clear()
     {
-        osgCompute::InteropMemory::clear();
+        osgCompute::GLMemory::clear();
         clearLocal();
     }
 
 	//------------------------------------------------------------------------------
-	osgCompute::InteropObject* TextureBuffer::getInteropObject()
+	osgCompute::GLMemoryAdapter* TextureMemory::getAdapter()
 	{ 
-		return dynamic_cast<osgCompute::InteropObject*>( _texref.get() );
+		return dynamic_cast<osgCompute::GLMemoryAdapter*>( _texref.get() );
 	}
 
 	//------------------------------------------------------------------------------
-	const osgCompute::InteropObject* TextureBuffer::getInteropObject() const
+	const osgCompute::GLMemoryAdapter* TextureMemory::getAdapter() const
 	{ 
-		return dynamic_cast<const osgCompute::InteropObject*>( _texref.get() );
+		return dynamic_cast<const osgCompute::GLMemoryAdapter*>( _texref.get() );
 	}
 
     //------------------------------------------------------------------------------
-    bool TextureBuffer::init()
+    bool TextureMemory::init()
     {
-        if( !isClear() )
+        if( !isClear() || !_texref.valid() )
             return true;
-
-        if( !_texref.valid() )
-        {
-            osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::TextureBuffer::init()]: not connected to an texture object."
-                << std::endl;
-
-            clear();
-            return false;
-        }
 
         if( !initElementSize() )
         {
@@ -138,11 +196,11 @@ namespace osgCuda
             return false;
         }
 
-        return osgCompute::InteropMemory::init();
+        return osgCompute::GLMemory::init();
     }
 
     //------------------------------------------------------------------------------
-    bool TextureBuffer::initDimension()
+    bool TextureMemory::initDimension()
     {
         unsigned int dim[3];
         if( _texref->getImage(0) )
@@ -161,7 +219,7 @@ namespace osgCuda
         if( dim[0] == 0 )
         {
             osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::TextureBuffer::initDimension()]: no dimensions defined for texture! set the texture dimensions first."
+                << _texref->getName() << " [osgCuda::TextureMemory::initDimension()]: no dimensions defined for texture! set the texture dimensions first."
                 << std::endl;
 
             return false;
@@ -178,7 +236,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool TextureBuffer::initElementSize()
+    bool TextureMemory::initElementSize()
     {
         unsigned int elementSize = 0;
         unsigned int elementBitSize;
@@ -201,7 +259,7 @@ namespace osgCuda
         if( elementSize == 0 )
         {
             osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::TextureBuffer::initElementSize()]: cannot determine element size."
+                << _texref->getName() << " [osgCuda::TextureMemory::initElementSize()]: cannot determine element size."
                 << std::endl;
 
             return false;
@@ -211,9 +269,24 @@ namespace osgCuda
         return true;
     }
 
+	//------------------------------------------------------------------------------
+	void TextureMemory::setUsage( unsigned int usage )
+	{
+		_usage = usage;
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int TextureMemory::getUsage() const
+	{
+		return _usage;
+	}
+
     //------------------------------------------------------------------------------
-    void* TextureBuffer::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
+    void* TextureMemory::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
     {
+		if( !_texref.valid() )
+			return NULL;
+
         if( osgCompute::Resource::isClear() )
             if( !init() )
                 return NULL;
@@ -238,14 +311,14 @@ namespace osgCuda
             if( memory._graphicsResource == NULL )
             {
                 // Initialize texture resource if it is a render target
-                osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
+                osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
                 if( !tex )
                 {
                     osg::State* state;
                     osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
                     for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
                     {
-                        if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::Resource::getContextID()) )
+                        if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::GLMemory::getContextID()) )
                         {
                             state = (*itr)->getState();
                             break;
@@ -255,14 +328,14 @@ namespace osgCuda
                     if( NULL == state )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::alloc()]: unable to find valid state."
+                            << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to find valid state."
                             << std::endl;
 
                         return false;
                     }
 
                     _texref->compileGLObjects( *state );
-                    tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
+                    tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
                 }
 
                 // Register vertex buffer object for Cuda
@@ -270,7 +343,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::alloc()]: unable to register image object (cudaGraphicsGLRegisterImage()). Not all GL formats are supported."
+                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to register image object (cudaGraphicsGLRegisterImage()). Not all GL formats are supported."
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -356,7 +429,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::TextureBuffer::map()]: error during cudaGraphicsMapResources(). "
+                        << _texref->getName() << " [osgCuda::TextureMemory::map()]: error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -367,7 +440,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::TextureBuffer::map()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << _texref->getName() << " [osgCuda::TextureMemory::map()]: error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -423,7 +496,7 @@ namespace osgCuda
         else
         {
             osg::notify(osg::WARN)
-                << getName() << " [osgCuda::TextureBuffer::map()]: Wrong mapping type specified. Use one of the following types: "
+                << _texref->getName() << " [osgCuda::TextureMemory::map()]: Wrong mapping type specified. Use one of the following types: "
                 << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE, DEVICE_ARRAY."
                 << std::endl;
 
@@ -469,8 +542,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    void TextureBuffer::unmap( unsigned int )
+    void TextureMemory::unmap( unsigned int )
     {
+		if( !_texref.valid() )
+			return;
+
         if( osgCompute::Resource::isClear() )
             if( !init() )
                 return;
@@ -492,7 +568,7 @@ namespace osgCuda
             if( NULL == map( osgCompute::MAP_DEVICE_ARRAY, 0 ) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::unmap()]: error during device memory synchronization (map())."
+                    << _texref->getName() << " [osgCuda::TextureMemory::unmap()]: error during device memory synchronization (map())."
                     << std::endl;
 
                 return;
@@ -515,7 +591,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::TextureBuffer::unmap()]: error during cudaGLUnmapBufferObject(). "
+                    << _texref->getName() << " [osgCuda::TextureMemory::unmap()]: error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -527,8 +603,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool TextureBuffer::reset( unsigned int  )
+    bool TextureMemory::reset( unsigned int  )
     {
+		if( !_texref.valid() )
+			return false;
+
         if( osgCompute::Resource::isClear() )
             if( !init() )
                 return false;
@@ -554,7 +633,7 @@ namespace osgCuda
             if( !memset( memory._hostPtr, 0x0, getByteSize() ) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::reset()]: error during memset() for host memory."
+                    << _texref->getName() << " [osgCuda::TextureMemory::reset()]: error during memset() for host memory."
                     << std::endl;
 
                 return false;
@@ -573,7 +652,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset3D() for device memory."
+                        << _texref->getName() << " [osgCuda::Buffer::reset()]: error during cudaMemset3D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -587,7 +666,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset2D() for device memory."
+                        << _texref->getName() << " [osgCuda::Buffer::reset()]: error during cudaMemset2D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -601,7 +680,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::WARN)
-                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset() for device memory."
+                        << _texref->getName() << " [osgCuda::Buffer::reset()]: error during cudaMemset() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -615,8 +694,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool TextureBuffer::isMappingAllowed( unsigned int mapping, unsigned int ) const
+    bool TextureMemory::supportsMapping( unsigned int mapping, unsigned int ) const
     {
+		if( !_texref.valid() )
+			return false;
+
         switch( mapping )
         {
         case osgCompute::UNMAP:
@@ -637,14 +719,14 @@ namespace osgCuda
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void TextureBuffer::clearLocal()
+    void TextureMemory::clearLocal()
     {
         // Do not call _texref = NULL;
         // Do not change _usage;
     }
 
     //------------------------------------------------------------------------------
-    unsigned int TextureBuffer::computePitch() const
+    unsigned int TextureMemory::computePitch() const
     {
         // Proof paramters
         if( getDimension(0) == 0 || getElementSize() == 0 ) 
@@ -663,7 +745,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool TextureBuffer::setup( unsigned int mapping )
+    bool TextureMemory::setup( unsigned int mapping )
     {
         ////////////////////
         // RECEIVE HANDLE //
@@ -688,7 +770,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << "[osgCuda::TextureBuffer::setup()]: error during cudaGraphicsUnmapResources(). "
+                        << "[osgCuda::TextureMemory::setup()]: error during cudaGraphicsUnmapResources(). "
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
                     return false;
@@ -704,7 +786,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::setup()]: unable to unregister buffer object. "
+                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: unable to unregister buffer object. "
                         << std::endl;
 
                     return false;
@@ -719,7 +801,7 @@ namespace osgCuda
             osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
             for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
             {
-                if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::Resource::getContextID()) )
+                if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::GLMemory::getContextID()) )
                 {
                     state = (*itr)->getState();
                     break;
@@ -729,7 +811,7 @@ namespace osgCuda
             if( NULL == state )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::setup()]: unable to find valid state."
+                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: unable to find valid state."
                     << std::endl;
 
                 return false;
@@ -741,12 +823,12 @@ namespace osgCuda
             //////////////////
             // REGISTER TEX //
             //////////////////
-            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
+            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
             cudaError res = cudaGraphicsGLRegisterImage( &memory._graphicsResource, tex->id(), tex->_profile._target, cudaGraphicsMapFlagsNone );
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::setup()]: unable to register buffer object again."
+                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: unable to register buffer object again."
                     << std::endl;
 
                 return false;
@@ -766,7 +848,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::setup()]: cannot receive valid data pointer from image."
+                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: cannot receive valid data pointer from image."
                     << std::endl;
 
                 return false;
@@ -783,7 +865,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::setup()]: error during cudaMemcpy()."
+                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -796,7 +878,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::setup()]: error during cudaMemcpy()."
+                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -820,7 +902,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::setup()]: cannot receive valid data pointer from image."
+                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: cannot receive valid data pointer from image."
                     << std::endl;
 
                 return false;
@@ -830,7 +912,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::setup()]: error during cudaMemcpy()."
+                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy()."
                     << " " << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -851,7 +933,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool TextureBuffer::alloc( unsigned int mapping )
+    bool TextureMemory::alloc( unsigned int mapping )
     {
         ////////////////////
         // RECEIVE HANDLE //
@@ -873,7 +955,7 @@ namespace osgCuda
             if( NULL == memory._hostPtr )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::alloc()]: error during mallocHost()."
+                    << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: error during mallocHost()."
                     << std::endl;
 
                 return false;
@@ -886,14 +968,14 @@ namespace osgCuda
             if( memory._graphicsResource != NULL )
                 return true;
 
-            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
+            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
             if( !tex )
             {
                 osg::State* state;
                 osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
                 for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
                 {
-                    if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::Resource::getContextID()) )
+                    if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::GLMemory::getContextID()) )
                     {
                         state = (*itr)->getState();
                         break;
@@ -903,14 +985,14 @@ namespace osgCuda
                 if( NULL == state )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::alloc()]: unable to find valid state."
+                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to find valid state."
                         << std::endl;
 
                     return false;
                 }
 
                 _texref->compileGLObjects( *state );
-                tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
+                tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
             }
 
             // Register vertex buffer object for Cuda
@@ -918,7 +1000,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::alloc()]: unable to register image object (cudaGraphicsGLRegisterImage()). Not all GL formats are supported."
+                    << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to register image object (cudaGraphicsGLRegisterImage()). Not all GL formats are supported."
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -945,7 +1027,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::alloc()]: unable to alloc shadow-copy (cudaMalloc())."
+                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to alloc shadow-copy (cudaMalloc())."
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -961,7 +1043,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::alloc()]: unable to alloc shadow-copy (cudaMallocPitch())."
+                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to alloc shadow-copy (cudaMallocPitch())."
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -974,7 +1056,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::alloc()]: unable to alloc shadow-copy (cudaMalloc())."
+                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to alloc shadow-copy (cudaMalloc())."
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -992,8 +1074,8 @@ namespace osgCuda
                 cudaGetDeviceProperties( &devProp, device );
 
                 osg::notify(osg::INFO)
-                    << getName() << " [osgCuda::TextureBuffer::alloc()] \""<<getName()
-                    << "\": Memory requirement is not a multiple of texture alignment. This "
+					<< _texref->getName() << " [osgCuda::TextureMemory::alloc()]: "
+                    << "memory requirement is not a multiple of texture alignment. This "
                     << "leads to a pitch which is not equal to the logical row size in bytes. "
                     << "Texture alignment requirement is \""
                     << devProp.textureAlignment << "\". "
@@ -1007,7 +1089,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool TextureBuffer::sync( unsigned int mapping )
+    bool TextureMemory::sync( unsigned int mapping )
     {
         cudaError res;
 
@@ -1032,7 +1114,7 @@ namespace osgCuda
                 ((memory._syncOp & osgCompute::SYNC_DEVICE) && (memory._syncOp & osgCompute::SYNC_HOST)) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::sync()]: no current memory found."
+                    << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found."
                     << std::endl;
 
                 return false;
@@ -1047,7 +1129,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: cudaMemcpyToArray() failed."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: cudaMemcpyToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1062,7 +1144,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: cudaMemcpy2DToArray() failed."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: cudaMemcpy2DToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1087,7 +1169,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << "[osgCuda::TextureBuffer::sync()]: cudaMemcpy3D() failed."
+                            << _texref->getName() << "[osgCuda::TextureMemory::sync()]: cudaMemcpy3D() failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1104,7 +1186,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: cudaMemcpyToArray() failed."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: cudaMemcpyToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1119,7 +1201,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: cudaMemcpy2DToArray() failed."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: cudaMemcpy2DToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1144,7 +1226,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << "[osgCuda::TextureBuffer::sync()]: cudaMemcpy3D() failed."
+                            << _texref->getName() << "[osgCuda::TextureMemory::sync()]: cudaMemcpy3D() failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1165,7 +1247,7 @@ namespace osgCuda
                 ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_HOST)) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::sync()]: no current memory found."
+                    << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found."
                     << std::endl;
 
                 return false;
@@ -1175,11 +1257,11 @@ namespace osgCuda
             {
                 if( memory._graphicsResource == NULL )
                 {
-                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
+                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
                     if( !tex )
                     {
                         osg::notify(osg::WARN)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: no current memory found. "
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found. "
                             << std::endl;
 
                         return false;
@@ -1190,7 +1272,7 @@ namespace osgCuda
                     if( res != cudaSuccess )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: unable to register image object (cudaGraphicsGLRegisterImage())."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: unable to register image object (cudaGraphicsGLRegisterImage())."
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1205,7 +1287,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::WARN)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaGraphicsMapResources(). "
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsMapResources(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1216,7 +1298,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::WARN)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1231,7 +1313,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]:  error during cudaMemcpyFromArray() to host memory."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]:  error during cudaMemcpyFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1251,7 +1333,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy2DFromArray() to host memory."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy2DFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1281,7 +1363,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy3D() to host memory."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy3D() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1297,7 +1379,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy() to device from host. "
+                        << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy() to device from host. "
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -1317,7 +1399,7 @@ namespace osgCuda
                 ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_DEVICE)) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::TextureBuffer::sync()]: no current memory found."
+                    << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found."
                     << std::endl;
 
                 return false;
@@ -1327,11 +1409,11 @@ namespace osgCuda
             {
                 if( memory._graphicsResource == NULL )
                 {
-                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::Resource::getContextID() );
+                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
                     if( !tex )
                     {
                         osg::notify(osg::WARN)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: no current memory found. "
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found. "
                             << std::endl;
 
                         return false;
@@ -1342,7 +1424,7 @@ namespace osgCuda
                     if( res != cudaSuccess )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: unable to register image object (cudaGraphicsGLRegisterImage())."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: unable to register image object (cudaGraphicsGLRegisterImage())."
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1357,7 +1439,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::WARN)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaGraphicsMapResources(). "
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsMapResources(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1368,7 +1450,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::WARN)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1383,7 +1465,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]:  error during cudaMemcpyFromArray() to host memory."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]:  error during cudaMemcpyFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1403,7 +1485,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy2DFromArray() to host memory."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy2DFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1433,7 +1515,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy3D() to host memory."
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy3D() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1474,7 +1556,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy() to device from host. "
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy() to device from host. "
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1487,7 +1569,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy() to device from host. "
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy() to device from host. "
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1500,7 +1582,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::TextureBuffer::sync()]: error during cudaMemcpy() to device from host. "
+                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy() to device from host. "
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1517,7 +1599,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::MemoryObject* TextureBuffer::createObject() const
+    osgCompute::MemoryObject* TextureMemory::createObject() const
     {
         return new TextureObject;
     }
@@ -1528,141 +1610,81 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     Texture2D::Texture2D()
         : osg::Texture2D(),
-        _proxy(NULL)
+		  osgCompute::GLMemoryAdapter()
     {
+		TextureMemory* memory = new TextureMemory;
+		memory->_texref = this;
+		_memory = memory;
+
         clearLocal();
 
         // some flags for textures are not available right now
         // like resize to a power of two and mip-maps
         asTexture()->setResizeNonPowerOfTwoHint( false );
         asTexture()->setUseHardwareMipMapGeneration( false );
+        asTexture()->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+        asTexture()->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
     }
 
     //------------------------------------------------------------------------------
-    bool Texture2D::init()
+    osgCompute::Memory* Texture2D::getMemory()
     {
-        if( NULL != _proxy )
-        {
-            _proxy->_usage = getUsage();
-            _proxy->init();
-        }
-
-        _clear = false;
-        return true;
+        return _memory;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Texture2D::getInteropMemory()
+    const osgCompute::Memory* Texture2D::getMemory() const
     {
-        return _proxy;
-    }
-
-    //------------------------------------------------------------------------------
-    const osgCompute::InteropMemory* Texture2D::getInteropMemory() const
-    {
-        return _proxy;
-    }
-
-    //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Texture2D::getOrCreateInteropMemory()
-    {
-        // create proxy buffer on demand
-        if( _proxy == NULL )
-        {
-            _proxy = new TextureBuffer;
-            _proxy->setName( getName() );
-            _proxy->_texref = this;
-            _proxy->_usage = getUsage();
-            _proxy->setIdentifiers( _identifiers );
-            _identifiers.clear();
-            if( !_proxy->init() )
-            {
-                _proxy->unref();
-                _proxy = NULL;
-            }
-        }
-
-        return _proxy;
+        return _memory;
     }
 
     //------------------------------------------------------------------------------
     void Texture2D::addIdentifier( const std::string& identifier )
     {
-        if( _proxy != NULL )
-        {
-            _proxy->addIdentifier( identifier );
-        }
-        else
-        {
-            if( !isIdentifiedBy(identifier) )
-                _identifiers.insert( identifier );
-        }
+        _memory->addIdentifier( identifier );
     }
 
     //------------------------------------------------------------------------------
     void Texture2D::removeIdentifier( const std::string& identifier )
     {
-        if( _proxy != NULL )
-        {
-            _proxy->removeIdentifier( identifier );
-        }
-        else
-        {
-            osgCompute::IdentifierSetItr itr = _identifiers.find( identifier );
-            if( itr != _identifiers.end() )
-                _identifiers.erase( itr );
-
-        }
+        _memory->removeIdentifier( identifier );
     }
 
     //------------------------------------------------------------------------------
     bool Texture2D::isIdentifiedBy( const std::string& identifier ) const
     {
-        if( _proxy != NULL )
-        {
-            return _proxy->isIdentifiedBy( identifier );
-        }
-        else
-        {
-            osgCompute::IdentifierSetCnstItr itr = _identifiers.find( identifier );
-            if( itr == _identifiers.end() )
-                return false;
-
-            return true;
-        }
+        return _memory->isIdentifiedBy( identifier );
     }
 
 	//------------------------------------------------------------------------------
 	osgCompute::IdentifierSet& Texture2D::getIdentifiers()
 	{
-		if( _proxy != NULL )
-		{
-			return _proxy->getIdentifiers();
-		}
-		else
-		{
-			return _identifiers;
-		}
+		return _memory->getIdentifiers();
 	}
 
 	//------------------------------------------------------------------------------
 	const osgCompute::IdentifierSet& Texture2D::getIdentifiers() const
 	{
-		if( _proxy != NULL )
-		{
-			return _proxy->getIdentifiers();
-		}
-		else
-		{
-			return _identifiers;
-		}
+		return _memory->getIdentifiers();
+	}
+
+	//------------------------------------------------------------------------------
+	void Texture2D::setUsage( unsigned int usage )
+	{
+		_memory->setUsage(usage);
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int Texture2D::getUsage() const
+	{
+		return _memory->getUsage();
 	}
 
     //------------------------------------------------------------------------------
     void Texture2D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( _proxy != NULL && state != NULL && state->getContextID() == osgCompute::Resource::getContextID() )
-            _proxy->clearObject();
+        if( state != NULL && state->getContextID() == osgCompute::GLMemory::getContextID() )
+            _memory->releaseObjects();
 
         osg::Texture2D::releaseGLObjects( state );
     }
@@ -1676,35 +1698,10 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::apply(osg::State& state) const
     {
-        if( _proxy != NULL && state.getContextID() == osgCompute::Resource::getContextID() )
-            _proxy->unmap();
+        if( !_memory->isClear() && state.getContextID() == osgCompute::GLMemory::getContextID() )
+            _memory->unmap();
 
         osg::Texture2D::apply( state );
-    }
-
-    //------------------------------------------------------------------------------
-    void Texture2D::freeProxy()
-    {
-        if( _proxy != NULL )
-        {
-            // attach identifiers
-            _identifiers = _proxy->getIdentifiers();
-            // proxy is now deleted
-            _proxy = NULL;
-        }
-
-    }
-
-    //------------------------------------------------------------------------------
-    bool Texture2D::isClear()
-    {
-        return _clear;
-    }
-
-    //------------------------------------------------------------------------------
-    void Texture2D::clear()
-    {
-        clearLocal();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1713,23 +1710,16 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     Texture2D::~Texture2D()
     {
-        if( _proxy != NULL )
-        {
-            osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::Texture2D::destructor()]: proxy is still valid!!!."
-                << std::endl;
-        }
+		// _memory object is not deleted until this point
+		// as reference count is increased in constructor
+		clearLocal();
+		_memory = NULL;
     }
 
     //------------------------------------------------------------------------------
     void Texture2D::clearLocal()
     {
-        _clear = true;
-        if( NULL != _proxy )
-        {
-            _proxy->clear();
-        }
-        _identifiers.clear();
+        _memory->clear();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1738,141 +1728,81 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     Texture3D::Texture3D()
         : osg::Texture3D(),
-        _proxy(NULL)
+		  osgCompute::GLMemoryAdapter()
     {
+		TextureMemory* memory = new TextureMemory;
+		memory->_texref = this;
+		_memory = memory;
+
         clearLocal();
 
         // some flags for textures are not available right now
         // like resize to a power of two and mip-maps
         asTexture()->setResizeNonPowerOfTwoHint( false );
         asTexture()->setUseHardwareMipMapGeneration( false );
+        asTexture()->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+        asTexture()->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
     }
 
     //------------------------------------------------------------------------------
-    bool Texture3D::init()
+    osgCompute::Memory* Texture3D::getMemory()
     {
-        if( NULL != _proxy )
-        {
-            _proxy->_usage = getUsage();
-            _proxy->init();
-        }
-
-        _clear = false;
-        return true;
+        return _memory;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Texture3D::getInteropMemory()
+    const osgCompute::Memory* Texture3D::getMemory() const
     {
-        return _proxy;
-    }
-
-    //------------------------------------------------------------------------------
-    const osgCompute::InteropMemory* Texture3D::getInteropMemory() const
-    {
-        return _proxy;
-    }
-
-    //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* Texture3D::getOrCreateInteropMemory()
-    {
-        // create proxy buffer on demand
-        if( _proxy == NULL )
-        {
-            _proxy = new TextureBuffer;
-            _proxy->setName( getName() );
-            _proxy->_texref = this;
-            _proxy->_usage = getUsage();
-            _proxy->setIdentifiers( _identifiers );
-            _identifiers.clear();
-            if( !_proxy->init() )
-            {
-                _proxy->unref();
-                _proxy = NULL;
-            }
-        }
-
-        return _proxy;
+        return _memory;
     }
 
     //------------------------------------------------------------------------------
     void Texture3D::addIdentifier( const std::string& identifier )
     {
-        if( _proxy != NULL )
-        {
-            _proxy->addIdentifier( identifier );
-        }
-        else
-        {
-            if( !isIdentifiedBy(identifier) )
-                _identifiers.insert( identifier );
-        }
+        _memory->addIdentifier( identifier );
     }
 
     //------------------------------------------------------------------------------
     void Texture3D::removeIdentifier( const std::string& identifier )
     {
-        if( _proxy != NULL )
-        {
-            _proxy->removeIdentifier( identifier );
-        }
-        else
-        {
-            osgCompute::IdentifierSetItr itr = _identifiers.find( identifier );
-            if( itr != _identifiers.end() )
-                _identifiers.erase( itr );
-
-        }
+        _memory->removeIdentifier( identifier );
     }
 
     //------------------------------------------------------------------------------
     bool Texture3D::isIdentifiedBy( const std::string& identifier ) const
     {
-        if( _proxy != NULL )
-        {
-            return _proxy->isIdentifiedBy( identifier );
-        }
-        else
-        {
-            osgCompute::IdentifierSetCnstItr itr = _identifiers.find( identifier );
-            if( itr == _identifiers.end() )
-                return false;
-
-            return true;
-        }
+        return _memory->isIdentifiedBy( identifier );
     }
 
 	//------------------------------------------------------------------------------
 	osgCompute::IdentifierSet& Texture3D::getIdentifiers()
 	{
-		if( _proxy != NULL )
-		{
-			return _proxy->getIdentifiers();
-		}
-		else
-		{
-			return _identifiers;
-		}
+		return _memory->getIdentifiers();
 	}
 
 	//------------------------------------------------------------------------------
 	const osgCompute::IdentifierSet& Texture3D::getIdentifiers() const
 	{
-		if( _proxy != NULL )
-		{
-			return _proxy->getIdentifiers();
-		}
-		else
-		{
-			return _identifiers;
-		}
+		return _memory->getIdentifiers();
+	}
+
+	//------------------------------------------------------------------------------
+	void Texture3D::setUsage( unsigned int usage )
+	{
+		_memory->setUsage( usage );
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int Texture3D::getUsage() const
+	{
+		return _memory->getUsage();
 	}
 
     //------------------------------------------------------------------------------
     void Texture3D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( _proxy != NULL && state != NULL && state->getContextID() == osgCompute::Resource::getContextID() )
-            _proxy->clearObject();
+        if( state != NULL && state->getContextID() == osgCompute::GLMemory::getContextID() )
+            _memory->releaseObjects();
 
         osg::Texture3D::releaseGLObjects( state );
     }
@@ -1886,34 +1816,10 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::apply(osg::State& state) const
     {
-        if( _proxy != NULL && state.getContextID() == osgCompute::Resource::getContextID() )
-            _proxy->unmap();
+        if( !_memory->isClear() && state.getContextID() == osgCompute::GLMemory::getContextID() )
+            _memory->unmap();
 
         osg::Texture3D::apply( state );
-    }
-
-    //------------------------------------------------------------------------------
-    void Texture3D::freeProxy()
-    {
-        if( _proxy != NULL )
-        {
-            // attach identifiers
-            _identifiers = _proxy->getIdentifiers();
-            // proxy is now deleted
-            _proxy = NULL;
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    bool Texture3D::isClear()
-    {
-        return _clear;
-    }
-
-    //------------------------------------------------------------------------------
-    void Texture3D::clear()
-    {
-        clearLocal();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1922,23 +1828,16 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     Texture3D::~Texture3D()
     {
-        if( _proxy != NULL )
-        {
-            osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::Texture3D::destructor()]: proxy is still valid!!!."
-                << std::endl;
-        }
+		// _memory object is not deleted until this point
+		// as reference count is increased in constructor
+		clearLocal();
+		_memory = NULL;
     }
 
     //------------------------------------------------------------------------------
     void Texture3D::clearLocal()
     {
-        _clear = true;
-        if( NULL != _proxy )
-        {
-            _proxy->clear();
-        }
-        _identifiers.clear();
+        _memory->clear();
     }
 
 
@@ -1948,141 +1847,82 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     TextureRectangle::TextureRectangle()
         : osg::TextureRectangle(),
-        _proxy(NULL)
+		  osgCompute::GLMemoryAdapter()
     {
+		TextureMemory* memory = new TextureMemory;
+		memory->_texref = this;
+		_memory = memory;
+
         clearLocal();
 
         // some flags for textures are not available right now
         // like resize to a power of two and mip-maps
         asTexture()->setResizeNonPowerOfTwoHint( false );
         asTexture()->setUseHardwareMipMapGeneration( false );
+        asTexture()->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+        asTexture()->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
     }
 
     //------------------------------------------------------------------------------
-    bool TextureRectangle::init()
+    osgCompute::Memory* TextureRectangle::getMemory()
     {
-        if( NULL != _proxy )
-        {
-            _proxy->_usage = getUsage();
-            _proxy->init();
-        }
-
-        _clear = false;
-        return true;
+        return _memory;
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* TextureRectangle::getInteropMemory()
+    const osgCompute::Memory* TextureRectangle::getMemory() const
     {
-        return _proxy;
-    }
-
-    //------------------------------------------------------------------------------
-    const osgCompute::InteropMemory* TextureRectangle::getInteropMemory() const
-    {
-        return _proxy;
-    }
-
-    //------------------------------------------------------------------------------
-    osgCompute::InteropMemory* TextureRectangle::getOrCreateInteropMemory()
-    {
-        // create proxy buffer on demand
-        if( _proxy == NULL )
-        {
-            _proxy = new TextureBuffer;
-            _proxy->setName( getName() );
-            _proxy->_texref = this;
-            _proxy->_usage = getUsage();
-            _proxy->setIdentifiers( _identifiers );
-            _identifiers.clear();
-            if( !_proxy->init() )
-            {
-                _proxy->unref();
-                _proxy = NULL;
-            }
-        }
-
-        return _proxy;
+        return _memory;
     }
 
     //------------------------------------------------------------------------------
     void TextureRectangle::addIdentifier( const std::string& identifier )
     {
-        if( _proxy != NULL )
-        {
-            _proxy->addIdentifier( identifier );
-        }
-        else
-        {
-            if( !isIdentifiedBy(identifier) )
-                _identifiers.insert( identifier );
-        }
+        _memory->addIdentifier( identifier );
     }
 
     //------------------------------------------------------------------------------
     void TextureRectangle::removeIdentifier( const std::string& identifier )
     {
-        if( _proxy != NULL )
-        {
-            _proxy->removeIdentifier( identifier );
-        }
-        else
-        {
-            osgCompute::IdentifierSetItr itr = _identifiers.find( identifier );
-            if( itr != _identifiers.end() )
-                _identifiers.erase( itr );
-
-        }
+        _memory->removeIdentifier( identifier );
     }
 
     //------------------------------------------------------------------------------
     bool TextureRectangle::isIdentifiedBy( const std::string& identifier ) const
     {
-        if( _proxy != NULL )
-        {
-            return _proxy->isIdentifiedBy( identifier );
-        }
-        else
-        {
-            osgCompute::IdentifierSetCnstItr itr = _identifiers.find( identifier );
-            if( itr == _identifiers.end() )
-                return false;
-
-            return true;
-        }
+        return _memory->isIdentifiedBy( identifier );
     }
 
 	//------------------------------------------------------------------------------
 	osgCompute::IdentifierSet& TextureRectangle::getIdentifiers()
 	{
-		if( _proxy != NULL )
-		{
-			return _proxy->getIdentifiers();
-		}
-		else
-		{
-			return _identifiers;
-		}
+		return _memory->getIdentifiers();
 	}
 
 	//------------------------------------------------------------------------------
 	const osgCompute::IdentifierSet& TextureRectangle::getIdentifiers() const
 	{
-		if( _proxy != NULL )
-		{
-			return _proxy->getIdentifiers();
-		}
-		else
-		{
-			return _identifiers;
-		}
+		return _memory->getIdentifiers();
+	}
+
+
+	//------------------------------------------------------------------------------
+	void TextureRectangle::setUsage( unsigned int usage )
+	{
+		_memory->setUsage( usage );
+	}
+
+	//------------------------------------------------------------------------------
+	unsigned int TextureRectangle::getUsage() const
+	{
+		return _memory->getUsage();
 	}
 
     //------------------------------------------------------------------------------
     void TextureRectangle::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( _proxy != NULL && state != NULL && state->getContextID() == osgCompute::Resource::getContextID() )
-            _proxy->clearObject();
+        if( state != NULL && state->getContextID() == osgCompute::GLMemory::getContextID() )
+            _memory->releaseObjects();
 
         osg::TextureRectangle::releaseGLObjects( state );
     }
@@ -2096,34 +1936,10 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::apply(osg::State& state) const
     {
-        if( _proxy != NULL && state.getContextID() == osgCompute::Resource::getContextID() )
-            _proxy->unmap();
+        if( !_memory->isClear() && state.getContextID() == osgCompute::GLMemory::getContextID() )
+            _memory->unmap();
 
         osg::TextureRectangle::apply( state );
-    }
-
-    //------------------------------------------------------------------------------
-    bool TextureRectangle::isClear()
-    {
-        return _clear;
-    }
-
-    //------------------------------------------------------------------------------
-    void TextureRectangle::freeProxy()
-    {
-        if( _proxy != NULL )
-        {
-            // attach identifiers
-            _identifiers = _proxy->getIdentifiers();
-            // proxy is now deleted
-            _proxy = NULL;
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    void TextureRectangle::clear()
-    {
-        clearLocal();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2132,22 +1948,15 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     TextureRectangle::~TextureRectangle()
     {
-        if( _proxy != NULL )
-        {
-            osg::notify(osg::FATAL)
-                << getName() << " [osgCuda::TextureRectangle::destructor()]: proxy is still valid!!!."
-                << std::endl;
-        }
+		// _memory object is not deleted until this point
+		// as reference count is increased in constructor
+		clearLocal();
+		_memory = NULL;
     }
 
     //------------------------------------------------------------------------------
     void TextureRectangle::clearLocal()
     {
-        _clear = true;
-        if( NULL != _proxy )
-        {
-            _proxy->clear();
-        }
-        _identifiers.clear();
+        _memory->clear();
     }
 }
