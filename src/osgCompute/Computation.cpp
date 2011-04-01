@@ -554,25 +554,18 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Computation::releaseGLObjects( osg::State* state ) const
     {
-        if( state != NULL )
+        if( state != NULL && GLMemory::getContext() == state->getGraphicsContext() )
         {
-            if( state->getContextID() == GLMemory::getContextID() )
-            {
-                osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(GLMemory::getContextID());
-                if( !contexts.empty() && contexts.front() != NULL && contexts.front()->isRealized() )
-                {     
-                    // Make context the current context
-                    if( !contexts.front()->isCurrent() )
-                        contexts.front()->makeCurrent();
+            // Make context the current context
+            if( !GLMemory::getContext()->isCurrent() && GLMemory::getContext()->isRealized() )
+                GLMemory::getContext()->makeCurrent();
 
-                    // Release all resources associated with the current context
-                    for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-                        (*itr)->releaseObjects();
+            // Release all resources associated with the current context
+            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+                (*itr)->releaseObjects();
 
-                    for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-                        (*itr)._resource->releaseObjects();
-                }
-            }
+            for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
+                (*itr)._resource->releaseObjects();
         }
 
         Group::releaseGLObjects( state );
@@ -618,8 +611,8 @@ namespace osgCompute
             return;
         }
 
-        if( UINT_MAX != GLMemory::getContextID() && 
-            GLMemory::getContextID() != state.getContextID() )
+        if( NULL != GLMemory::getContext() && 
+            GLMemory::getContext() != state.getGraphicsContext() )
         {
             osg::notify(osg::FATAL)  << "Computation::setupContext() for \""
                 << getName()<<"\": GLObjectsVisitor can handle only a single context."
@@ -630,8 +623,8 @@ namespace osgCompute
             return;
         }
 
-        if( GLMemory::getContextID() == UINT_MAX )
-            GLMemory::bindToContextID( state.getContextID() );
+        if( GLMemory::getContext() == NULL )
+            GLMemory::bindToContext( *state.getGraphicsContext() );
     }
 
     
@@ -648,7 +641,7 @@ namespace osgCompute
             return;
         }
 
-		if( !cv.getState()->getContextID() == GLMemory::getContextID() )
+		if( cv.getState()->getGraphicsContext() != GLMemory::getContext() )
 			return;
 
         ///////////////////////
@@ -717,14 +710,12 @@ namespace osgCompute
     {            
         // Check if graphics context exist
         // or return otherwise
-        if( UINT_MAX != GLMemory::getContextID() )
+        if( NULL != GLMemory::getContext() && GLMemory::getContext()->isRealized() )
         {       
-            osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(GLMemory::getContextID());
-            if( contexts.empty() || !contexts.front()->isRealized() )
-                return;
                     
             // Make context the current context
-            if( !contexts.front()->isCurrent() ) contexts.front()->makeCurrent();
+            if( !GLMemory::getContext()->isCurrent() ) 
+                GLMemory::getContext()->makeCurrent();
 
             // Launch modules
             if( _launchCallback.valid() ) 

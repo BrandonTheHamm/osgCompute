@@ -16,6 +16,7 @@
 #ifndef OSGCOMPUTE_MEMORY
 #define OSGCOMPUTE_MEMORY 1
 
+#include <osg/GraphicsContext>
 #include <osgCompute/Resource>                
 
 namespace osgCompute
@@ -600,20 +601,20 @@ namespace osgCompute
         */
         virtual void releaseObjects();
 
-        /** Sets the OpenGL context ID for all GLMemory resources. Please note that
+        /** Sets the OpenGL context for all GLMemory resources. Please note that
         GL interoperability can only use a single GL context. 
-        @param[in] contextID OpenGL context for all resources.
+        @param[in] context pointer to the OpenGL context of all resources.
         */
-        static void bindToContextID( unsigned int contextID );
+        static void bindToContext( osg::GraphicsContext& context );
 
-        /** Clear the OpenGL context ID.
+        /** Clear the OpenGL context.
         */	
-        static void clearContextID();
+        static void clearContext();
 
         /** Returns the OpenGL context ID of all GLMemory resources.
         @return Returns the OpenGL context ID.
         */
-        static unsigned int getContextID();
+        static osg::GraphicsContext* getContext();
 
     protected:
         /** Destructor. Unregisters all GL handles.
@@ -627,7 +628,7 @@ namespace osgCompute
 
         void clearLocal();
 
-        static unsigned int                 s_contextID;
+        static osg::observer_ptr<osg::GraphicsContext>    s_context;
     };
 }
 

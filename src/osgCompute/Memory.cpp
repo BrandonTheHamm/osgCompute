@@ -15,7 +15,6 @@
 
 #include <osg/Notify>
 #include <osgCompute/Memory>
-#include <osg/GraphicsContext>
 
 namespace osgCompute
 {   
@@ -115,7 +114,7 @@ namespace osgCompute
 
 		_numElements = 1;
 		for( unsigned int d=0; d<_dimensions.size(); ++d )
-			_numElements *= _dimensions[dimIdx];
+			_numElements *= _dimensions[d];
     }
 
     //------------------------------------------------------------------------------
@@ -316,24 +315,24 @@ namespace osgCompute
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
-	unsigned int GLMemory::s_contextID = UINT_MAX;
+    osg::observer_ptr<osg::GraphicsContext> GLMemory::s_context = NULL;
 
 	//------------------------------------------------------------------------------
-	void GLMemory::bindToContextID( unsigned int contextID )
+	void GLMemory::bindToContext( osg::GraphicsContext& context )
 	{
-		s_contextID = contextID;
+		s_context = &context;
 	}
 
 	//------------------------------------------------------------------------------
-	void GLMemory::clearContextID()
+	void GLMemory::clearContext()
 	{
-		s_contextID = UINT_MAX;
+		s_context = NULL;
 	}
 
 	//------------------------------------------------------------------------------
-	unsigned int GLMemory::getContextID()
+    osg::GraphicsContext* GLMemory::getContext()
 	{
-		return s_contextID;
+		return s_context.get();
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -349,15 +348,15 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	void GLMemory::releaseObjects()
 	{
-		if( getContextID() != UINT_MAX )
+		if( s_context.valid() )
 		{
-			osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(GLMemory::getContextID());
-			if( !contexts.empty() && contexts.front()->isRealized() )
-			{      
-				// Make context the current context
-				if( !contexts.front()->isCurrent() )
-					contexts.front()->makeCurrent();
-			}
+			//osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(GLMemory::getContextID());
+			//if( !contexts.empty() && contexts.front()->isRealized() )
+			//{      
+			//	// Make context the current context
+			//	if( !contexts.front()->isCurrent() )
+			//		contexts.front()->makeCurrent();
+			//}
 			//else if( contexts.empty() )
 			//{
 			//	osg::notify(osg::FATAL) 
@@ -367,6 +366,9 @@ namespace osgCompute
 			//		<< "Maybe freeing OpenGL related resources is not possible."
 			//		<< std::endl;
 			//}
+            if( !s_context->isCurrent() && s_context->isRealized() )
+                s_context->makeCurrent();
+
 		}
 
 		osgCompute::Memory::releaseObjects();

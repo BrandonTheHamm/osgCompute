@@ -284,7 +284,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void* TextureMemory::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
     {
-		if( !_texref.valid() )
+		if( !_texref.valid() || osgCompute::GLMemory::getContext() == NULL )
 			return NULL;
 
         if( osgCompute::Resource::isClear() )
@@ -311,20 +311,10 @@ namespace osgCuda
             if( memory._graphicsResource == NULL )
             {
                 // Initialize texture resource if it is a render target
-                osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
+                osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
                 if( !tex )
                 {
-                    osg::State* state = NULL;
-                    osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
-                    for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
-                    {
-                        if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::GLMemory::getContextID()) )
-                        {
-                            state = (*itr)->getState();
-                            break;
-                        }
-                    }
-
+                    osg::State* state = osgCompute::GLMemory::getContext()->getState();
                     if( NULL == state )
                     {
                         osg::notify(osg::FATAL)
@@ -335,7 +325,7 @@ namespace osgCuda
                     }
 
                     _texref->compileGLObjects( *state );
-                    tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
+                    tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
                 }
 
                 // Register vertex buffer object for Cuda
@@ -343,7 +333,8 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to register image object (cudaGraphicsGLRegisterImage()). Not all GL formats are supported."
+                        << _texref->getName() 
+                        << " [osgCuda::TextureMemory::alloc()]: unable to register image object (cudaGraphicsGLRegisterImage()). Not all GL formats are supported."
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -544,7 +535,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureMemory::unmap( unsigned int )
     {
-		if( !_texref.valid() )
+		if( !_texref.valid() || osgCompute::GLMemory::getContext() == NULL )
 			return;
 
         if( osgCompute::Resource::isClear() )
@@ -605,7 +596,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     bool TextureMemory::reset( unsigned int  )
     {
-		if( !_texref.valid() )
+        if( !_texref.valid() || osgCompute::GLMemory::getContext() == NULL )
 			return false;
 
         if( osgCompute::Resource::isClear() )
@@ -797,17 +788,7 @@ namespace osgCuda
             ////////////////
             // UPDATE TEX //
             ////////////////
-            osg::State* state = NULL;
-            osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
-            for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
-            {
-                if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::GLMemory::getContextID()) )
-                {
-                    state = (*itr)->getState();
-                    break;
-                }
-            }
-
+            osg::State* state = osgCompute::GLMemory::getContext()->getState();
             if( NULL == state )
             {
                 osg::notify(osg::FATAL)
@@ -823,7 +804,7 @@ namespace osgCuda
             //////////////////
             // REGISTER TEX //
             //////////////////
-            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
+            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
             cudaError res = cudaGraphicsGLRegisterImage( &memory._graphicsResource, tex->id(), tex->_profile._target, cudaGraphicsMapFlagsNone );
             if( res != cudaSuccess )
             {
@@ -968,20 +949,10 @@ namespace osgCuda
             if( memory._graphicsResource != NULL )
                 return true;
 
-            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
+            osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
             if( !tex )
             {
-                osg::State* state = NULL;
-                osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
-                for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
-                {
-                    if( (*itr)->getState() && ((*itr)->getState()->getContextID() == osgCompute::GLMemory::getContextID()) )
-                    {
-                        state = (*itr)->getState();
-                        break;
-                    }
-                }
-
+                osg::State* state = osgCompute::GLMemory::getContext()->getState();
                 if( NULL == state )
                 {
                     osg::notify(osg::FATAL)
@@ -992,7 +963,7 @@ namespace osgCuda
                 }
 
                 _texref->compileGLObjects( *state );
-                tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
+                tex = _texref->getTextureObject(osgCompute::GLMemory::getContext()->getState()->getContextID() );
             }
 
             // Register vertex buffer object for Cuda
@@ -1257,7 +1228,7 @@ namespace osgCuda
             {
                 if( memory._graphicsResource == NULL )
                 {
-                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
+                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
                     if( !tex )
                     {
                         osg::notify(osg::WARN)
@@ -1409,7 +1380,7 @@ namespace osgCuda
             {
                 if( memory._graphicsResource == NULL )
                 {
-                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
+                    osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
                     if( !tex )
                     {
                         osg::notify(osg::WARN)
@@ -1683,7 +1654,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && state->getContextID() == osgCompute::GLMemory::getContextID() )
+        if( state != NULL && state->getGraphicsContext() == osgCompute::GLMemory::getContext() )
             _memory->releaseObjects();
 
         osg::Texture2D::releaseGLObjects( state );
@@ -1698,7 +1669,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::apply(osg::State& state) const
     {
-        if( !_memory->isClear() && state.getContextID() == osgCompute::GLMemory::getContextID() )
+        if( !_memory->isClear() && state.getGraphicsContext() == osgCompute::GLMemory::getContext() )
             _memory->unmap();
 
         osg::Texture2D::apply( state );
@@ -1801,7 +1772,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && state->getContextID() == osgCompute::GLMemory::getContextID() )
+        if( state != NULL && state->getGraphicsContext() == osgCompute::GLMemory::getContext() )
             _memory->releaseObjects();
 
         osg::Texture3D::releaseGLObjects( state );
@@ -1816,7 +1787,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::apply(osg::State& state) const
     {
-        if( !_memory->isClear() && state.getContextID() == osgCompute::GLMemory::getContextID() )
+        if( !_memory->isClear() && state.getGraphicsContext() == osgCompute::GLMemory::getContext() )
             _memory->unmap();
 
         osg::Texture3D::apply( state );
@@ -1921,7 +1892,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && state->getContextID() == osgCompute::GLMemory::getContextID() )
+        if( state != NULL && state->getGraphicsContext() == osgCompute::GLMemory::getContext() )
             _memory->releaseObjects();
 
         osg::TextureRectangle::releaseGLObjects( state );
@@ -1936,7 +1907,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::apply(osg::State& state) const
     {
-        if( !_memory->isClear() && state.getContextID() == osgCompute::GLMemory::getContextID() )
+        if( !_memory->isClear() && state.getGraphicsContext() == osgCompute::GLMemory::getContext() )
             _memory->unmap();
 
         osg::TextureRectangle::apply( state );
