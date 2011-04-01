@@ -314,7 +314,7 @@ namespace osgCuda
                 osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
                 if( !tex )
                 {
-                    osg::State* state;
+                    osg::State* state = NULL;
                     osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
                     for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
                     {
@@ -797,7 +797,7 @@ namespace osgCuda
             ////////////////
             // UPDATE TEX //
             ////////////////
-            osg::State* state;
+            osg::State* state = NULL;
             osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
             for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
             {
@@ -971,7 +971,7 @@ namespace osgCuda
             osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContextID() );
             if( !tex )
             {
-                osg::State* state;
+                osg::State* state = NULL;
                 osg::GraphicsContext::GraphicsContexts _ctxs = osg::GraphicsContext::getAllRegisteredGraphicsContexts();
                 for( osg::GraphicsContext::GraphicsContexts::iterator itr = _ctxs.begin(); itr != _ctxs.end(); ++itr )
                 {

@@ -27,8 +27,8 @@ void reseed( unsigned int numBlocks,
             void* seeds,
             unsigned int seedCount,
             unsigned int seedIdx,
-            osg::Vec3f bbmin,
-            osg::Vec3f bbmax );
+            float3 bbmin,
+            float3 bbmax );
 
 
 namespace PtclDemo
@@ -68,6 +68,10 @@ namespace PtclDemo
         if( isClear() )
             return;
 
+		
+		float3 bbmin = { _box->_min.x(), _box->_min.y(), _box->_min.z() };
+		float3 bbmax = { _box->_max.x(), _box->_max.y(), _box->_max.z() };
+		
         reseed(
             _numBlocks,
             _numThreads,
@@ -75,8 +79,8 @@ namespace PtclDemo
             _seeds->map(),
             _seeds->getDimension(0),
             static_cast<unsigned int>(rand()),
-            _box->_min,
-            _box->_max );
+            bbmin,
+            bbmax );
     }
 
     //------------------------------------------------------------------------------
