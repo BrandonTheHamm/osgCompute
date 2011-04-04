@@ -612,7 +612,7 @@ namespace osgCompute
         }
 
         if( NULL != GLMemory::getContext() && 
-            GLMemory::getContext() != state.getGraphicsContext() )
+            GLMemory::getContext()->getState()->getContextID() != state.getContextID() )
         {
             osg::notify(osg::FATAL)  << "Computation::setupContext() for \""
                 << getName()<<"\": GLObjectsVisitor can handle only a single context."
@@ -641,7 +641,10 @@ namespace osgCompute
             return;
         }
 
-		if( cv.getState()->getGraphicsContext() != GLMemory::getContext() )
+        if( GLMemory::getContext() == NULL )
+            return;
+
+		if( cv.getState()->getContextID() != GLMemory::getContext()->getState()->getContextID() )
 			return;
 
         ///////////////////////

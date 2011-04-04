@@ -1657,7 +1657,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && state->getGraphicsContext() == osgCompute::GLMemory::getContext() )
+        if( state != NULL && 
+            osgCompute::GLMemory::getContext() != NULL && 
+            state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->releaseObjects();
 
         osg::Texture2D::releaseGLObjects( state );
@@ -1672,7 +1674,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::apply(osg::State& state) const
     {
-        if( !_memory->isClear() && state.getGraphicsContext() == osgCompute::GLMemory::getContext() )
+        if( !_memory->isClear() && 
+            osgCompute::GLMemory::getContext() != NULL && 
+            state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->unmap();
 
         osg::Texture2D::apply( state );
@@ -1775,7 +1779,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && state->getGraphicsContext() == osgCompute::GLMemory::getContext() )
+        if( state != NULL && 
+            osgCompute::GLMemory::getContext() != NULL && 
+            state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->releaseObjects();
 
         osg::Texture3D::releaseGLObjects( state );
@@ -1790,7 +1796,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::apply(osg::State& state) const
     {
-        if( !_memory->isClear() && state.getGraphicsContext() == osgCompute::GLMemory::getContext() )
+        if( !_memory->isClear() && 
+            osgCompute::GLMemory::getContext() != NULL && 
+            state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->unmap();
 
         osg::Texture3D::apply( state );
@@ -1895,7 +1903,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && state->getGraphicsContext() == osgCompute::GLMemory::getContext() )
+        if( state != NULL && 
+            osgCompute::GLMemory::getContext() != NULL && 
+            state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->releaseObjects();
 
         osg::TextureRectangle::releaseGLObjects( state );
@@ -1910,7 +1920,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::apply(osg::State& state) const
     {
-        if( !_memory->isClear() && state.getGraphicsContext() == osgCompute::GLMemory::getContext() )
+        if( !_memory->isClear() && 
+            osgCompute::GLMemory::getContext() != NULL && 
+            state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->unmap();
 
         osg::TextureRectangle::apply( state );

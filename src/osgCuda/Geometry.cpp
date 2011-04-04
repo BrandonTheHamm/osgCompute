@@ -1961,7 +1961,9 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Geometry::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && state->getGraphicsContext() == osgCompute::GLMemory::getContext() )
+        if( state != NULL && 
+            osgCompute::GLMemory::getContext() != NULL && 
+            state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->releaseObjects();
 
         osg::Geometry::releaseGLObjects( state );
