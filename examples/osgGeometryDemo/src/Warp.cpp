@@ -103,7 +103,7 @@ namespace GeometryDemo
         if( isClear() )
             return;
 
-        _simulationTime += 0.04f;
+        _simulationTime += 0.01f;
 
         ///////////////////
         // MOVE VERTICES //
