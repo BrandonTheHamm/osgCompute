@@ -136,21 +136,33 @@ namespace osgCompute
             }
             else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
             {
-                update( nv );
-
                 if( _enabled && (_computeOrder & UPDATE_BEFORECHILDREN) == UPDATE_BEFORECHILDREN )
                     launch();
 
-                nv.apply( *this );
+                if( getUpdateCallback() )
+                {
+                    (*getUpdateCallback())( this, &nv );
+                }
+                else
+                {
+                    applyVisitorToModules( nv );
+                    nv.apply( *this );
+                }
 
                 if( _enabled && (_computeOrder & UPDATE_AFTERCHILDREN) == UPDATE_AFTERCHILDREN )
                     launch();
             }
             else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
             {
-                handleevent( nv );
-
-                nv.apply( *this );
+                if( getEventCallback() )
+                {
+                    (*getEventCallback())( this, &nv );
+                }
+                else
+                {
+                    applyVisitorToModules( nv );
+                    nv.apply( *this );
+                }
             }
             else
             {
@@ -741,36 +753,24 @@ namespace osgCompute
         }
     }
 
-    //------------------------------------------------------------------------------
-    void Computation::update( osg::NodeVisitor& uv )
-    {
-        if( getUpdateCallback() )
-        {
-            (*getUpdateCallback())( this, &uv );
-        }
-        else
-        {
-            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
-            {
-                if( (*itr)->getUpdateCallback() )
-                    (*(*itr)->getUpdateCallback())( *(*itr), uv );
-            }
-        }
-    }
 
     //------------------------------------------------------------------------------
-    void Computation::handleevent( osg::NodeVisitor& ev )
+    void Computation::applyVisitorToModules( osg::NodeVisitor& nv )
     {
-        if( getEventCallback() )
-        {
-            (*getEventCallback())( this, &ev );
-        }
-        else
+        if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
         {
             for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
             {
                 if( (*itr)->getEventCallback() )
-                    (*(*itr)->getEventCallback())( *(*itr), ev );
+                    (*(*itr)->getEventCallback())( *(*itr), nv );
+            }
+        }
+        else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
+        {
+            for( ModuleListItr itr = _modules.begin(); itr != _modules.end(); ++itr )
+            {
+                if( (*itr)->getUpdateCallback() )
+                    (*(*itr)->getUpdateCallback())( *(*itr), nv );
             }
         }
     }  

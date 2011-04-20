@@ -719,14 +719,18 @@ namespace osgCompute
         */
         virtual void clear();
 
-        /** 
-        Method is called by OSG to release all OpenGL resources
+        /** Method is called by OSG to release all OpenGL resources
         for a specific OpenGL context/state. 
         All resources used within the state's context will be 
         released including the non GL resources.
         @param[in] state pointer to the OpenGL context.
         */
         virtual void releaseGLObjects( osg::State* state ) const;
+
+        /** Applies event handling and/or update handling to the computation's modules.
+        @param[in] nv node visitor.
+        */
+        void applyVisitorToModules( osg::NodeVisitor& nv );
 
     protected:
         friend class ResourceVisitor;
@@ -751,10 +755,8 @@ namespace osgCompute
         void clearLocal();
 
         void setupContext( osg::State& state );
-        void update( osg::NodeVisitor& uv );
         void launch();
         void addBin( osgUtil::CullVisitor& cv );
-        void handleevent( osg::NodeVisitor& ev );
 
         bool                                	_enabled;
         osg::ref_ptr<LaunchCallback>            _launchCallback; 
