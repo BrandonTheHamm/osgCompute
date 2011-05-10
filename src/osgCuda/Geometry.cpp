@@ -376,8 +376,10 @@ namespace osgCuda
             // SETUP STREAM //
             //////////////////
             if( needsSetup && !(memory._syncOp & osgCompute::SYNC_HOST) )
+            {
                 if( !setup( mapping ) )
                     return NULL;
+            }
 
             /////////////////
             // SYNC STREAM //
@@ -879,13 +881,15 @@ namespace osgCuda
 
                 // synchronize host memory with device memory and avoid copying data
                 // from buffers in first place
+                memory._lastModifiedCount.clear();
                 osg::VertexBufferObject* vbo = _geomref->getOrCreateVertexBufferObject();
                 for( unsigned int d=0; d< vbo->getNumBufferData(); ++d )
                     memory._lastModifiedCount.push_back( vbo->getBufferData(d)->getModifiedCount() );
             }
             else
             {
-                // mark buffers to be copied into the host memory
+                // Mark buffers to be copied into the host memory
+                memory._lastModifiedCount.clear();
                 osg::VertexBufferObject* vbo = _geomref->getOrCreateVertexBufferObject();
                 for( unsigned int d=0; d< vbo->getNumBufferData(); ++d )
                     memory._lastModifiedCount.push_back( UINT_MAX );
@@ -920,6 +924,11 @@ namespace osgCuda
             if( glBO->isDirty() )
                 glBO->compileBuffer();
 
+            // Avoid copy operation during osgCompute::MAP_HOST
+            memory._lastModifiedCount.clear();
+            for( unsigned int d=0; d< vbo->getNumBufferData(); ++d )
+                memory._lastModifiedCount.push_back( vbo->getBufferData(d)->getModifiedCount() );
+
             // Register vertex buffer 
             cudaError res = cudaGraphicsGLRegisterBuffer ( &memory._graphicsResource, glBO->getGLObjectID(), cudaGraphicsMapFlagsNone );
             if( res != cudaSuccess )
@@ -931,6 +940,7 @@ namespace osgCuda
 
                 return false;
             }
+
 
             if( memory._hostPtr != NULL )
                 memory._syncOp |= osgCompute::SYNC_DEVICE;
