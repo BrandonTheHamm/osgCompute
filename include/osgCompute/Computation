@@ -313,6 +313,8 @@ Several issues are currently under construction:
 	<li> If multiple GL contexts are utilized modules can only be executed in a single context. </li>
 	<li> Unregistering of CUDA bound but already deleted GL objects will cause an exception. This happens 
 	if GL objects will not be released at time of releaseGLObjects() traversal.</li>
+    <li> To enure that GL context is always available for proper data syncronization during mapping 
+    set hint setReleaseContextAtEndOfFrameHint to false.</li>
 </ul>
 */
 

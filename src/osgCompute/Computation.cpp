@@ -729,8 +729,11 @@ namespace osgCompute
         {       
                     
             // Make context the current context
-            if( !GLMemory::getContext()->isCurrent() ) 
-                GLMemory::getContext()->makeCurrent();
+            // Annotation: better avoid this! It seems to cause problems with several windows (widgets)
+            // which share GL context! And: buffers which are also used in GL do not need to be "mapped" to host
+            // first when using shared contexts.
+            //if( !GLMemory::getContext()->isCurrent() ) 
+            //    GLMemory::getContext()->makeCurrent();
 
             // Launch modules
             if( _launchCallback.valid() ) 
