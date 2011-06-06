@@ -1,0 +1,36 @@
+#ifndef SVTCUDA_PINGPONGSWITCH_H
+#define SVTCUDA_PINGPONGSWITCH_H 1
+
+#include <osg/Switch>
+#include <osgCudaUtil/PingPongBuffer>
+
+namespace osgCuda
+{                                                                                                  
+    class LIBRARY_EXPORT PingPongSwitch : public osg::Switch
+    {
+    public:
+        PingPongSwitch();
+
+        META_Object( osgCuda, PingPongSwitch )
+
+        virtual void accept( osg::NodeVisitor& nv );
+        virtual bool setPingPongBuffer( osgCuda::PingPongBuffer* pingPongBuffer );
+        virtual osgCuda::PingPongBuffer* getPingPongBuffer();
+        virtual const osgCuda::PingPongBuffer* getPingPongBuffer() const;
+
+        static osg::Switch* createPingPongGeodeSwitch( osgCuda::PingPongBuffer* pingPongBuffer );
+        static osg::Switch* createPingPongTextureSwitch( unsigned int unit, osgCuda::PingPongBuffer* pingPongBuffer );
+
+    protected:
+        virtual ~PingPongSwitch() { clearLocal(); }
+        void clearLocal();
+
+        osg::ref_ptr<osgCuda::PingPongBuffer>		_pingPongBuffer;
+
+    private:
+        PingPongSwitch( const PingPongSwitch&, const osg::CopyOp& ) {}
+        PingPongSwitch &operator=(const PingPongSwitch &) { return *this; }
+    };
+}
+
+#endif // SVTCUDA_PINGPONGSWITCH_H

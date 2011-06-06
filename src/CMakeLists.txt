@@ -8,6 +8,7 @@ ADD_SUBDIRECTORY(osgCompute)
 # and if cuda emulation is available then also osgCudaEmu
 IF (CUDA_FOUND)
   ADD_SUBDIRECTORY(osgCuda)
+  ADD_SUBDIRECTORY(osgCudaUtil)
   ADD_SUBDIRECTORY(osgCudaSerializer)
   #IF ( CUDA_EMU_FOUND )
   #  ADD_SUBDIRECTORY(osgCudaEmu)

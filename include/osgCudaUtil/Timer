@@ -1,0 +1,56 @@
+#ifndef SVTCUDA_TIMER
+#define SVTCUDA_TIMER 1
+
+#include <cuda_runtime.h>
+#include <osgCompute/Resource>
+
+namespace osgCuda
+{
+	class Timer;
+
+	typedef std::vector< osg::ref_ptr<Timer> >						TimerList;
+	typedef std::vector< osg::ref_ptr<Timer> >::iterator			TimerListItr;
+	typedef std::vector< osg::ref_ptr<Timer> >::const_iterator		TimerListCnstItr;
+
+    class LIBRARY_EXPORT Timer : public osgCompute::Resource
+	{
+	public:
+		Timer();
+
+        META_Object( osgCuda, Timer )
+
+        virtual bool init();
+
+        virtual void start();
+        virtual void stop();
+        virtual float getAveTime() const;
+        virtual float getLastTime() const;
+        virtual float getPeakTime() const;
+        virtual unsigned int getCalls() const;
+
+        static void disableAllTimer();
+        static void enableAllTimer();
+        static bool timerEnabled();
+
+		virtual void clear();
+
+	protected:
+		virtual ~Timer();
+		void clearLocal();
+
+        cudaEvent_t     _start;
+        cudaEvent_t     _stop;
+        unsigned int    _calls;
+        float           _lastTime;
+        float           _peakTime;
+        float           _overallTime;
+
+        static bool     _timerEnabled;
+
+	private:																			
+		Timer(const Timer&, const osg::CopyOp& ) {}							
+		inline Timer &operator=(const Timer &) { return *this; }	
+	};
+}
+
+#endif // SVTCUDA_TIMER

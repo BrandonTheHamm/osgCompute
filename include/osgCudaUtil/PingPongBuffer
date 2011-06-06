@@ -1,0 +1,69 @@
+#ifndef OSGCUDA_PINGPONGBUFFER_H
+#define OSGCUDA_PINGPONGBUFFER_H 1
+
+#include <osgCompute/Memory>
+
+namespace osgCuda
+{
+    typedef std::vector< osg::ref_ptr<osgCompute::Memory> >                    BufferStack;
+    typedef std::vector< osg::ref_ptr<osgCompute::Memory> >::iterator          BufferStackItr;
+    typedef std::vector< osg::ref_ptr<osgCompute::Memory> >::const_iterator    BufferStackCnstItr;
+
+    /**
+	*/
+	class LIBRARY_EXPORT PingPongBuffer : public osgCompute::Memory
+	{
+	public:
+		PingPongBuffer();
+
+		META_Object( osgCuda, PingPongBuffer )
+
+		virtual bool init();
+        virtual bool createSwapBuffers();
+
+		virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int bufferIdx = 0 );
+		virtual void unmap( unsigned int bufferIdx = 0 );
+		virtual bool reset( unsigned int bufferIdx = 0 );
+        virtual bool supportsMapping( unsigned int mapping, unsigned int bufferIdx = 0 ) const;
+        virtual unsigned int getMapping( unsigned int bufferIdx = 0 ) const;
+        virtual unsigned int getPitch( unsigned int bufferIdx = 0 ) const;
+
+		virtual void swap( unsigned int incr = 1 );
+
+		virtual void setSwapIdx( unsigned int idx );
+        virtual unsigned int getSwapIdx() const;
+        virtual void setSwapCount( unsigned int sc );
+		virtual unsigned int getSwapCount() const;
+
+		virtual void setRefBuffer( unsigned int idx );
+		virtual osgCompute::Memory* getBufferAt( unsigned int idx );
+		virtual const osgCompute::Memory* getBufferAt( unsigned int idx ) const;
+		virtual void appendBuffer( osgCompute::Memory& buffer );
+		virtual void insertBuffer( unsigned int idx, osgCompute::Memory& buffer );
+		virtual void removeBuffer( unsigned int idx );
+
+		virtual BufferStack& getBuffers();
+		virtual const BufferStack& getBuffers() const;
+
+        virtual osgCompute::Memory* refAt( unsigned int idx );
+        virtual const osgCompute::Memory* refAt( unsigned int idx ) const;
+
+		virtual void clear();
+
+	protected:
+		virtual ~PingPongBuffer();
+		inline void clearLocal();
+        virtual unsigned int computePitch() const;
+
+		BufferStack				_bufferStack;
+		unsigned int			_stackIdx;
+		unsigned int			_refIdx;
+
+	private:
+		// copy-operator and copy-constructor are not allowed
+		PingPongBuffer(const PingPongBuffer&, const osg::CopyOp& ) {} 
+		inline PingPongBuffer &operator=(const PingPongBuffer&) { return *this; }
+	};
+}
+
+#endif OSGCUDA_PINGPONGBUFFER_H
