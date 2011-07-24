@@ -111,6 +111,20 @@ namespace osgCompute
             osgUtil::GLObjectsVisitor* ov = dynamic_cast<osgUtil::GLObjectsVisitor*>( &nv );
             if( cv != NULL )
             {
+                if( GLMemory::getContext() == NULL )
+                {
+                    setupContext( *cv->getState() );                    
+                    // Setup state
+                    if( !isDeviceReady() ) 
+                    {               
+                        osg::notify(osg::FATAL) 
+                            << getName() << " [Computation::accept(GLObjectsVisitor)]: No valid Computation Device found."
+                            << std::endl;
+
+                        return;
+                    }
+                }
+
                 if( _enabled && (_computeOrder & OSGCOMPUTE_RENDER) == OSGCOMPUTE_RENDER )
                     addBin( *cv );
                 else if( (_computeOrder & OSGCOMPUTE_NORENDER) == OSGCOMPUTE_NORENDER )
@@ -120,22 +134,25 @@ namespace osgCompute
             }
             else if( ov != NULL )
             {
-                setupContext( *ov->getState() );
+                if( GLMemory::getContext() == NULL )
+                {
+                    setupContext( *ov->getState() );                
+                    // Setup state
+                    if( !isDeviceReady() ) 
+                    {               
+                        osg::notify(osg::FATAL) 
+                            << getName() << " [Computation::accept(GLObjectsVisitor)]: No valid Computation Device found."
+                            << std::endl;
 
-                // Setup state
-                if( !isDeviceReady() ) 
-                {               
-                    osg::notify(osg::FATAL) 
-                        << getName() << " [Computation::accept(GLObjectsVisitor)]: No valid Computation Device found."
-                        << std::endl;
-
-                    return;
+                        return;
+                    }
                 }
 
                 nv.apply( *this );
             }
             else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
             {
+
                 if( _enabled && (_computeOrder & UPDATE_BEFORECHILDREN) == UPDATE_BEFORECHILDREN )
                     launch();
 
