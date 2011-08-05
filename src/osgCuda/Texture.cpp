@@ -116,7 +116,7 @@ namespace osgCuda
             cudaError res = cudaGraphicsUnmapResources( 1, &_graphicsResource );
             if( cudaSuccess != res )
             {
-                osg::notify(osg::WARN)
+                osg::notify(osg::FATAL)
                     << "[TextureObject::~TextureObject()]: error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
@@ -422,7 +422,7 @@ namespace osgCuda
                 cudaError res = cudaGraphicsMapResources(1, &memory._graphicsResource);
                 if( cudaSuccess != res )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << _texref->getName() << " [osgCuda::TextureMemory::map()]: error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -433,7 +433,7 @@ namespace osgCuda
                 res = cudaGraphicsSubResourceGetMappedArray( &memory._graphicsArray, memory._graphicsResource, 0, 0);
                 if( cudaSuccess != res )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << _texref->getName() << " [osgCuda::TextureMemory::map()]: error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -584,7 +584,7 @@ namespace osgCuda
             cudaError res = cudaGraphicsUnmapResources( 1, &memory._graphicsResource );
             if( cudaSuccess != res )
             {
-                osg::notify(osg::WARN)
+                osg::notify(osg::FATAL)
                     << _texref->getName() << " [osgCuda::TextureMemory::unmap()]: error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
@@ -645,7 +645,7 @@ namespace osgCuda
                 res = cudaMemset3D( pitchedPtr, 0x0, extent );
                 if( res != cudaSuccess )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << _texref->getName() << " [osgCuda::Buffer::reset()]: error during cudaMemset3D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -659,7 +659,7 @@ namespace osgCuda
                 res = cudaMemset2D( memory._devPtr, memory._pitch, 0x0, getDimension(0)*getElementSize(), getDimension(1) );
                 if( res != cudaSuccess )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << _texref->getName() << " [osgCuda::Buffer::reset()]: error during cudaMemset2D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -673,7 +673,7 @@ namespace osgCuda
                 res = cudaMemset( memory._devPtr, 0x0, getByteSize() );
                 if( res != cudaSuccess )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << _texref->getName() << " [osgCuda::Buffer::reset()]: error during cudaMemset() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -763,7 +763,7 @@ namespace osgCuda
                 cudaError res = cudaGraphicsUnmapResources( 1, &memory._graphicsResource );
                 if( cudaSuccess != res )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << "[osgCuda::TextureMemory::setup()]: error during cudaGraphicsUnmapResources(). "
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
@@ -1234,7 +1234,7 @@ namespace osgCuda
                     osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
                     if( !tex )
                     {
-                        osg::notify(osg::WARN)
+                        osg::notify(osg::NOTICE)
                             << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found. "
                             << std::endl;
 
@@ -1260,7 +1260,7 @@ namespace osgCuda
                     cudaError res = cudaGraphicsMapResources(1, &memory._graphicsResource);
                     if( cudaSuccess != res )
                     {
-                        osg::notify(osg::WARN)
+                        osg::notify(osg::FATAL)
                             << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsMapResources(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
@@ -1271,7 +1271,7 @@ namespace osgCuda
                     res = cudaGraphicsSubResourceGetMappedArray( &memory._graphicsArray, memory._graphicsResource, 0, 0);
                     if( cudaSuccess != res )
                     {
-                        osg::notify(osg::WARN)
+                        osg::notify(osg::FATAL)
                             << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
@@ -1386,7 +1386,7 @@ namespace osgCuda
                     osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
                     if( !tex )
                     {
-                        osg::notify(osg::WARN)
+                        osg::notify(osg::FATAL)
                             << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found. "
                             << std::endl;
 
@@ -1412,7 +1412,7 @@ namespace osgCuda
                     cudaError res = cudaGraphicsMapResources(1, &memory._graphicsResource);
                     if( cudaSuccess != res )
                     {
-                        osg::notify(osg::WARN)
+                        osg::notify(osg::FATAL)
                             << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsMapResources(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
@@ -1423,7 +1423,7 @@ namespace osgCuda
                     res = cudaGraphicsSubResourceGetMappedArray( &memory._graphicsArray, memory._graphicsResource, 0, 0);
                     if( cudaSuccess != res )
                     {
-                        osg::notify(osg::WARN)
+                        osg::notify(osg::FATAL)
                             << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;

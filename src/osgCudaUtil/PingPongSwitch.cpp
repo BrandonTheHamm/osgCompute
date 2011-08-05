@@ -93,7 +93,7 @@ namespace osgCuda
             }
 
             osg::ref_ptr<osg::Group> group = new osg::Group;
-            group->getOrCreateStateSet()->setTextureAttributeAndModes( unit, texture );
+            group->getOrCreateStateSet()->setTextureAttribute( unit, texture, osg::StateAttribute::ON );
             ppSwitch->addChild( group );
         }
 

@@ -22,7 +22,7 @@ namespace osgCuda
 
 		if( _bufferStack.empty() )
 		{
-			osg::notify(osg::FATAL) 
+			osg::notify(osg::WARN) 
 				<< "PingPongBuffer::init() of buffer \""<<getName()<<"\": No buffers found."
 				<< std::endl;
 
@@ -41,7 +41,7 @@ namespace osgCuda
 			osgCompute::Memory* curBuffer = dynamic_cast<osgCompute::Memory*>(_bufferStack.at(b).get());
 			if( curBuffer->isClear() && !curBuffer->init() )
 			{
-				osg::notify(osg::FATAL) 
+				osg::notify(osg::WARN) 
 					<< "PingPongBuffer::init() of buffer \""<<getName()<<"\": Buffer at idx \""
 					<<b<< "\"could not be initialized."
 					<< std::endl;
@@ -59,7 +59,7 @@ namespace osgCuda
 			if( _bufferStack.size() < _refIdx ||
 				!_bufferStack.at(_refIdx).valid() )
 			{
-				osg::notify(osg::FATAL) 
+				osg::notify(osg::WARN) 
 					<< "PingPongBuffer::init() of buffer \""<<getName()<<"\": No element size set and no reference buffer has been found."
 					<< std::endl;
 
@@ -79,7 +79,7 @@ namespace osgCuda
 			if( _bufferStack.size() < _refIdx ||
 				NULL == _bufferStack.at(_refIdx) )
 			{
-				osg::notify(osg::FATAL) 
+				osg::notify(osg::WARN) 
 					<< "PingPongBuffer::init() of buffer \""<<getName()<<"\": No dimensions set but no reference buffer has been found."
 					<< std::endl;
 
@@ -105,7 +105,7 @@ namespace osgCuda
 		{
             if( !_bufferStack.at(b).valid() )
             {
-                osg::notify(osg::FATAL) 
+                osg::notify(osg::WARN) 
 					<< "PingPongBuffer::init() of buffer \""<<getName()<<"\": no buffer specified on idx "<<b<<"."
 					<< std::endl;
 
@@ -117,7 +117,7 @@ namespace osgCuda
 			osgCompute::Memory* curBuffer = dynamic_cast<osgCompute::Memory*>(_bufferStack.at(b).get());
 			if( byteSize != curBuffer->getByteSize() )
 			{
-				osg::notify(osg::FATAL) 
+				osg::notify(osg::WARN) 
 					<< "PingPongBuffer::init() of buffer \""<<getName()<<"\": Buffers have different sizes."
 					<< std::endl;
 

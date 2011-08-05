@@ -49,7 +49,7 @@ namespace osgCuda
             cudaError res = cudaFree( _devPtr );
             if( res != cudaSuccess )
             {
-                osg::notify(osg::WARN)
+                osg::notify(osg::FATAL)
                     <<"MemoryObject::~MemoryObject(): error during cudaFree(). "
                     <<cudaGetErrorString(res)<<std::endl;
             }
@@ -366,7 +366,7 @@ namespace osgCuda
         {
             if( !memset( memory._hostPtr, 0x0, getByteSize() ) )
             {
-                osg::notify(osg::WARN)
+                osg::notify(osg::FATAL)
                     << getName() << " [osgCuda::Memory::reset()] \"" << getName() << "\": error during memset() for host memory."
                     << std::endl;
 
@@ -385,7 +385,7 @@ namespace osgCuda
                 res = cudaMemset3D( pitchedPtr, 0x0, extent );
                 if( res != cudaSuccess )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << getName() << " [osgCuda::Memory::reset()] \"" << getName() << "\": error during cudaMemset3D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -399,7 +399,7 @@ namespace osgCuda
                 res = cudaMemset2D( memory._devPtr, memory._pitch, 0x0, getDimension(0)*getElementSize(), getDimension(1) );
                 if( res != cudaSuccess )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << getName() << " [osgCuda::Memory::reset()] \"" << getName() << "\": error during cudaMemset2D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -413,7 +413,7 @@ namespace osgCuda
                 res = cudaMemset( memory._devPtr, 0x0, getByteSize() );
                 if( res != cudaSuccess )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << getName() << " [osgCuda::Memory::reset()] \"" << getName() << "\": error during cudaMemset() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -571,7 +571,7 @@ namespace osgCuda
                 res = cudaMemcpy3D( &memcpyParams );
                 if( cudaSuccess != res )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << getName() << " [osgCuda::Memory::setup()] \""<<getName()<<"\": error during cudaMemcpy3D()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
@@ -584,7 +584,7 @@ namespace osgCuda
                 res = cudaMemcpy2D( memory._devPtr, memory._pitch, data, getDimension(0) * getElementSize(), getDimension(0), getDimension(1), cudaMemcpyHostToDevice );
                 if( cudaSuccess != res )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << getName() << " [osgCuda::Memory::setup()] \""<<getName()<<"\": error during cudaMemcpy2D()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
@@ -597,7 +597,7 @@ namespace osgCuda
                 res = cudaMemcpy( memory._devPtr,  data, getByteSize(), cudaMemcpyHostToDevice );
                 if( cudaSuccess != res )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << getName() << " [osgCuda::Memory::setup()] \""<<getName()<<"\": error during cudaMemcpy()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
@@ -628,7 +628,7 @@ namespace osgCuda
 
             if( data == NULL )
             {
-                osg::notify(osg::WARN)
+                osg::notify(osg::FATAL)
                     << getName() << " [osgCuda::Memory::setup()] \""<<getName()<<"\": cannot receive valid data pointer."
                     << std::endl;
 
@@ -638,7 +638,7 @@ namespace osgCuda
             res = cudaMemcpy( memory._hostPtr,  data, getByteSize(), cudaMemcpyHostToHost );
             if( cudaSuccess != res )
             {
-                osg::notify(osg::WARN)
+                osg::notify(osg::FATAL)
                     << getName() << " [osgCuda::Memory::setup()] \""<<getName()<<"\": error during cudaMemcpy()."
                     << " " << cudaGetErrorString( res ) <<"."
                     << std::endl;
@@ -684,7 +684,7 @@ namespace osgCuda
             memory._hostPtr = malloc( getByteSize() );
             if( NULL == memory._hostPtr )
             {
-                osg::notify(osg::WARN)
+                osg::notify(osg::FATAL)
                     << getName() << " [osgCuda::Memory::alloc()] \""<<getName()<<"\": error during malloc()."
                     << std::endl;
 
@@ -782,7 +782,7 @@ namespace osgCuda
                 cudaError_t res = cudaMalloc3D( &pitchPtr, extent );
                 if( cudaSuccess != res || NULL == pitchPtr.ptr )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << getName() << " [osgCuda::Memory::alloc()] \""<<getName()<<"\": error during mallocDevice3D()."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -801,7 +801,7 @@ namespace osgCuda
                 cudaError_t res = cudaMallocPitch( &memory._devPtr, (size_t*)&memory._pitch, getDimension(0) * getElementSize(), getDimension(1) );
                 if( cudaSuccess != res )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << getName() << " [osgCuda::Memory::alloc()] \""<<getName()<<"\": error during mallocDevice2D()."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -818,7 +818,7 @@ namespace osgCuda
                 cudaError_t res = cudaMalloc( &memory._devPtr, getByteSize() );
                 if( res != cudaSuccess )
                 {
-                    osg::notify(osg::WARN)
+                    osg::notify(osg::FATAL)
                         << getName() << " [osgCuda::Memory::alloc()] \""<<getName()<<"\": error during mallocDevice()."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
@@ -1139,7 +1139,7 @@ namespace osgCuda
                     res = cudaMemcpy( memory._devPtr, memory._hostPtr, getByteSize(), cudaMemcpyHostToDevice );
                     if( cudaSuccess != res )
                     {
-                        osg::notify(osg::WARN)
+                        osg::notify(osg::FATAL)
                             << getName() << " [osgCuda::Memory::sync()] \""<<getName()<<"\": cudaMemcpy() to device failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
@@ -1281,7 +1281,7 @@ namespace osgCuda
                     res = cudaMemcpy( memory._hostPtr, memory._devPtr, getByteSize(), cudaMemcpyDeviceToHost );
                     if( cudaSuccess != res )
                     {
-                        osg::notify(osg::WARN)
+                        osg::notify(osg::FATAL)
                             << getName() << " [osgCuda::Memory::sync()] \""<<getName()<<"\": cudaMemcpy() to host failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;

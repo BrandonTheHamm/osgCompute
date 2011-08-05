@@ -633,7 +633,7 @@ namespace osgCompute
     {
         if( !state.getGraphicsContext() )
         {
-            osg::notify(osg::FATAL)  << "Computation::setupContext() for \""
+            osg::notify(osg::WARN)  << "Computation::setupContext() for \""
                 << getName()<<"\": GLObjectsVisitor must provide a valid graphics context."
                 << std::endl;
 
@@ -643,7 +643,7 @@ namespace osgCompute
         if( NULL != GLMemory::getContext() && 
             GLMemory::getContext()->getState()->getContextID() != state.getContextID() )
         {
-            osg::notify(osg::FATAL)  << "Computation::setupContext() for \""
+            osg::notify(osg::WARN)  << "Computation::setupContext() for \""
                 << getName()<<"\": GLObjectsVisitor can handle only a single context."
                 << " However multiple contexts are detected."
                 << " Please make shure to share a computation context by several windows."
@@ -663,7 +663,7 @@ namespace osgCompute
     {
         if( !cv.getState() )
         {
-            osg::notify(osg::FATAL)  << "Computation::addBin() for \""
+            osg::notify(osg::WARN)  << "Computation::addBin() for \""
                 << getName()<<"\": CullVisitor must provide a valid state."
                 << std::endl;
 
@@ -682,7 +682,7 @@ namespace osgCompute
         osgUtil::RenderBin* oldRB = cv.getCurrentRenderBin();
         if( !oldRB )
         {
-            osg::notify(osg::FATAL)  
+            osg::notify(osg::WARN)  
                 << getName() << " [Computation::addBin()]: current CullVisitor has no active RenderBin."
                 << std::endl;
 
