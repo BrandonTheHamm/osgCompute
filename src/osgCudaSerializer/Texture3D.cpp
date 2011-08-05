@@ -15,7 +15,7 @@ static bool checkIdentifiers( const osgCuda::Texture3D& interopObject )
 static bool writeIdentifiers( osgDB::OutputStream& os, const osgCuda::Texture3D& interopObject )
 {	
 	const osgCompute::IdentifierSet ids = interopObject.getIdentifiers();
-	os << ids.size() << osgDB::BEGIN_BRACKET << std::endl;
+	os << (unsigned int)ids.size() << osgDB::BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::IdentifierSetCnstItr idItr = ids.begin();
 		idItr != ids.end();

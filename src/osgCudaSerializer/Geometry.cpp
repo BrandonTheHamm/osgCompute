@@ -15,7 +15,7 @@ static bool checkIdentifiers( const osgCuda::Geometry& geometry )
 static bool writeIdentifiers( osgDB::OutputStream& os, const osgCuda::Geometry& geometry )
 {	
 	const osgCompute::IdentifierSet ids = geometry.getIdentifiers();
-	os << ids.size() << osgDB::BEGIN_BRACKET << std::endl;
+	os << (unsigned int)ids.size() << osgDB::BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::IdentifierSetCnstItr idItr = ids.begin();
 		idItr != ids.end();
