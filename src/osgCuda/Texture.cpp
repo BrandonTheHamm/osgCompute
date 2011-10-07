@@ -849,7 +849,20 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy()."
+                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy3D()."
+                        << " " << cudaGetErrorString( res ) <<"."
+                        << std::endl;
+
+                    return false;
+                }
+            }
+            else if( getNumDimensions() == 2) 
+            {
+                cudaError res = cudaMemcpy2D( memory._devPtr, memory._pitch, data, getDimension(0)*getElementSize(), getDimension(0)*getElementSize(), getDimension(1),  cudaMemcpyHostToDevice );
+                if( cudaSuccess != res )
+                {
+                    osg::notify(osg::FATAL)
+                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy2D()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
