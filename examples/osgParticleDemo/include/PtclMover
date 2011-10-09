@@ -16,7 +16,7 @@
 #define PTCLDEMO_PTCL_MOVER 1
 
 #include <osg/ref_ptr>
-#include <osgCompute/Module>
+#include <osgCompute/Computation>
 #include <osgCompute/Memory>
 
 namespace PtclDemo
@@ -24,34 +24,19 @@ namespace PtclDemo
     class AdvanceTime : public osgCompute::Resource
     {
     public:
-        AdvanceTime() : osgCompute::Resource() {}
-
-        META_Object(PtclDemo,AdvanceTime)
-
-        osg::FrameStamp* _fs;
-
-    protected:
-        virtual ~AdvanceTime() {}
-
-    private:
-        AdvanceTime(const AdvanceTime&, const osg::CopyOp& ) {} 
-        inline AdvanceTime &operator=(const AdvanceTime &) { return *this; }
+        osg::ref_ptr<osg::FrameStamp> _fs;
     };
 
-    class PtclMover : public osgCompute::Module 
+    class PtclMover : public osgCompute::Computation 
     {
     public:
-        PtclMover() : osgCompute::Module() {clearLocal();}
+        PtclMover() : osgCompute::Computation() {clearLocal();}
 
-        META_Object( PtclDemo, PtclMover )
-
-        // Modules have to implement at least this
-        // three methods:
         virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+        virtual void clear() { clearLocal(); osgCompute::Computation::clear(); }
     protected:
         virtual ~PtclMover();
         void clearLocal();

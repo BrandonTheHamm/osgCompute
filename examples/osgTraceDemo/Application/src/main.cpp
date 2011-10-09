@@ -30,7 +30,7 @@
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCuda/Computation>
+#include <osgCuda/Program>
 #include <osgCuda/Memory>
 #include <osgCuda/Geometry>
 
@@ -39,6 +39,9 @@ osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
 {
     osg::Geometry* bbgeom = new osg::Geometry;
 
+    ////////////////////
+    // SETUP GEOMETRY //
+    ////////////////////
     // vertices
     osg::Vec3Array* vertices = new osg::Vec3Array();
 
@@ -94,9 +97,9 @@ osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
     bbgeom->setColorArray( color );
     bbgeom->setColorBinding( osg::Geometry::BIND_OVERALL );
 
-    ////////////////
-    // SETUP BBOX //
-    ////////////////
+    /////////////////
+    // SETUP NODES //
+    /////////////////
     osg::Geode* bbox = new osg::Geode;
     bbox->addDrawable( bbgeom );
 
@@ -128,10 +131,10 @@ osg::Geode* getGeode( unsigned int numParticles )
     // Add particles
     geode->addDrawable( ptclGeom.get() );
 
-    ////////////
-    // SPRITE //
-    ////////////
-    // increase point size within shader
+    ///////////
+    // STATE //
+    ///////////
+    // Increase point size within shader
     geode->getOrCreateStateSet()->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
 
     osg::PointSprite* sprite = new osg::PointSprite();
@@ -139,6 +142,14 @@ osg::Geode* getGeode( unsigned int numParticles )
 
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
+
+    // Screen resolution for particle sprite
+    osg::Uniform* pixelsize = new osg::Uniform();
+    pixelsize->setName( "pixelsize" );
+    pixelsize->setType( osg::Uniform::FLOAT_VEC2 );
+    pixelsize->set( osg::Vec2(1.0f,50.0f) );
+    geode->getOrCreateStateSet()->addUniform( pixelsize );
+    geode->setCullingActive( false );
 
     ////////////
     // SHADER //
@@ -189,124 +200,101 @@ osg::Geode* getGeode( unsigned int numParticles )
         "}                                                                                      \n";
 
     program->addShader( new osg::Shader( osg::Shader::FRAGMENT, frgShader ) );
-
-
     geode->getOrCreateStateSet()->setAttribute(program);
-
-    // Screen resolution for particle sprite
-    osg::Uniform* pixelsize = new osg::Uniform();
-    pixelsize->setName( "pixelsize" );
-    pixelsize->setType( osg::Uniform::FLOAT_VEC2 );
-    pixelsize->set( osg::Vec2(1.0f,50.0f) );
-    geode->getOrCreateStateSet()->addUniform( pixelsize );
-    geode->setCullingActive( false );
 
     return geode;
 }
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Computation> setupComputation()
+osg::ref_ptr<osgCompute::Program> setupProgram()
 {
-    osg::ref_ptr<osgCompute::Computation> computationEmitter = new osgCuda::Computation;
-    computationEmitter->setName( "emit particles computation" );
-    osg::ref_ptr<osgCompute::Computation> computationTracer = new osgCuda::Computation;
-    computationTracer->setName( "trace particles computation" );
+    osg::ref_ptr<osgCompute::Program> programEmitter = new osgCuda::Program;
+    programEmitter->setName( "emit particles program" );
+    osg::ref_ptr<osgCompute::Program> programTracer = new osgCuda::Program;
+    programTracer->setName( "trace particles program" );
 
-    // Execute the computation during the update traversal before the subgraph is handled. 
-    // This is the default behaviour. Use the following line to execute the computation in
+    // Execute the program during the update traversal before the subgraph is handled. 
+    // This is the default behaviour. Use the following line to execute the program in
     // the rendering traversal after the subgraph has been rendered.
-    //osgCompute::Computation::ComputeOrder order = osgCompute::Computation::PRERENDER_AFTERCHILDREN;
-    osgCompute::Computation::ComputeOrder order = osgCompute::Computation::UPDATE_BEFORECHILDREN;
-    computationEmitter->setComputeOrder( order );
-    computationTracer->setComputeOrder( order );
+    //osgCompute::Program::ComputeOrder order = osgCompute::Program::PRERENDER_AFTERCHILDREN;
+    osgCompute::Program::ComputeOrder order = osgCompute::Program::UPDATE_BEFORECHILDREN;
+    programEmitter->setComputeOrder( order );
+    programTracer->setComputeOrder( order );
 
     ////////////////////
     // SETUP HIERACHY //
     ////////////////////
-    osgCompute::Module* ptclTracer = osgCompute::Module::loadModule("osgcuda_ptcltracer");
+    osgCompute::Computation* ptclTracer = osgCompute::Computation::loadComputation("osgcuda_ptcltracer");
     if( ptclTracer )
     {
         ptclTracer->addIdentifier( "osgcuda_ptcltracer" );
-        computationTracer->addModule( *ptclTracer );
+        programTracer->addComputation( *ptclTracer );
     }
 
-    osgCompute::Module* ptclEmitter = osgCompute::Module::loadModule("osgcuda_ptclemitter");
+    osgCompute::Computation* ptclEmitter = osgCompute::Computation::loadComputation("osgcuda_ptclemitter");
     if( ptclEmitter )
     {
         ptclEmitter->addIdentifier( "osgcuda_ptclemitter" );
-        computationEmitter->addModule( *ptclEmitter );
+        programEmitter->addComputation( *ptclEmitter );
     }
-    computationTracer->addChild( computationEmitter );
+    programTracer->addChild( programEmitter );
 
-    // Write this computation to file
-    // osgDB::writeNodeFile( *computationTracer, "tracedemo.osgt" );
+    // Write this program to file
+    // osgDB::writeNodeFile( *programTracer, "tracedemo.osgt" );
 
-    return computationTracer;
+    return programTracer;
 }
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Computation> loadComputation()
+osg::ref_ptr<osgCompute::Program> loadProgram()
 {
-    osg::ref_ptr<osgCompute::Computation> computationNode;
+    osg::ref_ptr<osgCompute::Program> program;
 
     std::string dataFile = osgDB::findDataFile( "osgTraceDemo/scenes/tracedemo.osgt" );
     if( !dataFile.empty() )
-        computationNode = dynamic_cast<osgCuda::Computation*>( osgDB::readNodeFile( dataFile ) );
+        program = dynamic_cast<osgCuda::Program*>( osgDB::readNodeFile( dataFile ) );
 
-    return computationNode;
+    if( !program.valid() ) program = setupProgram();
+    return program;
 }
 
 //------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
-    osg::ArgumentParser arguments(&argc, argv);
-    osgViewer::Viewer viewer(arguments);
 
-    osg::Vec3 bbmin(-1.f,-1.f,-1.f);
-    osg::Vec3 bbmax(1.f,1.f,1.f);
-    unsigned int numParticles = 64000;
-
-    /////////////////
-    // COMPUTATION //
-    /////////////////
-    // Please note that loading need the modules to be
-    // INSTALLED first. Otherwise the serializer cannot
-    // find the respective modules.
-    osg::ref_ptr<osgCompute::Computation> computation = loadComputation();
-    if( !computation.valid() ) computation = setupComputation();
-
-
-    /////////////////
-    // SETUP SCENE //
-    /////////////////
-    osg::Group* scene = new osg::Group;
-    scene->addChild( computation );
-    scene->addChild( getBoundingBox( bbmin, bbmax ) );
-    scene->addChild( getGeode( numParticles ) );
-
-
-    //////////////////////
-    // RESOURCE VISITOR //
-    //////////////////////
-    // The resource-visitor will distribute all resources over
-    // the scene.
-    osg::ref_ptr<osgCompute::ResourceVisitor> rv = new osgCompute::ResourceVisitor;
-    rv->apply( *scene );
+    osgViewer::Viewer viewer(osg::ArgumentParser(&argc, argv));
+    viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
+    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
+    viewer.setUpViewInWindow( 50, 50, 640, 480);
+    viewer.addEventHandler(new osgViewer::StatsHandler);
 
     //////////////////
     // SETUP VIEWER //
     //////////////////
-    // You must use the single threaded version since osgCompute currently
-    // does only support single threaded applications. Please ask in the
-    // forum for the multi-threaded version if you need it.
-    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
-    viewer.setReleaseContextAtEndOfFrameHint(false);
-    viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
-    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
-    viewer.setUpViewInWindow( 50, 50, 640, 480);
+    osgCuda::setupOsgCudaAndViewer( viewer );
+
+    /////////////////
+    // SETUP SCENE //
+    /////////////////
+    // Please note that loading need the modules to be
+    // INSTALLED first. Otherwise the serializer cannot
+    // find the respective modules.
+    osg::ref_ptr<osgCompute::Program> program = loadProgram();
+    
+    osg::Group* scene = new osg::Group;
+    scene->addChild( program );
+    scene->addChild( getBoundingBox( osg::Vec3(-1.f,-1.f,-1.f), osg::Vec3(1.f,1.f,1.f) ) );
+    scene->addChild( getGeode( 64000 ) );
     viewer.setSceneData( scene );
-    viewer.addEventHandler(new osgViewer::StatsHandler);
+
+    //////////////////////
+    // RESOURCE VISITOR //
+    //////////////////////
+    // The resource-visitor will collect and distribute all resources 
+    // of the scene.
+    osg::ref_ptr<osgCompute::ResourceVisitor> rv = new osgCompute::ResourceVisitor;
+    rv->apply( *scene );
 
     return viewer.run();
 }

@@ -47,7 +47,7 @@ SET(TARGET_H
 	${HEADER_PATH}/Memory
 	${HEADER_PATH}/Export
 	${HEADER_PATH}/Geometry
-	${HEADER_PATH}/Computation
+	${HEADER_PATH}/Program
     ${HEADER_PATH}/Texture
 )
 
@@ -57,7 +57,7 @@ SET(TARGET_SRC
 	Memory.cpp
 	Geometry.cpp
 	Texture.cpp
-	Computation.cpp
+	Program.cpp
 )
 
 
@@ -108,6 +108,7 @@ LINK_WITH_VARIABLES(${LIB_NAME}
 	OPENTHREADS_LIBRARY
 	OSG_LIBRARY
 	OSGDB_LIBRARY
+	OSGVIEWER_LIBRARY
     CUDA_RUNTIME_LIBRARY
 )
 

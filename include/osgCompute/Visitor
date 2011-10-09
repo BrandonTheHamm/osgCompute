@@ -22,12 +22,12 @@
 
 namespace osgCompute
 {
-    class Computation;
+    class Program;
 
 	//! Default class for resource sharing
     /**
 	A resource visitor collects and distributes or exchanges resources in a graph-structure.
-	You can use a resource visitor to share resources among modules of different computation nodes.
+	You can use a resource visitor to share resources among computations of different program nodes.
 	\code
 	osg::ref_ptr<osgCompute::ResourceVisitor> visitor = new ResourceVisitor;
 	visitor->apply( *sceneNode );
@@ -35,7 +35,7 @@ namespace osgCompute
 	<br />
 	<br />
 	As any other node visitor the resource visitor traverses the graph and synchronizes resources between
-	different computation nodes. A resource visitor can run with different combinations of modes (see setMode()). To set the 
+	different program nodes. A resource visitor can run with different combinations of modes (see setMode()). To set the 
 	default mode of the resource visitor do the following:
 	\code
 	visitor->setMode( 
@@ -44,12 +44,12 @@ namespace osgCompute
 		osgCompute::ResourceVisitor::RESET );
 	\endcode
 	First the visitor collects all resources (COLLECT) and in the second pass the resources are distributed to all 
-	computation nodes (DISTRIBUTE). After the second pass all resources are removed from the visitor's 
+	program nodes (DISTRIBUTE). After the second pass all resources are removed from the visitor's 
 	internal list (RESET). <br />
 	<br />
 	<br />
 	You can add resources before traversal in order to spread them over the graph. In the following example
-	the resource with identifier "PTCL_BUFFER" is exchanged in all computation nodes of the scene. Old resources
+	the resource with identifier "PTCL_BUFFER" is exchanged in all program nodes of the scene. Old resources
 	with this identifier are replaced by the new resource
 	\code
 	osg::ref_ptr<osgCompute::Resource> myResource = new osgCuda::Buffer;
@@ -86,10 +86,10 @@ namespace osgCompute
 		*/
 		/** \var Mode DISTRIBUTE 
 		Distribute resources among the graph. The resource list of a visitor will be distributed to all
-		computation nodes that will be found. Can be combined with COLLECT and/or RESET. 
+		program nodes that will be found. Can be combined with COLLECT and/or RESET. 
 		*/
 		/** \var Mode EXCHANGE 
-		Exchange resources in the graph. Each computation node in the graph will exchange its resources 
+		Exchange resources in the graph. Each program node in the graph will exchange its resources 
 		with the resource of the visitor. Can be combined with RESET
 		*/
 		/** \var Mode RESET 
@@ -166,7 +166,7 @@ namespace osgCompute
         virtual void reset();
 
     protected:
-        friend class Computation;
+        friend class Program;
 
 		/** Destructor.
 		*/

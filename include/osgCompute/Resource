@@ -43,7 +43,7 @@ namespace osgCompute
 		Abstract base class for device dependent objects.
 		Any object that is in any way connected with a device 
 		context should derive from osgCompute::Resource, 
-		like Memory or Module objects. Resources have 
+		like Memory or Computation objects. Resources have 
 		string identifiers to uniquely distinguish between 
 		different resources of the same type.
 		\code
@@ -52,7 +52,7 @@ namespace osgCompute
 		osg::ref_ptr<osgCompute::Resource> resourceB = new osgCuda::Buffer;
 		resourceA->addIdentifier("OUTPUT RESOURCE");
 		\endcode
-		Each module will check for these names during acceptResource() 
+		Each computation will check for these names during acceptResource() 
 		in order to identify its resources of interest.
     */
     class LIBRARY_EXPORT Resource : public osg::Object
@@ -61,6 +61,8 @@ namespace osgCompute
 		/** Constructor. Identifier list is empty by default.
 		*/
         Resource();
+
+        META_Object( osgCompute, Resource );
 
 		/** Init will check for internal parameters applied to 
 		resources and will create device dependent objects.

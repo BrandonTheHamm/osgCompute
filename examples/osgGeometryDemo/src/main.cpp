@@ -27,20 +27,20 @@
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCuda/Computation>
+#include <osgCuda/Program>
 #include <osgCuda/Geometry>
 #include "Warp"
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Computation> setupComputation()
+osg::ref_ptr<osgCompute::Program> setupProgram()
 {
-	osg::ref_ptr<osgCompute::Computation> computationNode = new osgCuda::Computation;
+	osg::ref_ptr<osgCompute::Program> program = new osgCuda::Program;
 
 	//////////////////
 	// COW OSG FILE //
 	//////////////////
     osg::ref_ptr<osg::Group> cowModel = dynamic_cast<osg::Group*>( osgDB::readNodeFile("cow.osg") );
-    if( !cowModel.valid() ) return computationNode;
+    if( !cowModel.valid() ) return program;
 
 	///////////////////////////////////
 	// TRANFORM TO OSGCUDA::GEOMETRY //
@@ -71,64 +71,46 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
 	animTransform->setUpdateCallback(nc);
 	animTransform->addChild( cowModel );
 
-	computationNode->setComputeOrder( osgCompute::Computation::UPDATE_BEFORECHILDREN );
-	computationNode->addChild( animTransform );
+	program->setComputeOrder( osgCompute::Program::UPDATE_BEFORECHILDREN );
+	program->addChild( animTransform );
 
 	//////////////////
 	// SETUP MODULE //
 	//////////////////
-    osg::ref_ptr<osgCompute::Module> warpModule = new GeometryDemo::Warp;
-    warpModule->setLibraryName("osgcuda_warp");
-	warpModule->addIdentifier("osgcuda_warp");
-	computationNode->addModule( *warpModule );
-    computationNode->addResource( *geometry->getMemory() );
+    osg::ref_ptr<osgCompute::Computation> warpComputation = new GeometryDemo::Warp;
+    warpComputation->setLibraryName("osgcuda_warp");
+	warpComputation->addIdentifier("osgcuda_warp");
+	program->addComputation( *warpComputation );
+    program->addResource( *geometry->getMemory() );
 
-	// Write this computation to file
-	//osgDB::writeNodeFile( *computationNode, "geomdemo.osgt" );
+	// Serialize the program to file by activating the
+    // following line of code:
+	// osgDB::writeNodeFile( *program, "geomdemo.osgt" );
+    // Afterwards you can load it via:
+    // osg::ref_ptr<osg::Node> program = osgDB::readNodeFile( "PATH_TO_FILE/geomdemo.osgt" );
 
-    return computationNode;
+    return program;
 }
 
 //------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
-	osg::ArgumentParser arguments(&argc,argv);
-	osgViewer::Viewer viewer(arguments);
-
-	/////////////////
-	// COMPUTATION //
-	/////////////////
-	osg::ref_ptr<osgCompute::Computation> computation = setupComputation();
-
-	osg::ref_ptr<osgCompute::Module> module = computation->getModule( "osgcuda_warp" );
-	if( !module )
-	{
-		osg::notify(osg::FATAL) << "Cannot find module identified by osgcuda_warp." << std::endl;
-		return -1;
-	}
-	module->setUserData( viewer.getFrameStamp() );
-
-    /////////////////
-    // SCENE SETUP //
-    /////////////////
-    osg::Group* scene = new osg::Group;
-    scene->addChild( computation );
-
-    //////////////////
-    // VIEWER SETUP //
-    //////////////////
+    osgViewer::Viewer viewer(osg::ArgumentParser(&argc,argv));
     viewer.setUpViewInWindow( 50, 50, 640, 480);
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
-
-    // You must use single threaded version since osgCompute currently
-    // does only support single threaded applications. Please ask in the
-    // forum for the multi-threaded version if you need it.
-
-    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
-    viewer.setReleaseContextAtEndOfFrameHint(false);
-    viewer.setSceneData( scene );
     viewer.addEventHandler(new osgViewer::StatsHandler);
+
+    //////////////////
+    // SETUP VIEWER //
+    //////////////////
+    osgCuda::setupOsgCudaAndViewer( viewer );
+
+	/////////////////
+	// SETUP SCENE //
+	/////////////////
+    osg::ref_ptr<osgCompute::Program> program = setupProgram();  
+    viewer.setSceneData( program );
 
     return viewer.run();
 }

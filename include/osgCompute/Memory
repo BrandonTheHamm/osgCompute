@@ -389,7 +389,7 @@ namespace osgCompute
 		The usage flag of a GLMemoryAdapter defines where a GLMemory
 		object is frequently updated. Default is GL_SOURCE_COMPUTE_TARGET which
 		tells osgCompute that the memory is frequently changed during
-		the execution of modules. Use osgCompute::GLMemoryAdapter::setUsage()
+		the execution of computations. Use osgCompute::GLMemoryAdapter::setUsage()
 		to change the default behavior:
 		\code
 		osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::Texture2D;

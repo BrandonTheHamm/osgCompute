@@ -12,766 +12,291 @@
 *
 * The full license is in LICENSE file included with this distribution.
 */
-/** \mainpage
-\section Introduction
-osgCompute is a 3rd party library for OpenSceneGraph. It is designed to make full integration  <br />
-of GPGPU algorithms (like CUDA) into OpenSceneGraph easy. It was developed 2009 by the <br />
-Computergraphics and Multimediasystem Group at the University of Siegen. The library currently <br />
-is divided into two packages osgCompute and osgCuda.
-
-\image html "Packages.png"
-
-\subsection osgCompute
-osgCompute is the abstract base library for the execution of code on parallel streaming processors. <br />
-The library is connected to OpenSceneGraph (OSG) and thus it can be included in the scenegraph.		<br />
-It gives the user the possibility to jump to the Graphics Processing Unit (GPU) for any kind of		<br />
-calculations. The manipulated data is then afterwards available to the scenegraph for further		<br />
-processing (e.g. rendering).
-
-\subsection osgCuda
-osgCuda is based on the osgCompute library and implements the specific functionality for NVIDIA's CUDA. <br />
-CUDA is a general purpose parallel computing architecture that leverages the parallel compute engine in <br />
-NVIDIA GPUs to solve many complex computational problems in a fraction of the time required on a CPU.	<br />
-
-\section Features
-osgCompute takes advantage of parallel streaming processors on GPUs. It offers a simple interface for GPU 
-progamming which dramatically increases the speed of your application (since osgCuda is the only library 
-which implements this functionality we refer to some CUDA specific terms in the following): 
-<ul>
-    <li>Jump to the GPU within the OSG scenegraph for GPU calculations</li>
-    <li>Further processing of the GPU data within the OSG scenegraph</li>
-    <li>Basic data types of the streaming processors are encapsulated in Memory objects</li>
-    <li>Memory structures ensure a proper exchange of OSG and CUDA data types as well as between various modules </li>
-    <li>Quick start for scientific visualization</li>
-    <li>Examples easily describe how to use the library</li>
-    <li>osgCuda supports the latest Runtime API of CUDA</li>
-    <li>Easy debugging of the graphics kernels</li>
-</ul>
-
-\section Examples
-See \ref StepByStepExamples section. 
-
-\section Installation
-See \ref StepByStepInstallation section.
-
-\section US Usage
-See \ref Usage section.
-
-\section KI Known Issues
-See \ref KnownIssues section. 
-
-\section License
-osgCompute is protected by Copyright, and is licensed as OpenSource, so the source code <br />
-is freely available, modifiable and redistributed under terms of the <br />
-Lesser Gnu Public License (LGPL).
-
-\section Acknowledgments
-We would like to thank Robert Osfield for his support regarding osgCompute and for his <br />
-incredible work on OpenSceneGraph. Additionally, we would also like to thank Art Tevs  <br />
-for discussing some design questions as well as testing the modules. 
-
-\section Support
-For support please subscribe to the public 
-<a href="http://www.openscenegraph.org/projects/osg/wiki/MailingLists "> 
-mailing list</a> of OpenSceneGraph <br />
-or go directly to the <a href="http://forum.openscenegraph.org/"> 
-OpenSceneGraph forum </a> which is synchronized with the mailing lists.
-
-\section Publication 
-J. Orthmann, M. Keller and A. Kolb<br />
-<a href="http://www.cg.informatik.uni-siegen.de/data/Publications/2009/orthmann09osgcompute.pdf">
-"Integrating GPGPU Functionality into Scene Graphs"</a> <br />
-In 14th International Workshop on Vision, Modeling, and Visualization, 2009 <br />
-*/
-
-
-
-
-/** \page StepByStepInstallation Installation 
-
-Three steps are necessary in order to setup a running osgCuda environment: <br />
-
-\section OpenSceneGraph Install OpenSceneGraph
-As osgCompute is a 3rd party library to OpenSceneGraph you first have to setup 
-<a href="http://www.openscenegraph.org/">OpenSceneGraph</a>. Follow the instructions on the website.
-We recommend using a current version of <a href="http://www.openscenegraph.org/projects/osg/wiki/Downloads/SVN"> OpenSceneGraph </a>.
-After installation please make sure that the environment variables OSG_BIN_PATH, OSG_INCLUDE_PATH and OSG_LIB_PATH are set correctly.  
-
-\section Environment Install CUDA environment
-For CUDA integration you need to install the current 
-<a href="http://developer.nvidia.com/object/gpucomputing.html">CUDA Toolkit</a>. 
-The environment variable CUDA_BIN_PATH, CUDA_INCLUDE_PATH and CUDA_LIB_PATH should be defined 
-for proper work with CUDA. They should point to the binary, include and lib path of your CUDA installation.
-
-\section Library Install osgCompute
-\subsection Download
-Download the source files and the data files via the following SVN packages:<br />
-Sources: "svn co https://svn.cg.informatik.uni-siegen.de/svt/osgCompute/trunk osgCompute"		<br />
-Data: "svn co https://svn.cg.informatik.uni-siegen.de/svt/osgCompute-Data/trunk osgCompute-Data"	<br />
-
-\subsection Setup
-Setup the OSGCOMPUTE_FILE_PATH variable to the data folder containing the data files. Then use CMake 
-to generate the build environment of your choice. The CMake script for osgCompute will look for the 
-previous defined environment variables in order to find CUDA and OpenSceneGraph files automatically. 
-A correct CMake configuration should look like the following image:
-
-\image html "CMake.png" "CMake Configuration of osgCompute"
-
-You can now start to build osgCompute. After installation try to run one of the examples in order to test the 
-installation. If you have built dynamic libraries of osgCompute and osgCuda extend the system path variable.
-You are now ready to setup your Application with osgCuda integration.
-*/
-
-
-
-
-/** \page StepByStepExamples Examples
-
-osgCompute comes with several examples demonstrating the applicability of
-the library. For any details please examine the source code of the examples.
-Please make sure that you have checked out the osgCompute-Data SVN repository
-and have extended the OSG_FILE_PATH variable before running the examples:
-
-\image html "Examples.png" "osgCompute examples"
-
-\section osgTraceDemo
-osgTraceDemo uses the new osgCuda serializer and loads a scene graph from a file. 
-The two modules which are used in the computation are loaded from libraries. 
-The result of the vortex field's tracing is rendered by OSG.
-
-\section osgTexDemo
-osgTexDemo loads an osg::Image which is then processed by an osgCuda::Module. The module 
-uses CUDA arrays and CUDA texture filtering. Finally, the result is rendered by OSG.
-
-\section osgEndiannessDemo
-osgEndiannessDemo uses osgCuda for computing a simple swap of the byte order of a 
-given input stream. This example demonstrates the usage of osgCuda with no OpenGL 
-functionality.
-
-\section osgParticleDemo
-osgParticleDemo uses osgCuda and the OSG scenegraph for a simple particle movement. 
-Two osgCuda::Modules take care of the particle emitter and the particle mover functionality. 
-The result calculated by the modules is then rendered by OSG using a point sprite approach 
-for proper visualization.
-
-\section osgGeometryDemo
-osgGeometryDemo uses osgCuda and the OSG scenegraph for a deformation of the geometry. 
-The osgCuda::Module "warp" moves the vertices along the normal vector. The result is then 
-rendered by OSG.
-*/
-
-
-
-
-/** \page Usage Usage 
-Three components are implemented in order to extend OSG with compute capabilities:
-
-\image html "Components.png" "Components of osgCompute"
-
-<ul>
-    <li>A <b>Computation Node</b> is a container for modules and resources.</li> 
-    <li>Users implement (parallel) algorithms within <b>Modules</b>. </li>
-    <li>All modules operate on <b>Resources</b> like textures or geometry objects which might be 
-    spread all over the scene graph.</li>
-</ul>
-
-<br />
-<br />
-
-\section ComputationNodes Computation Nodes
-A osgCompute::Computation node is a container class for application specific modules and resources. It manages 
-the context handling between the Compute API (e.g. CUDA) and OpenGL. Computation Nodes are implemented as a sort 
-of RenderBin and thus they can be used similar to an osg::Camera in a scene graph structure. However they are not restricted 
-to run during rendering. A computation's modules can be executed during the update traversal as well. The execution time of a 
-computation can be changed via osgCompute::Computation::setComputeOrder(). 
-The default compute order is osgCompute::UPDATE_BEFORECHILDREN. By default modules are launched during the update cycle 
-before any children node is updated. Use the following lines to setup a Computation Node which executes modules after 
-the rendering as a post process:
-\code
-    osg::ref_ptr<osgCompute::Computation> computationNode = new osgCuda::Computation;
-    computationNode->setComputeOrder( osgCompute::POSTRENDER_AFTERCHILDREN );
-    rootNode->addChild( computationNode );
-\endcode
-A Computation Node can contain more than one module producing a pipeline of processing steps. 
-See osgCompute::LaunchCallback for further information on changing the default
-top-down execution of the attached modules. <br />
-Modules do operate on resource which can be found all over the scene graph. However, instead of adding a resource 
-directly by osgCompute::Computation::addResource() you can utilize a resource visitor. A osgCompute::ResourceVisitor
-by default collects resources during the first traversal and distributes them among the graph in a second traversal.
-That way resources can be easily shared between different computation nodes as well.
-
-\image html "Visitor.png" "osgCompute::ResourceVisitor"
-
-\code
-osg::ref_ptr<osgCompute::ResourceVisitor> visitor = new ResourceVisitor;
-visitor->apply( *rootNode );
-\endcode
-
-<br />
-<br />
-
-\section Modules
-Modules can be attached to computation nodes by osgCompute::Computation::addModule(). Users have to implement
-their own modules by reimplementing the osgCompute::Module::launch() function of osgCompute::Module. A 
-computation's modules gain access to all resources that have been added to a computation node. Each module 
-has to decide if it can make use of a resource during osgCompute::Module::acceptResource(). acceptResource() is 
-called automatically for each resource. Dependent on a computation's compute order all modules are launched 
-frequently at a specific time in each frame. One can disable a module by calling osgCompute::Module::disable().
-If some operations should be done only once during initialization a user can reimplement a module's 
-osgCompute::Module::init() function.
-
-\image html "Module_Graph.png" "osgCompute::Module"
-
-The following code shows how to implement "MyModule":
-\code
-class MyModule : public osgCompute::Module
-{
-public:
-    MyModule() {}
-    META_Object( MyNamespace, MyModule );
-
-    virtual void launch()
-    {
-        //...Execute CUDA code with _myresource...
-    }
-
-    virtual void acceptResource( osgCompute::Resource& resource )
-    {   
-        //...We make use of "My Resource" only...
-        if( resource.isIdentifiedBy("My Resource") )
-            _myresource = &resource;	
-    }
-private:
-    osg::ref_ptr<osgCompute::Resource> _myresource;
-}
-\endcode
-
-<br />
-<br />
-
-
-\section Resources
-osgCompute::Resource objects can be of different type but mostly are osgCompute::Memory objects. 
-Modules identify resources by name. A resource can have different names which are
-setup by osgCompute::Resource::addIdentifier(). Use the following lines
-to create a CUDA linear memory object of 1024x512 floats:
-\code
-osg::ref_ptr<osgCompute::Memory> myResource = new osgCuda::Buffer;
-myResource->setDimension( 0, 1024 );
-myResource->setDimension( 1, 512 );
-myResource->setElementSize( sizeof(float) );
-myResource->addIdentifier("My Resource");
-computationNode->addResource( myResource );
-\endcode
-Other type of memory resources are GL interoperability resources like osgCuda::Geometry. 
-To receive a valid memory pointer use osgCompute::GLMemoryAdapter::getMemory(). osgCuda::Geometry
-derives functionality from osg::Geometry and just as a geometry can be added to a osg::Geode in order
-to render the vertices. The very same goes for osgCuda::Texture2D, osgCuda::Texture3D and 
-osgCuda::TextureRectangle objects.
-\code
-osg::ref_ptr<osgCuda::Geometry> myGeometry = new osgCuda::Geometry;
-myGeometry->addIdentifier("My Resource");
-...
-// Apply geometry to the graph
-myGeode->addDrawable( myGeometry );
-computationNode->addResource( myGeometry->getMemory() );
-\endcode
-<br />
-<br />
-<br />
-All memory resources allocate memory lazily at the first time of use. One can receive a pointer to device
-memory by calling osgCompute::Memory::map(). 
-\code
-virtual void launch()
-{
-    void* devPtr = _myresource->map();
-    // Call a CUDA kernel with devPtr
-    kernel<<<blocks,threads>>>( devPtr );
-}
-\endcode
-A memory resource can not only be allocated on the device, allocating host memory is possible as well. 
-One has to specify the required memory space as a parameter to map(). 
-\code
-virtual void launch()
-{
-    void* hostPtr = _myresource->map( osgCompute::MAP_HOST_TARGET );
-    // Change resource on the host
-    memset( hostPtr, 0x0, _myresource->getByteSize() );
-}
-\endcode
-If the memory resource is allocated on host and device memory a memory object will take care of synchronization
-between both memory spaces.
-*/
-
-
-
-
-/** \page KnownIssues Known Issues 
-Several issues are currently under construction:
-<ul>
-	<li> Only single threaded applications are supported. </li> 
-	<li> If multiple GL contexts are utilized modules can only be executed in a single context. </li>
-	<li> Unregistering of CUDA bound but already deleted GL objects will cause an exception. This happens 
-	if GL objects will not be released at time of releaseGLObjects() traversal.</li>
-    <li> To enure that GL context is always available for proper data syncronization during mapping 
-    set hint setReleaseContextAtEndOfFrameHint to false.</li>
-</ul>
-*/
 
 #ifndef OSGCOMPUTE_COMPUTATION
 #define OSGCOMPUTE_COMPUTATION 1
 
-#include <set>
-#include <osg/Group>
+#include <vector>
+#include <osg/Object>
+#include <osg/NodeVisitor>
 #include <osgCompute/Export>
 #include <osgCompute/Resource>
 #include <osgCompute/Callback>
-#include <osgCompute/Module>
 
-#define OSGCOMPUTE_AFTERCHILDREN			0x1
-#define OSGCOMPUTE_BEFORECHILDREN			0x2
-#define OSGCOMPUTE_NOCHILDREN				0x10
-#define OSGCOMPUTE_RENDER					0x100
-#define OSGCOMPUTE_POSTRENDER				0x104
-#define OSGCOMPUTE_PRERENDER				0x108
-#define OSGCOMPUTE_NORENDER					0x200
-#define OSGCOMPUTE_UPDATE					0x10000
-
-namespace osg
-{
-    class NodeVisitor;
-}
-
-namespace osgUtil
-{
-    class CullVisitor;
-}
-
-#define META_Computation( libraryname, classname, binlibrary, binclass )                                \
-    META_Object( libraryname, classname )                                                       		\
-    virtual std::string                  binLibraryName() const { return #binlibrary; }          		\
-    virtual std::string                  binClassName() const { return #binclass; }              		\
-
-//! \namespace osgCompute Compute interfaces
-/** \namespace osgCompute 
-	Defines the namespace for all interface classes that
-	need to be reimplemented for a specific compute API
-	like osgCuda does for the CUDA API.
-*/ 
 namespace osgCompute
 {
-    struct ResourceHandle
-    {
-        osg::ref_ptr<Resource>		_resource;
-        bool						_serialize;
-    };
+    class Context;
+    class Computation;
 
-    typedef std::list< ResourceHandle >								ResourceHandleList;
-    typedef std::list< ResourceHandle >::iterator					ResourceHandleListItr;
-    typedef std::list< ResourceHandle >::const_iterator				ResourceHandleListCnstItr;
+    typedef std::vector<osg::ref_ptr<osgCompute::Computation> >                          ComputationList;
+    typedef std::vector<osg::ref_ptr<osgCompute::Computation> >::iterator                ComputationListItr;
+    typedef std::vector<osg::ref_ptr<osgCompute::Computation> >::const_iterator          ComputationListCnstItr;
+}
 
+#define OSGCOMPUTE_CREATE_COMPUTATION_FUNCTION		osgComputeCreateComputationFunc
+#define OSGCOMPUTE_CREATE_COMPUTATION_FUNCTION_STR	"osgComputeCreateComputationFunc"
 
+#if defined(_MSC_VER) || defined(__CYGWIN__) || defined(__MINGW32__) || defined( __BCPLUSPLUS__) || defined( __MWERKS__)
+#	define OSGCOMPUTE_COMPUTATION_EXPORT				__declspec( dllexport )
+#else
+#   define OSGCOMPUTE_MODULE_EXPORT
+#endif 
 
-    //! Base class for module and resource management.
+typedef osgCompute::Computation* (*OSGCOMPUTE_CREATE_COMPUTATION_FUNCTION_PTR)( void );
+
+namespace osgCompute
+{
+    //! Base class for (parallel) algorithms
     /**
-	A computation is a container where you can add your 
-	osgCompute::Module objects, just like osg::Program is a container 
-	for osg::Shader objects. You can add modules with addModule(). 
-	The following code block shows how to setup a osgCuda::Computation: 
-	\code
-	osg::ref_ptr<osgCompute::Computation> computation = new osgCuda::Computation;
-	computation->setComputeOrder( osgCompute::Computation::UPDATE_BEFORECHILDREN );
-	computation->addModule( new PtclEmitter );
-	computation->addModule( new PtclMover );
-	SceneRoot->addChild( computation );
-	\endcode
+	A computation is the base class to implement application specific 
+	parallel algorithms working on resources. Computations implement a
+	strategy design pattern in connection with a program node. Think of a 
+	computation as a separated algorithm executed once in each frame like osg::Program objects 
+	are executed during rendering. However, computations are much more flexible as 
+	execution is handed over to the computation.	The following code shows a simple example 
+	how to define a computation. Your own computation at least has to implement the launch() method 
+	as it is done in the osgGeometry example:
 	<br />
-	<br />
-	Modules are launched sequentially in the order they have been added.
-	For example, the PtclEmitter module is executed before the PtclMover module.
-	To overwrite this default behaviour add a LaunchCallback 
-	(see osgCompute::LaunchCallback) to the computation node.
 	\code
-	myComputation->setLaunchCallback( new MyLaunchCallback() );
-	...
-	virtual void MyLaunchCallback::operator()( Computation& computation )
+	class Warp : public osgCompute::Computation
 	{
-	osgCompute::ModuleList& modules = computation.getModules();
-	modules[1]->launch(); //PtclMover
-	modules[0]->launch(); //PtclEmitter
+	public:
+		Warp() {}
+		META_Object(,Warp)
+
+		virtual void launch()
+		{ 
+			//... Warp Cow Geometry ...
+		}
 	}
 	\endcode
 	<br />
+	Computations are usually used in combination with program nodes.
+	A computation then is attached to a program node an will be 
+	executed either during the update cycle or during the 
+	render cycle (see osgCompute::Program). A computation's init() 
+	method is called before the launch() method and you can overload 
+	it to define your own initialization procedures.
+	After initialization, launch() is called frequently every time 
+	a program node is traversed. If the computation is disabled the launch()
+	method is not called. During both methods init() and launch() an OpenGL-context
+	is available allowing for interoperability resources like
+	textures or geometry objects (see Interoperability).
+	
 	<br />
-	Modules work on resources. A resource can be added to a 
-	computation by calling addResource():
+	A program node will hand over all resources to each attached computation via 
+	acceptResource(). Overwrite this method to get access to resources 
+	of a program node. Identification of specific resources is done by name:
+	<br />
 	\code
-	osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
-	ptclGeom->addIdentifier("PTCL_BUFFER");
-	...
-	computation->addResource( *ptclGeom->getMemory() );
+	class Warp : public osgCompute::Computation
+	{
+	public:
+		virtual void acceptResource( osgCompute::Resource& resource )
+		{
+			if( resource.isIdentifiedBy("WARP_GEOMETRY") )
+				_vertices = dynamic_cast<osgCompute::Memory*>( &resource );	
+		}
+
+		virtual void launch()
+		{
+			void* devPtr = _vertices->map();
+			//...Warp cow vertices on GPU...
+		}
+
+	private:
+		osg::ref_ptr<osgCompute::Memory> _vertices;
+	}
 	\endcode
-	The computation node distributes this resource to all attached 
-	modules via Module::acceptResource(). E.g. ptclGeom is handed over to both the PtclMover and 
-	the PtclEmitter modules. Alternatively, you can use a 
-	ResourceVisitor to collect and distribute resources over all 
-	computation nodes in a graph (see ResourceVisitor).
-	Please note that each resource is referenced by an identifier and 
-	modules check these identifiers in order to get access to their 
-	resources of interest, e.g both modules search for an resource with
-	identifier "PTCL_BUFFER". 
 	<br />
+	 
+	You are not limited to scene graph resources and its very easy to 
+	define own resources like timers. 
 	<br />
-	A computation node can launch modules either during the 
-	update cycle or the rendering cycle of your scene. You have to specify 
-	at which time during the traversals modules should be launched (see setComputeOrder). 
-	In the example above the modules will be launched during the update cycle before 
-	the subgraph is traversed. You can add an arbitray graph to a computation node. 
-	The handling of a computation's sub-graph is not changed by default. 
-	<br />
-	<br />
-	Please note that in the first frame no 
-	module is executed during the update traversal as OSG creates its OpenGL context 
-	in the first render traversal. That causes a delay of one frame until the first 
-	module is called. This only accounts for computation nodes executed during the 
-	update cycle (see osgCompute::Computation::ComputeOrder). 
-	<br />
-	However, if you do not need any interoperability 
-	with OpenGL you can launch your modules at any time and you 
-	do not need a computation node at all. A computation is does the 
-	context handling between OpenGL and the compute API (e.g. CUDA) and
-	gives the modules a location in the scene. Any compute code 
-	which utilizes interoperability buffers, i.g. objects of type 
-	osgCompute::GLMemory, is restricted to run in a module's 
-	launch() or init() function. If a module utilizes such an 
-	interoperability object outside of a computation it should 
-	take care of OpenGL context intialization. Otherwise the 
-	object's memory cannot be allocated.
-	*/                                                                                                       
-    class LIBRARY_EXPORT Computation : public osg::Group
+	A computation can have an event callback or update callback to watch out for events 
+	or changes to the graph.
+    */
+    class LIBRARY_EXPORT Computation : public Resource
     {
-    public: 
-        enum ComputeOrder
-        {
-            PRERENDER_AFTERCHILDREN = OSGCOMPUTE_PRERENDER | OSGCOMPUTE_AFTERCHILDREN,
-            PRERENDER_BEFORECHILDREN = OSGCOMPUTE_PRERENDER | OSGCOMPUTE_BEFORECHILDREN,
-            POSTRENDER_AFTERCHILDREN = OSGCOMPUTE_POSTRENDER | OSGCOMPUTE_AFTERCHILDREN,
-            POSTRENDER_BEFORECHILDREN = OSGCOMPUTE_POSTRENDER | OSGCOMPUTE_BEFORECHILDREN,
-            PRERENDER_NOCHILDREN = OSGCOMPUTE_PRERENDER | OSGCOMPUTE_NOCHILDREN,
-            POSTRENDER_NOCHILDREN = OSGCOMPUTE_POSTRENDER | OSGCOMPUTE_NOCHILDREN,
-            UPDATE_AFTERCHILDREN = OSGCOMPUTE_UPDATE | OSGCOMPUTE_AFTERCHILDREN,
-            UPDATE_BEFORECHILDREN = OSGCOMPUTE_UPDATE | OSGCOMPUTE_BEFORECHILDREN,
-            UPDATE_AFTERCHILDREN_NORENDER = OSGCOMPUTE_UPDATE | OSGCOMPUTE_AFTERCHILDREN | OSGCOMPUTE_NORENDER,
-            UPDATE_BEFORECHILDREN_NORENDER = OSGCOMPUTE_UPDATE | OSGCOMPUTE_BEFORECHILDREN | OSGCOMPUTE_NORENDER,
-        };
-        /** \enum ComputeOrder
-        The compute order defines when a computation should be executed during the traversals. 
-        Currently modules will be executed only during the render traversal (PRERENDER or POSTRENDER) or 
-        the update traversal (UPDATE). However you still need to define when child nodes are traversed. 
-        AFTERCHILDREN will launch the modules after the subgraph has been traversed. BEFORECHILDREN will launch 
-        them before any child nodes are handled. NOCHILDREN will completely stop the traversal after the modules 
-        have been launched. If you decide to execute the modules during the render traversal you have to choose 
-        between PRERENDER or POSTRENDER in the same way as for osgUtil::RenderBins.
-        E.g the following ComputeOrder will disable the rendering traversal for all children nodes after 
-        executing the modules. The computation is executed during the render traversal before the parent 
-        render bin is updated:
-        \code
-        computation->setComputeOrder( osgCompute::Computation::PRERENDER_NOCHILDREN );
-        \endcode
-        */
-        /** \var ComputeOrder PRERENDER_AFTERCHILDREN 
-        Execute modules during rendering before parent bin and after children have been rendered.
-        */
-        /** \var ComputeOrder PRERENDER_BEFORECHILDREN 
-        Execute modules during rendering before parent bin and after children have been rendered.
-        */
-        /** \var ComputeOrder POSTRENDER_AFTERCHILDREN 
-        Execute modules during rendering after parent bin and after children have been rendered.
-        */					
-        /** \var ComputeOrder POSTRENDER_BEFORECHILDREN 
-        Execute modules during rendering after parent bin and before children have been rendered.
-        */
-        /** \var ComputeOrder PRERENDER_NOCHILDREN 
-        Execute modules during rendering before parent bin. Do not render children.
-        */		
-        /** \var ComputeOrder POSTRENDER_NOCHILDREN 
-        Execute modules during rendering after parent bin. Do not render children.
-        */
-        /** \var ComputeOrder UPDATE_AFTERCHILDREN 
-        Execute modules during update traversal and after children have been updated.
-        */
-        /** \var ComputeOrder UPDATE_BEFORECHILDREN 
-        Execute modules during update traversal and before children have been updated.
-        */
-        /** \var ComputeOrder UPDATE_AFTERCHILDREN_NORENDER 
-        Execute modules during update traversal and before children have been updated. Do not render
-        the children.
-        */
-        /** \var ComputeOrder UPDATE_BEFORECHILDREN_NORENDER 
-        Execute modules during update traversal and before children have been updated. Do not render
-        the children.
-        */
-
     public:
-        /** Constructor. The object will be initialized with 
-        compute order "UPDATE_BEFORECHILDREN" and is enabled by default.
+        /** Constructor. 
         */
-        Computation();
+        Computation() { clearLocal(); }
 
-        /** Accept is called during the traversal of the graph. 
-        Overwrite this method in a specialized class to design your own 
-        traversal behavior. During the traversal modules are launched
-        dependent on a computation's ComputeOrder. A computation node
-        takes care of the context handling for all attached modules. 
-        @param[in] nv node visitor that traverses the graph.
+        META_Object( osgCompute, Computation )
+
+        /** This function should be used to create and initialize all resources necessary for the algorithm
+        If the computation is attached to a program node the function is called once before launch() and every
+        time the computation returns true on isClear().
         */
-        virtual void accept( osg::NodeVisitor& nv );
+        virtual bool init();
 
-        /** The derived class must provide a valid library name of the 
-        required computation bin. The bin is necessary to execute modules 
-        during rendering.
+        /** The launch method is the core function of each algorithm. A program node will call launch of its
+        computations in each frame as long as the computation returns true on isEnabled().
         */
-        virtual std::string binLibraryName() const = 0;
+        virtual void launch();
 
-        /** The derived class must provide a valid class name of the required 
-        computation bin. The bin is necessary to execute modules during 
-        rendering.
+        /** The accept resource method exchanges resources between this computations and other computations that are spread throughout
+        the current graph. A computation can use the isIdentifiedBy() method of resources to check if
+        the resource is required by an algorithm or not.
+        @param[in] resource Reference to the resource.
         */
-        virtual std::string binClassName() const = 0;
+        virtual void acceptResource( Resource& resource );
 
-        /** Add a module to the computation.
-        @param[in] module module to be added.
+
+        /** Change a computation's launch behavior by reimplementing this method. 
+        The action applied to the hint is up to the respective computation. 
+        By default nothing happens.
+        @param[in] hint Hint to change the behavior of the algorithm.
         */
-        virtual void addModule( Module& module );
+        virtual void setLaunchHint( unsigned int hint = 0 );
 
-        /** Remove the module by reference.
-        @param[in] module module to be removed.
+        /** Returns the current hint of this computation.
+        @return Hint that defines the launch behavior of the algorithm.
         */
-        virtual void removeModule( Module& module );
+        virtual unsigned int getLaunchHint() const;
 
-        /** Remove the module by identifier. 
-        @param[in] identifier string identifier of the module. 
+        /** Users should (not necessarily) overwrite this method and return true if a resource with this identifier 
+        is referenced by this computation.
+        @param[in] identifier The identifier of the resource.
+        @return Returns true if computation utilizes the resource.
         */
-        virtual void removeModule( const std::string& identifier );
+        virtual bool usesResource( const std::string& identifier ) const;
 
-        /** Returns the module with this identifier. Returns NULL 
-        if it does not exist.
-        @param[in] identifier string identifier of the module.
-        @return Returns a pointer to the module. NULL if does not exist.
+        /** Users should (not necessarily) overwrite this method in order to remove the referenced resource.
+        @param[in] resource Reference to the resource.
         */
-        virtual const Module* getModule( const std::string& identifier ) const;
+        virtual void removeResource( const Resource& resource );
 
-        /** Returns the module with this identifier. 
-        Returns NULL if it does not exist.
-        @param[in] identifier string identifier of the module.
-        @return Returns a pointer to the module. NULL if does not exist.
-        */
-        virtual Module* getModule( const std::string& identifier );
-
-        /** Returns true if the computation uses the referenced module.
-        @param[in] identifier string identifier of the module.
-        @return Returns true if module exists and false otherwise.
-        */
-        virtual bool hasModule( const std::string& identifier ) const;
-
-        /** Returns true if the computation uses the module.
-        @param[in] module reference to the module.
-        @return Returns true if module exists and false otherwise. 
-        */
-        virtual bool hasModule( Module& module ) const;
-
-        /** Returns true if the computation has modules at all.
-        @return Returns true if computation has any module and false otherwise. */
-        virtual bool hasModules() const;
-
-        /** Returns references to all attached modules. 
-        @return Returns a list of all modules attached to the computation 
-        which is empty if no module is attached. 
-        */
-        virtual ModuleList& getModules();
-
-        /** Returns references to all attached modules. 
-        @return Returns a list of all modules attached to the computation 
-        which is empty if no module is attached. 
-        */
-        virtual const ModuleList& getModules() const;
-
-        /** Returns the number of attached modules no matter 
-        if they are enabled or not.
-        @return Returns the number of attached modules
-        */
-        virtual unsigned int getNumModules() const;
-
-        /** Remove all attached modules.*/
-        virtual void removeModules();
-
-        /** Adds a resource to the computation. All currently or 
-        later attached modules will receive a reference to this resource
-        via acceptResource(). If resource should be serialized with this
-        computation the serialize flag must be true. Otherwise you have to
-        add the resource at each time the computation is loaded.
-        @param[in] resource reference to the resource.
-        @param[in] serialize true if the resource should be serialized with this computation.
-        */
-        virtual void addResource( Resource& resource, bool serialize = true );
-
-        /** Exchanges a resource with an other resource. If resource should be serialized with this
-        computation the serialize flag must be true. Otherwise you have to
-        add the resource at each time the computation is loaded. 
-        @param[in] resource reference to the resource.
-        @param[in] serialize true if the resource should be serialized with this computation.
-        */
-        virtual void exchangeResource( Resource& resource, bool serialize = true );
-
-        /** Remove resource by identifier. 
-        Does nothing if no module with that identifier 
-        can be found.
-        @param[in] identifier string identifier of the resource.
+        /** Users should (not necessarily) overwrite this method in order to remove the resource with the identifier.
+        @param[in] identifier The identifier of the resource.
         */
         virtual void removeResource( const std::string& identifier );
 
-        /** Remove resource by reference. 
-        Does nothing if no module with that identifier 
-        can be found.
-        @param[in] resource reference to the resource. 
+        /** Users should (not necessarily) overwrite this method to return the resource with this identifier and NULL if the 
+        the resource is not used.
+        @param[in] identifier The identifier of the resource.
+        @return Returns a pointer to the resource. NULL if it is not found.
         */
-        virtual void removeResource( Resource& resource );
+        virtual Resource* getResource( const std::string& identifier );
 
-        /** Returns true if the computation can find a resource 
-        which is addressed by the identifier. 
-        @param[in] identifier string identifier of the resource.
-        @return Returns true if the resource is 
-        attached to the computation
+        /** Users should (not necessarily) overwrite this method to return the resource with this identifier and NULL if the 
+        the resource is not used.
+        @param[in] identifier The identifier of the resource.
+        @return Returns a pointer to the resource. NULL if it is not found.
         */
-        virtual bool hasResource( const std::string& identifier ) const;
+        virtual const Resource* getResource( const std::string& identifier ) const;
 
-        /** Returns true if the computation can find the referenced
-        resource. 
-        @param[in] resource reference to the resource.
-        @return Returns true if the resource is 
-        attached to the computation
+        /** Users should (not necessarily) overwrite this method and return all utilized resources with the identifier in resource list.
+        @param[out] resourceList A list of all resources with the identifier.
+        @param[in] identifier The identifier of the resource.
         */
-        virtual bool hasResource( Resource& resource ) const;
+        virtual void getResources( ResourceList& resourceList, const std::string& identifier );
 
-        /** Returns true if resource is serialized together 
-        with the computation node.
-        @param[in] resource reference to the resource.
-        @return Returns true if the resource is 
-        serialized and false if it cannot be found or 
-        it is not serialized.
+        /** Users should (not necessarily) overwrite this method and return all utilized resources in resource list.
+        @param[out] resourceList A list of all resources of the computation.
         */
-        virtual bool isResourceSerialized( Resource& resource ) const;
+        virtual void getAllResources( ResourceList& resourceList );
 
-        /** Returns all resources of the computation. 
-        @return Returns a list of resources of the computation.
+        /** Setup an update callback. During the update traversal this method will be called.
+        Note that the computation still might be launched in the update-cycle 
+        (see osgCompute::ComputationCallback for further information).
+        @param[in] uc A pointer to the callback.
         */
-        virtual ResourceHandleList& getResources();
+        virtual void setUpdateCallback( ComputationCallback* uc );
 
-        /** Returns all resources of the computation. 
-        @return Returns a list of resources of the computation.
+        /** Returns a pointer to the update callback.
+        @return Returns the callback. NULL if no callback is utilized. 
         */
-        virtual const ResourceHandleList& getResources() const;
+        virtual ComputationCallback* getUpdateCallback();
 
-        /** Remove all resources. */
-        virtual void removeResources();
-
-        /** Set a launch callback. You can use a launch callback 
-        to define a different execution order for the modules. 
-        This callback replaces the internal default launch() 
-        function. (see osgCompute::LaunchCallback for further information).
-        @param[in] lc pointer to the launch callback.
+        /** Returns a pointer to the update callback.
+        @return Returns the callback. NULL if no callback is utilized. 
         */
-        virtual void setLaunchCallback( LaunchCallback* lc );
+        virtual const ComputationCallback* getUpdateCallback() const;
 
-        /** Returns the launch callback and NULL if there is none.
-        @return Returns a pointer to the launch callback.
+        /** Add a event callback. An event callback is launched during the
+        event-traversal of the scene 
+        (see osgCompute::ComputationCallback for further information).
+        @param[in] ec A pointer to the callback.
         */
-        virtual LaunchCallback* getLaunchCallback();
+        virtual void setEventCallback( ComputationCallback* ec );
 
-        /** Returns the launch callback and NULL if there is none.
-        @return Returns a pointer to the launch callback.
+        /** Returns a pointer to the event callback. 
+        @return Returns the callback. NULL if no callback is utilized.
         */
-        virtual const LaunchCallback* getLaunchCallback() const;
+        virtual ComputationCallback* getEventCallback();
 
-        /** The compute order is used to decide when to execute 
-        the modules. (see osgCompute::ComputeOrder for further information).
-        @param[in] co the compute order.
+        /** Returns a pointer to the event callback.
+        @return Returns the callback. NULL if no callback is utilized.
         */
-        virtual void setComputeOrder( ComputeOrder co );
+        virtual const ComputationCallback* getEventCallback() const;
 
-        /** Returns the compute order. The compute order is used to 
-        decide when to execute the modules. (see osgCompute::ComputeOrder 
-        for further information).
-        @return Returns the current compute order of the computation.
+        /** A computation is enabled by default. An enabled computation can be executed. With this
+        flag computations can be switched off and turned on easily.
         */
-        virtual ComputeOrder getComputeOrder() const;
-
-        /** Activates the computation (a computation is enabled 
-        by default). */
         virtual void enable();
 
-        /** Calling this method will deactivate all modules. */
+        /** Use this function to disable a computation and prevent it from being launched.
+        */
         virtual void disable();
 
-        /** Returns true if the computation is enabled.
-        @return Returns true if the computation is enabled. */
+        /**
+        @return Returns true if the computation is enabled*/
         virtual bool isEnabled() const;
 
-        /** Restore object to default state. Calls clearLocal(). 
+        /** Returns the dynamic library name of the computation. The library name is required during
+        the dynamic load (See loadComputation() ).
+        @return Returns the string reference with the library name.
+        */
+        virtual const std::string& getLibraryName() const;
+
+        /** Returns the library name of the computation. The library name is required during
+        the dynamic load (See loadComputation() ).
+        @return Returns the string reference with the library name.
+        */
+        virtual std::string& getLibraryName();
+
+        /** Set the library name of this computation. The library name is required during
+        the dynamic load (See loadComputation()).
+        @param[in] libraryName the string reference with the library name.
+        */
+        virtual void setLibraryName( const std::string& libraryName );
+
+        /** Use this function to load a computation as a dynamic library. osgDB methods are
+        utilized to encapsulate platform dependent dynamic linking. After the computation
+        has been loaded the function will return
+        a pointer to a new object of type computation. If the load fails then NULL is returned.
+        @param[in] libraryName the library name of the computation.
+        */
+        static Computation* loadComputation( const std::string& libraryName );
+
+        /** Returns true if osgDB can find a dynamic library with that library name. 
+        @param[in] libraryName the library name.
+        */
+        static bool existsComputation( const std::string& libraryName );
+
+        /** Removes all resources of a computation. The method is used to clear the complete state of a computation.
+        After clear() the computation should be initialized again to work properly. The method calls clearLocal().
         */
         virtual void clear();
 
-        /** Method is called by OSG to release all OpenGL resources
-        for a specific OpenGL context/state. 
-        All resources used within the state's context will be 
-        released including the non GL resources.
-        @param[in] state pointer to the OpenGL context.
-        */
-        virtual void releaseGLObjects( osg::State* state ) const;
-
-        /** Applies event handling and/or update handling to the computation's modules.
-        @param[in] nv node visitor.
-        */
-        void applyVisitorToModules( osg::NodeVisitor& nv );
-
-    protected:
-        friend class ResourceVisitor;
-
-        /** Destructor. 
+    protected:	
+        /**Destructor.
         */
         virtual ~Computation() { clearLocal(); }
 
-        /** Method checks for valid compute device.
-        */
-        virtual void checkDevice();
-
-        /** Returns true if the compute device is setup.
-        */
-        static bool isDeviceReady();
-
-        /** Set compute device ready
-        */
-        static void setDeviceReady();
-
     private:
+        // copy constructor and operator should not be called
+        Computation( const Computation&, const osg::CopyOp& ){}
+        Computation& operator=( const Computation& copy ) { return (*this); }
+
         void clearLocal();
 
-        void setupContext( osg::State& state );
-        void launch();
-        void addBin( osgUtil::CullVisitor& cv );
-
-        bool                                	_enabled;
-        osg::ref_ptr<LaunchCallback>            _launchCallback; 
-        mutable ModuleList                      _modules;
-        mutable ResourceHandleList              _resources;
-        ComputeOrder                        	_computeOrder;
-        static bool								s_deviceReady;
-
-        /** Copy constructor. This constructor should not be called.*/
-        Computation( const Computation& ) {}
-
-        /** Copy operator. This operator should not be called.*/
-        Computation &operator=(const Computation &) { return *this; }
+        osg::ref_ptr<ComputationCallback>  _updateCallback;
+        osg::ref_ptr<ComputationCallback>  _eventCallback;
+        bool                               _enabled;
+        std::string					       _libraryName;
     };
 }
 

@@ -26,12 +26,13 @@
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCuda/Computation>
+#include <osgCuda/Program>
 #include <osgCuda/Memory>
 #include <osgCuda/Texture>
 
 #include "TexFilter"
 
+//------------------------------------------------------------------------------
 osg::Geode* getTexturedQuad( osg::Texture2D& trgTexture )
 {
     osg::Geode* geode = new osg::Geode;
@@ -52,14 +53,13 @@ osg::Geode* getTexturedQuad( osg::Texture2D& trgTexture )
 }
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Computation> setupComputation()
+osg::ref_ptr<osgCompute::Program> setupProgram()
 {
-    osg::ref_ptr<osgCompute::Computation> computationNode = new osgCuda::Computation;
+    osg::ref_ptr<osgCompute::Program> program = new osgCuda::Program;
 
     ///////////////
-    // RESOURCEN //
+    // RESOURCES //
     ///////////////
-    // SOURCE
     osg::ref_ptr<osg::Image> srcImage = osgDB::readImageFile("osgTexDemo/images/logo.png");
     if (!srcImage)
     {
@@ -106,49 +106,45 @@ osg::ref_ptr<osgCompute::Computation> setupComputation()
     //////////////////
     osg::ref_ptr<TexDemo::TexFilter> texFilter = new TexDemo::TexFilter;
 
-    // Execute the computation during the rendering, but before
+    // Execute the program during the rendering, but before
     // the subgraph is rendered. Default is the execution during
     // the update traversal.
-    computationNode->setComputeOrder(  osgCompute::Computation::PRERENDER_BEFORECHILDREN );
-    computationNode->addModule( *texFilter );
-    computationNode->addResource( *srcArray );
-    computationNode->addResource( *trgTexture->getMemory() );
-    // the target texture is located in the subgraph of the computation
-    computationNode->addChild( getTexturedQuad( *trgTexture ) );
+    program->setComputeOrder(  osgCompute::Program::PRERENDER_BEFORECHILDREN );
+    program->addComputation( *texFilter );
+    program->addResource( *srcArray );
+    program->addResource( *trgTexture->getMemory() );
+    // the target texture is located in the subgraph of the program
+    program->addChild( getTexturedQuad( *trgTexture ) );
 
-    // Write this computation to file
-    //osgDB::writeNodeFile( *computationNode, "texdemo.osgt" );
+    // Serialize the program to file by activating the
+    // following line of code:
+    // osgDB::writeNodeFile( *program, "texdemo.osgt" );
+    // Afterwards you can load it via:
+    // osg::ref_ptr<osg::Node> program = osgDB::readNodeFile( "PATH_TO_FILE/texdemo.osgt" );
 
-    return computationNode;
+    return program;
 }
 
 //------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
-    osg::ArgumentParser arguments(&argc, argv);
-    osgViewer::Viewer viewer(arguments);
 
-    /////////////////
-    // COMPUTATION //
-    /////////////////
-    osg::ref_ptr<osgCompute::Computation> computation = setupComputation();
-
-    //////////////////
-    // VIEWER SETUP //
-    //////////////////
-    osg::Group* scene = new osg::Group;
-    scene->addChild( computation );
-
-    // You must use single threaded version since osgCompute currently
-    // does only support single threaded applications. Please ask in the
-    // forum for the multi-threaded version if you need it.
-    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
-    viewer.setReleaseContextAtEndOfFrameHint(false);
-    viewer.setSceneData( scene );
+    osgViewer::Viewer viewer( osg::ArgumentParser(&argc, argv) );
     viewer.addEventHandler(new osgViewer::StatsHandler);
     viewer.setUpViewInWindow( 50, 50, 640, 480);
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
+
+    //////////////////
+    // SETUP VIEWER //
+    //////////////////
+    osgCuda::setupOsgCudaAndViewer( viewer );
+
+    /////////////////
+    // SETUP SCENE //
+    /////////////////
+    osg::ref_ptr<osgCompute::Program> program = setupProgram();
+    viewer.setSceneData( program );
 
     return viewer.run();
 }

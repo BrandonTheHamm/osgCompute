@@ -23,26 +23,26 @@
 namespace osgCompute
 {
     class Resource;
-    class Module;
     class Computation;
+    class Program;
 
     //! Interface for customized event or update code    
-    /** A ModuleCallback is utilized for adding event or update 
-    functionality to modules. A ModuleCallback allows users to 
-    change the default update or event handling for modules.
+    /** A ComputationCallback is utilized for adding event or update 
+    functionality to computations. A ComputationCallback allows users to 
+    change the default update or event handling for computations.
     */
-    class LIBRARY_EXPORT ModuleCallback : public virtual osg::Object
+    class LIBRARY_EXPORT ComputationCallback : public virtual osg::Object
     {
     public:
         /** Constructor. The object will be initialized with 
         default values. */
-        inline ModuleCallback() { clearLocal(); }
+        inline ComputationCallback() { clearLocal(); }
 
         /** Do customized event or update callback code.
-        @param[in] module Reference to the module the callback is attached to.
+        @param[in] computation Reference to the computation the callback is attached to.
         @param[in] nv Reference to the node visitor.
         */
-        virtual void operator()( Module& module, osg::NodeVisitor& nv ) = 0;
+        virtual void operator()( Computation& computation, osg::NodeVisitor& nv ) = 0;
 
         /** Restore the object's default state. 
         */
@@ -50,15 +50,15 @@ namespace osgCompute
     protected:
         /** Destructor. 
         */
-        virtual ~ModuleCallback() { clearLocal(); }
+        virtual ~ComputationCallback() { clearLocal(); }
 
 
     private:
         /** Copy constructor. This constructor should not be called. */
-        ModuleCallback( const ModuleCallback&, const osg::CopyOp& ) {}
+        ComputationCallback( const ComputationCallback&, const osg::CopyOp& ) {}
 
         /** Copy operator. This operator should not be called. */
-        ModuleCallback &operator=(const ModuleCallback &) { return *this; }
+        ComputationCallback &operator=(const ComputationCallback &) { return *this; }
 
         /** Clear local members.*/
         void clearLocal() {}
@@ -118,21 +118,21 @@ namespace osgCompute
         void clearLocal() {}
     };
 
-    //! Interface for customized launch order of modules.
+    //! Interface for customized launch order of computations.
     /** Callback class which is used for adding launch 
-    callbacks to computation nodes. This allows users to 
-    customize the order in which modules are launched: 
+    callbacks to program nodes. This allows users to 
+    customize the order in which computations are launched: 
     \code
-    myComputation->setLaunchCallback( new MyCallback );
+    myProgram->setLaunchCallback( new MyCallback );
     ...
     class MyCallback : public osgCompute::LaunchCallback
     {
-        virtual void operator()( osgCompute::Computation& computation )
+        virtual void operator()( osgCompute::Program& program )
         {
-            osgCompute::ModuleList& modules = computation.getModules();
-            modules[1]->launch();
-            modules[2]->launch();
-            modules[0]->launch();
+            osgCompute::ComputationList& computations = program.getComputations();
+            computations[1]->launch();
+            computations[2]->launch();
+            computations[0]->launch();
             ...
         }
     };
@@ -149,11 +149,11 @@ namespace osgCompute
         */
         virtual void clear() { clearLocal(); }
 
-        /** Overwrite the default launch behavior for a computation node.
-        Is called whenever the computation is executed. 
-        @param[in] computation Reference to the computation
+        /** Overwrite the default launch behavior for a program node.
+        Is called whenever the program is executed. 
+        @param[in] program Reference to the program
         */
-        virtual void operator()( Computation& computation ) = 0;
+        virtual void operator()( Program& program ) = 0;
 
     protected:
         /** Destructor. Release the memory by calling clearLocal(). */

@@ -4,7 +4,7 @@
 #include <osg/StateSet>
 #include <osg/StateAttribute>
 #include <osgCompute/Visitor>
-#include <osgCompute/Computation>
+#include <osgCompute/Program>
 #include <osgCompute/Memory>
 
 namespace osgCompute
@@ -130,10 +130,10 @@ namespace osgCompute
         //////////////
         // INTERNAL //
         //////////////
-        osgCompute::Computation* computation = dynamic_cast<osgCompute::Computation*>( &node );
-        if( NULL != computation )
+        osgCompute::Program* program = dynamic_cast<osgCompute::Program*>( &node );
+        if( NULL != program )
         {
-            ResourceHandleList& resources = computation->getResources();
+            ResourceHandleList& resources = program->getResources();
             for( ResourceHandleListItr itr = resources.begin(); itr != resources.end(); ++itr )
             {
                 if( (*itr)._resource.valid() )
@@ -150,14 +150,14 @@ namespace osgCompute
         //////////////
         // INTERNAL //
         //////////////
-        osgCompute::Computation* computation = dynamic_cast<osgCompute::Computation*>( &node );
-        if( NULL != computation )
+        osgCompute::Program* program = dynamic_cast<osgCompute::Program*>( &node );
+        if( NULL != program )
         {
             for( ResourceSetItr itr = _collectedResources.begin(); itr != _collectedResources.end(); ++itr )
             {
                 if( (*itr).valid() )
                 {
-                    computation->exchangeResource( *(*itr), false );
+                    program->exchangeResource( *(*itr), false );
                 }
             }
         }
@@ -170,14 +170,14 @@ namespace osgCompute
         //////////////
         // INTERNAL //
         //////////////
-        osgCompute::Computation* computation = dynamic_cast<osgCompute::Computation*>( &node );
-        if( NULL != computation )
+        osgCompute::Program* program = dynamic_cast<osgCompute::Program*>( &node );
+        if( NULL != program )
         {
             for( ResourceSetItr itr = _collectedResources.begin(); itr != _collectedResources.end(); ++itr )
             {
                 if( (*itr).valid() )
                 {
-                    computation->addResource( *(*itr), false );
+                    program->addResource( *(*itr), false );
                 }
             }
         }

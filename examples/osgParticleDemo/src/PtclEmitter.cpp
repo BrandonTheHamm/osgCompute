@@ -59,7 +59,7 @@ namespace PtclDemo
         _numBlocks = _ptcls->getDimension(0) / 128;
         _numThreads = 128;
 
-        return osgCompute::Module::init();
+        return osgCompute::Computation::init();
     }
 
     //------------------------------------------------------------------------------

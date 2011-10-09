@@ -15,7 +15,7 @@
 #include <memory.h>
 #include <osg/Notify>
 #include <osgCuda/Memory>
-#include <osgCompute/Module>
+#include <osgCompute/Computation>
 #include <cuda_runtime.h>
 
 //------------------------------------------------------------------------------
@@ -23,39 +23,34 @@ extern "C" void swapEndianness( unsigned int numBlocks, unsigned int numThreads,
 
 /**
 */
-class SwapModule : public osgCompute::Module
+class SwapComputation : public osgCompute::Computation
 {
 public:
-    SwapModule() : osgCompute::Module() {clearLocal();}
+    SwapComputation() : osgCompute::Computation() {clearLocal();}
 
-    META_Object( , SwapModule )
-        virtual bool init();
+    virtual bool init();
     virtual void launch();
 
     inline void setBuffer( osgCompute::Memory* buffer ) { _buffer = buffer; }
 
-    virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+    virtual void clear() { clearLocal(); osgCompute::Computation::clear(); }
 protected:
-    virtual ~SwapModule() { clearLocal(); }
+    virtual ~SwapComputation() { clearLocal(); }
     void clearLocal() { _buffer = NULL; }
 
     unsigned int                                     _numThreads;
     unsigned int                                     _numBlocks;
     osg::ref_ptr<osgCompute::Memory>                 _buffer;
-
-private:
-    SwapModule(const SwapModule&, const osg::CopyOp& ) {}
-    inline SwapModule &operator=(const SwapModule &) { return *this; }
 };
 
 //------------------------------------------------------------------------------
-void SwapModule::launch()
+void SwapComputation::launch()
 {
     swapEndianness( _numBlocks, _numThreads, _buffer->map() );
 }
 
 //------------------------------------------------------------------------------
-bool SwapModule::init()
+bool SwapComputation::init()
 {
     if( !_buffer )
         return false;
@@ -63,7 +58,7 @@ bool SwapModule::init()
     _numThreads = 1;
     _numBlocks = _buffer->getDimension(0) / _numThreads;
 
-    return osgCompute::Module::init();
+    return osgCompute::Computation::init();
 }
 
 //------------------------------------------------------------------------------
@@ -73,7 +68,7 @@ int main(int argc, char *argv[])
 
     // You can use modules and buffers in the update cycle or everywhere
     // you want. But please make sure that the context is still active at
-    // computation time if you use osgCuda::Geometry or osgCuda::Texture objects!!!
+    // program time if you use osgCuda::Geometry or osgCuda::Texture objects!!!
 	cudaSetDevice(0);
 
     ///////////////////
@@ -98,7 +93,7 @@ int main(int argc, char *argv[])
     ///////////////////
     // LAUNCH MODULE //
     ///////////////////
-    osg::ref_ptr<SwapModule> module = new SwapModule;
+    osg::ref_ptr<SwapComputation> module = new SwapComputation;
     if( !module.valid() )
         return -1;
 

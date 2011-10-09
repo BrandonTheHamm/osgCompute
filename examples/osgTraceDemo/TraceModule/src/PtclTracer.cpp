@@ -18,7 +18,7 @@
 #include <cstdlib>
 #include <osg/Notify>
 #include <osg/FrameStamp>
-#include <osgCompute/Module>
+#include <osgCompute/Computation>
 #include <osgCompute/Memory>
 
 //------------------------------------------------------------------------------
@@ -30,18 +30,16 @@ namespace PtclDemo
     //////////////////////////////////////////////////////////////////////////////////////////////////
     // DECLARATION ///////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////
-    class PtclTracer : public osgCompute::Module 
+    class PtclTracer : public osgCompute::Computation 
     {
     public:
-        PtclTracer() : osgCompute::Module() {clearLocal();}
-
-        META_Object( PtclDemo, PtclTracer )
+        PtclTracer() : osgCompute::Computation() {clearLocal();}
 
         virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+        virtual void clear() { clearLocal(); osgCompute::Computation::clear(); }
     protected:
         virtual ~PtclTracer() {clearLocal();}
         void clearLocal();
@@ -79,7 +77,7 @@ namespace PtclDemo
         _numBlocks = _ptcls->getDimension(0) / 128;
         _numThreads = 128;
 
-        return osgCompute::Module::init();
+        return osgCompute::Computation::init();
     }
 
     //------------------------------------------------------------------------------  
@@ -117,7 +115,7 @@ namespace PtclDemo
 
 //-----------------------------------------------------------------------------
 // Use this function to return a new warp module to the application
-extern "C" OSGCOMPUTE_MODULE_EXPORT osgCompute::Module* OSGCOMPUTE_CREATE_MODULE_FUNCTION() 
+extern "C" OSGCOMPUTE_COMPUTATION_EXPORT osgCompute::Computation* OSGCOMPUTE_CREATE_COMPUTATION_FUNCTION() 
 {
     return new PtclDemo::PtclTracer;
 }

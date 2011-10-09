@@ -30,7 +30,7 @@
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCuda/Computation>
+#include <osgCuda/Program>
 #include <osgCuda/Memory>
 #include <osgCuda/Geometry>
 
@@ -202,15 +202,15 @@ osg::Geode* getGeode()
 }
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Computation> getComputation()
+osg::ref_ptr<osgCompute::Program> getProgram()
 {
-    osg::ref_ptr<osgCompute::Computation> computationEmitter = new osgCuda::Computation;
-    computationEmitter->addModule( *new PtclDemo::PtclEmitter );  
-    osg::ref_ptr<osgCompute::Computation> computationMover = new osgCuda::Computation;
-    computationMover->addModule( *new PtclDemo::PtclMover );
-    computationMover->addChild( computationEmitter );
+    osg::ref_ptr<osgCompute::Program> programEmitter = new osgCuda::Program;
+    programEmitter->addComputation( *new PtclDemo::PtclEmitter );  
+    osg::ref_ptr<osgCompute::Program> programMover = new osgCuda::Program;
+    programMover->addComputation( *new PtclDemo::PtclMover );
+    programMover->addChild( programEmitter );
 
-    return computationMover;
+    return programMover;
 }
 
 //------------------------------------------------------------------------------
@@ -222,7 +222,7 @@ osg::ref_ptr<osgCompute::ResourceVisitor> getVisitor( osg::FrameStamp* fs )
     // GLOBAL RESOURCES //
     //////////////////////
     // You can add resources directly to resource visitor.
-    // Each resource will be distributed to all computations
+    // Each resource will be distributed to all programs
     // located in the graph.
 
     // EMITTER BOX
@@ -263,16 +263,26 @@ int main(int argc, char *argv[])
     osg::setNotifyLevel( osg::WARN );
     osg::ArgumentParser arguments(&argc, argv);
     osgViewer::Viewer viewer(arguments);
+    viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
+    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
+    viewer.setUpViewInWindow( 50, 50, 640, 480);
+    viewer.addEventHandler(new osgViewer::StatsHandler);
+
+    //////////////////
+    // SETUP VIEWER //
+    //////////////////
+    osgCuda::setupOsgCudaAndViewer( viewer );
 
     /////////////////
     // SETUP SCENE //
     /////////////////
     // Creat an arbitrary graph
     osg::ref_ptr<osg::Group> scene = new osg::Group;
-    osg::ref_ptr<osg::Group> computation = getComputation();
-    scene->addChild( computation );
-    computation->addChild( getGeode() );
+    osg::ref_ptr<osg::Group> program = getProgram();
+    scene->addChild( program );
+    program->addChild( getGeode() );
     scene->addChild( getBoundingBox() );
+    viewer.setSceneData( scene );
 
     //////////////////////
     // RESOURCE VISITOR //
@@ -280,23 +290,10 @@ int main(int argc, char *argv[])
     // Use a resource visitor to collect and distribute
     // resources among a sub-graph. Here it is applied 
     // to the scene root. In the first pass it collects all resources
-    // and in a second traversal it distributes them to the
-    // computations in the graph.
+    // and in a second traversal it distributes them among the
+    // programs in a graph.
     osg::ref_ptr<osgCompute::ResourceVisitor> visitor = getVisitor( viewer.getFrameStamp() );
     visitor->apply( *scene );
-
-    //////////////////
-    // SETUP VIEWER //
-    //////////////////
-    // You must use the single threaded version since osgCompute currently
-    // does only support single threaded applications. 
-    viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
-    viewer.setReleaseContextAtEndOfFrameHint(false);
-    viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
-    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
-    viewer.setUpViewInWindow( 50, 50, 640, 480);
-    viewer.setSceneData( scene );
-    viewer.addEventHandler(new osgViewer::StatsHandler);
 
     return viewer.run();
 }

@@ -95,7 +95,7 @@ namespace GeometryDemo
             _numBlocks+=1;
 
         _numThreads = 128;
-        return osgCompute::Module::init();
+        return osgCompute::Computation::init();
     }
 
     //------------------------------------------------------------------------------  

@@ -18,25 +18,26 @@
 
 #include <osg/ref_ptr>
 #include <vector_types.h>
-#include <osgCompute/Module>
+#include <osgCompute/Computation>
 #include <osgCompute/Memory>
 
 namespace GeometryDemo
 {
-    class Warp : public osgCompute::Module 
+    class AdvanceTime : public osgCompute::Resource
     {
     public:
-        Warp() : osgCompute::Module() {clearLocal();}
+        osg::FrameStamp* _fs;
+    };
 
-        META_Object( GeometryDemo, Warp )
+    class Warp : public osgCompute::Computation 
+    {
+    public:
+        Warp() : osgCompute::Computation() {clearLocal();}
 
-        // Modules have to implement at least this
-        // three methods:
         virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
     protected:
         virtual ~Warp() { clearLocal(); }
         void clearLocal();
@@ -47,10 +48,6 @@ namespace GeometryDemo
         osg::ref_ptr<osgCompute::Memory>				  _initNormals;
         osg::ref_ptr<osgCompute::Memory>				  _initPos;
         float                                             _simulationTime;
-
-    private:
-        Warp(const Warp&, const osg::CopyOp& ) {} 
-        inline Warp &operator=(const Warp &) { return *this; }
     };
 
 };

@@ -18,25 +18,21 @@
 
 #include <osg/ref_ptr>
 #include <vector_types.h>
-#include <osgCompute/Module>
+#include <osgCompute/Computation>
 #include <osgCompute/Memory>
 
 namespace TexDemo
 {
-    class TexFilter : public osgCompute::Module 
+    class TexFilter : public osgCompute::Computation 
     {
     public:
-        TexFilter() : osgCompute::Module() {clearLocal();}
+        TexFilter() : osgCompute::Computation() {clearLocal();}
 
-        META_Object( TexDemo, TexFilter )
-
-        // Modules have to implement at least this
-        // three methods:
         virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+        virtual void clear() { clearLocal(); osgCompute::Computation::clear(); }
     protected:
         virtual ~TexFilter() { clearLocal(); }
         void clearLocal();

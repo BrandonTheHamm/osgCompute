@@ -45,9 +45,9 @@ SET(TARGET_H
 	${HEADER_PATH}/Memory	
 	${HEADER_PATH}/Callback
 	${HEADER_PATH}/Export	
-	${HEADER_PATH}/Module
-	${HEADER_PATH}/Resource
 	${HEADER_PATH}/Computation
+	${HEADER_PATH}/Resource
+	${HEADER_PATH}/Program
 	${HEADER_PATH}/Visitor
 )
 
@@ -55,9 +55,9 @@ SET(TARGET_H
 # collect the sources
 SET(TARGET_SRC
 	Memory.cpp
-	Module.cpp
+	Computation.cpp
 	Resource.cpp
-	Computation.cpp	
+	Program.cpp	
 	Visitor.cpp
 )
 

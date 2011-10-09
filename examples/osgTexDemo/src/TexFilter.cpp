@@ -77,8 +77,8 @@ namespace TexDemo
         
         _blocks = dim3( numReqBlocksWidth, numReqBlocksHeight, 1 );
 
-        // Do not forget to call osgCompute::Module::init()!!!
-        return osgCompute::Module::init();
+        // Do not forget to call osgCompute::Computation::init()!!!
+        return osgCompute::Computation::init();
     }
 
     //------------------------------------------------------------------------------  

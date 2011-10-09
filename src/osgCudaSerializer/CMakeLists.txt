@@ -40,7 +40,7 @@ SET(TARGET_H
 # collect the sources
 SET(TARGET_SRC
 	Util.cpp
-	Computation.cpp
+	Program.cpp
 	CudaMemory.cpp
 	Memory.cpp
 	Resource.cpp

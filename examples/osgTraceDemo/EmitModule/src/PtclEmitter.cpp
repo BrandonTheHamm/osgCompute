@@ -19,7 +19,7 @@
 #include <osg/Notify>
 #include <osg/Array>
 #include <osg/ref_ptr>
-#include <osgCompute/Module>
+#include <osgCompute/Computation>
 #include <osgCompute/Memory>
 #include <osgCuda/Memory>
 
@@ -39,18 +39,16 @@ namespace PtclDemo
 {
     /**
     */
-    class PtclEmitter : public osgCompute::Module 
+    class PtclEmitter : public osgCompute::Computation 
     {
     public:
-        PtclEmitter() : osgCompute::Module() {clearLocal();}
-
-        META_Object( PtclDemo, PtclEmitter )
+        PtclEmitter() : osgCompute::Computation() {clearLocal();}
 
         virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        virtual void clear() { clearLocal(); osgCompute::Module::clear(); }
+        virtual void clear() { clearLocal(); osgCompute::Computation::clear(); }
     protected:
         virtual ~PtclEmitter();
         void clearLocal();
@@ -114,7 +112,7 @@ namespace PtclDemo
         _numBlocks = _ptcls->getDimension(0) / 128;
         _numThreads = 128;
 
-        return osgCompute::Module::init();
+        return osgCompute::Computation::init();
     }
 
     //------------------------------------------------------------------------------
@@ -175,7 +173,7 @@ namespace PtclDemo
 
 //-----------------------------------------------------------------------------
 // Use this function to return a new warp module to the application
-extern "C" OSGCOMPUTE_MODULE_EXPORT osgCompute::Module* OSGCOMPUTE_CREATE_MODULE_FUNCTION( void ) 
+extern "C" OSGCOMPUTE_COMPUTATION_EXPORT osgCompute::Computation* OSGCOMPUTE_CREATE_COMPUTATION_FUNCTION( void ) 
 {
     return new PtclDemo::PtclEmitter;
 }
