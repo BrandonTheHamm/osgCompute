@@ -39,7 +39,7 @@ namespace osgCompute
 #if defined(_MSC_VER) || defined(__CYGWIN__) || defined(__MINGW32__) || defined( __BCPLUSPLUS__) || defined( __MWERKS__)
 #	define OSGCOMPUTE_COMPUTATION_EXPORT				__declspec( dllexport )
 #else
-#   define OSGCOMPUTE_MODULE_EXPORT
+#   define OSGCOMPUTE_COMPUTATION_EXPORT
 #endif 
 
 typedef osgCompute::Computation* (*OSGCOMPUTE_CREATE_COMPUTATION_FUNCTION_PTR)( void );

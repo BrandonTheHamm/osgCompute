@@ -61,7 +61,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool setupOsgCudaAndViewer( osgViewer::ViewerBase& viewer, int device /*= 0 */ )
+    bool setupOsgCudaAndViewer( osgViewer::ViewerBase& viewer, int device /*= 0 */, bool realize /*= true*/ )
     {
         // Setup viewer to properly handle osgCuda.
 
@@ -74,18 +74,24 @@ namespace osgCuda
         // which is not released at the end of a frame to secure 
         // CUDA launches everywhere
         viewer.setReleaseContextAtEndOfFrameHint(false);
-        viewer.realize();
 
-        osgViewer::ViewerBase::Contexts ctxs;
-        viewer.getContexts( ctxs, true );
-        if( ctxs.empty() )
+        if( realize )
         {
-            osg::notify(osg::WARN)<<"Cannot setup CUDA context and viewer as no valid OpenGL context is found"<<std::endl;
-            return false;
+            // Create the current OpenGL context and make it current
+            viewer.realize();
+            osgViewer::ViewerBase::Contexts ctxs;
+            viewer.getContexts( ctxs, true );
+            if( ctxs.empty() )
+            {
+                osg::notify(osg::WARN)<<"Cannot setup CUDA context and viewer as no valid OpenGL context is found"<<std::endl;
+                return false;
+            }
+            ctxs.front()->makeCurrent();
+
+            // Bind Context to osgCompute::GLMemory
+            osgCompute::GLMemory::bindToContext( *ctxs.front() );
         }
 
-        osgCompute::GLMemory::bindToContext( *ctxs.front() );
-        ctxs.front()->makeCurrent();
 
         return setupDevice( device );
     }
