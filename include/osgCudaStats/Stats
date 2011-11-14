@@ -40,6 +40,7 @@ namespace osgCuda
 
         unsigned int                    _statsType;
         osg::ref_ptr<osg::Camera>       _hudCamera;
+        osg::ref_ptr<osg::Switch>       _memorySwitch;
         unsigned int                    _statsWidth;
         unsigned int                    _statsHeight;
         std::set< std::string >         _modulesOfInterest;

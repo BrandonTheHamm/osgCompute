@@ -197,6 +197,7 @@ namespace osgCuda
     {
         _statsType = STATISTICS_NONE;
         _hudCamera = NULL;
+        _memorySwitch = NULL;
         _statsWidth = 1280.0f;
         _statsHeight = 1024.0f;
         osg::ApplicationUsage::instance()->addUsageExplanation(osg::ApplicationUsage::KEYBOARD_MOUSE_BINDING,"c","On/Off Display CUDA stats");
@@ -242,6 +243,7 @@ namespace osgCuda
                     case STATISTICS_MEMORY:
                         {
                             setUpMemoryScene(viewer);
+                            _memorySwitch->setSingleChildOn(0);
                             _hudCamera->setNodeMask(0xffffffff);
                         }
                         break;
@@ -255,6 +257,21 @@ namespace osgCuda
                     default: break;
                     }
                 }
+                if( /*ea.getKey() == osgGA::GUIEventAdapter::MODKEY_SHIFT &&*/ ea.getKey() == 'C' &&
+                    ea.getEventType() == osgGA::GUIEventAdapter::KEYDOWN )
+                {
+                    if( _statsType == STATISTICS_MEMORY )
+                    {
+                        unsigned int curSwitchPage = 0;
+                        for ( unsigned int i = 0; i < _memorySwitch->getNumChildren(); i++ )
+                            if ( _memorySwitch->getValue(i) == true ) curSwitchPage = i;
+
+                        curSwitchPage = ( (curSwitchPage + 1) % (_memorySwitch->getNumChildren()) );
+                        // show next page if available
+                        _memorySwitch->setSingleChildOn(curSwitchPage);
+                    }
+
+                } 
             }
         default: break;
         }
@@ -284,6 +301,9 @@ namespace osgCuda
         _hudCamera->setViewMatrix(osg::Matrix::identity());
         _hudCamera->setClearMask(0);
         _hudCamera->setRenderer(new osgViewer::Renderer(_hudCamera.get()));
+
+        if( !_memorySwitch.valid() ) _memorySwitch = new osg::Switch;
+
         return true;
     }
 
@@ -309,11 +329,14 @@ namespace osgCuda
         if( !_hudCamera.valid() )
             return;
 
-        osg::Geode* geode = new osg::Geode();
-        geode->setName("Memory");
-        _hudCamera->addChild( geode );
-
-        osg::StateSet* stateset = geode->getOrCreateStateSet();
+        //osg::Geode* geode = new osg::Geode();
+        //geode->setName("Memory");
+        //_hudCamera->addChild( geode );
+        _hudCamera->addChild( _memorySwitch );
+        
+        
+        //osg::StateSet* stateset = geode->getOrCreateStateSet();
+        osg::StateSet* stateset = _memorySwitch->getOrCreateStateSet();
         stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
         stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
         stateset->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
@@ -321,11 +344,13 @@ namespace osgCuda
 
         std::string font("fonts/arial.ttf");
 
+        unsigned int maxEntriesPerPage = 30;
         float leftPos = 10.0f;
         float characterSize = 18.0f;
         osg::Vec4 colorFR(1.0f,1.0f,1.0f,1.0f);
 
-        osg::Vec3 pos(leftPos, _statsHeight-24.0f,0.0f);
+        osg::Vec3 posOrig(leftPos, _statsHeight-24.0f,0.0f);
+        osg::Vec3 pos = posOrig;
 
         //////////////////////////////
         // COLLECT MEMORY RESOURCES //
@@ -404,10 +429,42 @@ namespace osgCuda
         }
 
         float overallByteSize = 0.0f;
+        unsigned int counter = 0;
+        unsigned int pageCount = 1;
+        osg::Geode* geode = NULL;
+        unsigned int numPages = memoryList.size() / maxEntriesPerPage;
+        if( memoryList.size() % maxEntriesPerPage != 0 )
+            numPages++;
 
         // Add up all relevant constants
         for( osgCompute::ResourceClassListItr itr = memoryList.begin(); itr != memoryList.end(); ++itr )
         {
+            
+            // setup geode and page info if needed
+            if ( counter % maxEntriesPerPage == 0 )
+            {
+                geode = new osg::Geode();
+                geode->setName("Memory");
+                _memorySwitch->addChild( geode );
+
+                pos = posOrig;
+                pos.x() = leftPos;
+
+                osg::ref_ptr<osgText::Text> curPageInfo = new osgText::Text;
+                geode->addDrawable( curPageInfo.get() );
+                curPageInfo->setColor(colorFR);
+                curPageInfo->setFont(font);
+                curPageInfo->setCharacterSize(characterSize);
+                curPageInfo->setPosition(pos);
+
+                std::stringstream pagestream;
+                pagestream << "Page " << pageCount << " of " << numPages << " (use SHIFT + c for showing next page):";
+                curPageInfo->setText(pagestream.str());
+                pageCount++;
+                pos.y() -= characterSize*2.5f;
+            }
+            counter++;
+
             pos.x() = leftPos;
 
             const osgCompute::Memory* memory = dynamic_cast<const osgCompute::Memory*>((*itr).get());
@@ -465,6 +522,7 @@ namespace osgCuda
          overallLabel->setCharacterSize(characterSize);
          overallLabel->setPosition(pos);
          overallLabel->setText( consstream.str() );
+         
     }
 
     //------------------------------------------------------------------------------
@@ -809,6 +867,7 @@ namespace osgCuda
     void StatsHandler::clearScene(osgViewer::ViewerBase* viewer)
     {
         _hudCamera->removeChildren(0, _hudCamera->getNumChildren() );
+        _memorySwitch->removeChildren(0, _memorySwitch->getNumChildren() );
     }
 
 }
