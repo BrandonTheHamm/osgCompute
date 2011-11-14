@@ -69,14 +69,14 @@ namespace osgCuda
         OpenGL and CUDA.
         @return Returns a pointer to the GL buffer resource. NULL if it does not exist.
         */
-        virtual osgCompute::Memory* getMemory();
+        virtual osgCompute::GLMemory* getMemory();
 
         /** Returns a pointer to a GLMemory object which has access to the internal 
         OpenGL texture handles. The memory object handles the interoperability between 
         OpenGL and CUDA.
         @return Returns a pointer to the GL buffer resource. NULL if it does not exist.
         */
-        virtual const osgCompute::Memory* getMemory() const;
+        virtual const osgCompute::GLMemory* getMemory() const;
 
         /** Adds an identifier to the GLMemory object. GLMemoryAdapters will share these identifiers 
         with its GLMemory adaptees.
@@ -106,20 +106,6 @@ namespace osgCuda
         */ 	
         virtual const osgCompute::IdentifierSet& getIdentifiers() const;
 
-        /** The usage hint specifies in which context a texture resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the texture is a render target in the OpenGL context.
-        @param[in] usage usage hint for interoperability.
-        */
-        virtual void setUsage( unsigned int usage );
-
-        /** The usage hint specifies in which context a texture resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the texture is a render target in the OpenGL context.
-        @return Returns the usage hint of an GLMemoryAdapter.
-        */
-        virtual unsigned int getUsage() const;
-
         /** Overloaded rendering function from osg::Texture. Checks
         if is necessary to unmap() the memory from the CUDA context and afterwards
         calls osg::Texture::apply(). 
@@ -132,6 +118,14 @@ namespace osgCuda
         @param[in] state pointer to the current state object to compile for.
         */
         virtual void compileGLObjects(osg::State& state) const;
+
+        /** Notify adapter when it is bound as an FrameBufferObject 
+            for rendering with OpenGL. Sets MAP_DEVICE_ARRAY_TARGET for
+            connected memory object. Calling map() with MAP_HOST_XXX or 
+            MAP_DEVICE_XXX will cause a memory copy afterwards, before 
+            a pointer is returned.
+        */
+        virtual void applyAsRenderTarget() const;
 
         /** Overloaded from osg::Texture. Will unregister the memory from 
         the CUDA context if state is connected to the CUDA device.
@@ -153,7 +147,7 @@ namespace osgCuda
 
         void clearLocal();
 
-        osg::ref_ptr<osgCompute::GLMemory> _memory;
+        mutable osg::ref_ptr<osgCompute::GLMemory> _memory;
     };
 
     //! Class extends osg::Texture3D by CUDA functionality.
@@ -203,14 +197,14 @@ namespace osgCuda
         OpenGL and CUDA.
         @return Returns a pointer to the GL buffer resource. 
         */
-        virtual osgCompute::Memory* getMemory();
+        virtual osgCompute::GLMemory* getMemory();
 
         /** Returns a pointer to a GLMemory object which has access to the internal 
         OpenGL texture handles. The memory object handles the interoperability between 
         OpenGL and CUDA.
         @return Returns a pointer to the GL buffer resource.
         */
-        virtual const osgCompute::Memory* getMemory() const;
+        virtual const osgCompute::GLMemory* getMemory() const;
 
         /** Adds an identifier to the GLMemory object. GLMemoryAdapters will share these identifiers 
         with its GLMemory adaptees.
@@ -240,20 +234,6 @@ namespace osgCuda
         */ 	
         virtual const osgCompute::IdentifierSet& getIdentifiers() const;
 
-        /** The usage hint specifies in which context a texture resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the texture is a render target in the OpenGL context.
-        @param[in] usage usage hint for interoperability.
-        */
-        virtual void setUsage( unsigned int usage );
-
-        /** The usage hint specifies in which context a texture resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the texture is a render target in the OpenGL context.
-        @return Returns the usage hint of an GLMemoryAdapter.
-        */
-        virtual unsigned int getUsage() const;
-
         /** Overloaded rendering function from osg::Texture. Checks
         if is necessary to unmap() the memory from the CUDA context and afterwards
         calls osg::Texture::apply(). 
@@ -266,6 +246,14 @@ namespace osgCuda
         @param[in] state pointer to the current state object to compile for.
         */
         virtual void compileGLObjects(osg::State& state) const;
+
+        /** Notify adapter when it is bound as an FrameBufferObject 
+            for rendering with OpenGL. Sets MAP_DEVICE_ARRAY_TARGET for
+            connected memory object. Calling map() with MAP_HOST_XXX or 
+            MAP_DEVICE_XXX will cause a memory copy afterwards, before 
+            a pointer is returned.
+        */
+        virtual void applyAsRenderTarget() const;
 
         /** Overloaded from osg::Texture. Will unregister the memory from 
         the CUDA context if state is connected to the CUDA device.
@@ -287,7 +275,7 @@ namespace osgCuda
 
         void clearLocal();
 
-        osg::ref_ptr<osgCompute::GLMemory> _memory;
+        mutable osg::ref_ptr<osgCompute::GLMemory> _memory;
     };
 
     //! Class extends osg::TextureRectangle by CUDA functionality.
@@ -337,14 +325,14 @@ namespace osgCuda
         OpenGL and CUDA.
         @return Returns a pointer to the GL buffer resource. 
         */
-        virtual osgCompute::Memory* getMemory();
+        virtual osgCompute::GLMemory* getMemory();
 
         /** Returns a pointer to a GLMemory object which has access to the internal 
         OpenGL texture handles. The memory object handles the interoperability between 
         OpenGL and CUDA.
         @return Returns a pointer to the GL buffer resource. 
         */
-        virtual const osgCompute::Memory* getMemory() const;
+        virtual const osgCompute::GLMemory* getMemory() const;
 
         /** Adds an identifier to the GLMemory object. GLMemoryAdapters will share these identifiers 
         with its GLMemory adaptees.
@@ -374,20 +362,6 @@ namespace osgCuda
         */ 	
         virtual const osgCompute::IdentifierSet& getIdentifiers() const;
 
-        /** The usage hint specifies in which context a texture resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the texture is a render target in the OpenGL context.
-        @param[in] usage usage hint for interoperability.
-        */
-        virtual void setUsage( unsigned int usage );
-
-        /** The usage hint specifies in which context a texture resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the texture is a render target in the OpenGL context.
-        @return Returns the usage hint of an GLMemoryAdapter.
-        */
-        virtual unsigned int getUsage() const;
-
         /** Overloaded rendering function from osg::Texture. Checks
         if is necessary to unmap() the memory from the CUDA context and afterwards
         calls osg::Texture::apply(). 
@@ -400,6 +374,14 @@ namespace osgCuda
         @param[in] state pointer to the current state object to compile for.
         */
         virtual void compileGLObjects(osg::State& state) const;
+
+        /** Notify adapter when it is bound as an FrameBufferObject 
+            for rendering with OpenGL. Sets MAP_DEVICE_ARRAY_TARGET for
+            connected memory object. Calling map() with MAP_HOST_XXX or 
+            MAP_DEVICE_XXX will cause a memory copy afterwards, before 
+            a pointer is returned.
+        */
+        virtual void applyAsRenderTarget() const;
 
         /** Overloaded from osg::Texture. Will unregister the memory from 
         the CUDA context if state is connected to the CUDA device.
@@ -421,7 +403,7 @@ namespace osgCuda
 
         void clearLocal();
 
-        osg::ref_ptr<osgCompute::GLMemory> _memory;
+        mutable osg::ref_ptr<osgCompute::GLMemory> _memory;
     };
 }
 

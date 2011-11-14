@@ -26,40 +26,21 @@ extern "C" void swapEndianness( unsigned int numBlocks, unsigned int numThreads,
 class SwapComputation : public osgCompute::Computation
 {
 public:
-    SwapComputation() : osgCompute::Computation() {clearLocal();}
+    virtual void launch()
+    {
+        if( !_buffer.valid() )
+            return;
 
-    virtual bool init();
-    virtual void launch();
+        unsigned int numThreads = 1;
+        unsigned int numBlocks = _buffer->getDimension(0) / numThreads;
+        swapEndianness( numBlocks, numThreads, _buffer->map( osgCompute::MAP_DEVICE_TARGET ) );
+    }
 
     inline void setBuffer( osgCompute::Memory* buffer ) { _buffer = buffer; }
 
-    virtual void clear() { clearLocal(); osgCompute::Computation::clear(); }
 protected:
-    virtual ~SwapComputation() { clearLocal(); }
-    void clearLocal() { _buffer = NULL; }
-
-    unsigned int                                     _numThreads;
-    unsigned int                                     _numBlocks;
     osg::ref_ptr<osgCompute::Memory>                 _buffer;
 };
-
-//------------------------------------------------------------------------------
-void SwapComputation::launch()
-{
-    swapEndianness( _numBlocks, _numThreads, _buffer->map() );
-}
-
-//------------------------------------------------------------------------------
-bool SwapComputation::init()
-{
-    if( !_buffer )
-        return false;
-
-    _numThreads = 1;
-    _numBlocks = _buffer->getDimension(0) / _numThreads;
-
-    return osgCompute::Computation::init();
-}
 
 //------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -81,14 +62,11 @@ int main(int argc, char *argv[])
     for( unsigned int v=0; v<numEndians; ++v )
         osg::notify(osg::INFO)<<std::hex<< bigEndians[v] <<std::endl;
 
-
-
     // create a buffer
     osg::ref_ptr<osgCuda::Memory> buffer = new osgCuda::Memory;
     buffer->setElementSize( sizeof(unsigned int) );
     buffer->setDimension(0, numEndians);
     buffer->init();
-
 
     ///////////////////
     // LAUNCH MODULE //

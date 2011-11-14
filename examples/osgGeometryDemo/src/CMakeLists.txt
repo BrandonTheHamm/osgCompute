@@ -43,7 +43,6 @@ INCLUDE_DIRECTORIES(
 # collect all headers
 
 SET(TARGET_H
-	 ${HEADER_PATH}/Warp
 )
 
 
@@ -57,7 +56,6 @@ WRAP_CUDA( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
 # collect the sources
 SET(TARGET_SRC
 	main.cpp
-	Warp.cpp
 	${CUDA_FILES}
     ${MY_CUDA_SOURCE_FILES} 
 )
@@ -110,6 +108,7 @@ SET(ADDITIONAL_FILES
 SET(TARGET_ADDITIONAL_LIBRARIES
 	osgCompute
 	osgCuda
+	osgCudaStats
 )
 
 

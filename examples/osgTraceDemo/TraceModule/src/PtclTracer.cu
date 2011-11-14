@@ -19,7 +19,7 @@
 // DEVICE FUNCTIONS //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define GAM 0.003f
-#define VEL_STRENGTH  10.0f
+#define VEL_STRENGTH  10.0f 
 
 //------------------------------------------------------------------------------
 inline __device__ 
@@ -67,26 +67,29 @@ inline float4 vortexField( float4 pos )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void traceKernel( float4* ptcls, float etime )
+void traceKernel( float4* ptcls, float etime, unsigned int numPtcls )
 {
     unsigned int ptclIdx = thIdx();
-    float4 ptclPos = ptcls[ptclIdx];
+    if( ptclIdx < numPtcls )
+    {
+        float4 ptclPos = ptcls[ptclIdx];
 
-    // 4th order Runge-Kutta 
-    float halfETime = etime * 0.5f;
-    float4 k0 = vortexField( ptclPos );
-    float4 k1 = vortexField( ptclPos + (halfETime * k0) );
-    float4 k2 = vortexField( ptclPos + (halfETime * k1) );
-    float4 k3 = vortexField( ptclPos + (etime * k2) );
+        // 4th order Runge-Kutta 
+        float halfETime = etime * 0.5f;
+        float4 k0 = vortexField( ptclPos );
+        float4 k1 = vortexField( ptclPos + (halfETime * k0) );
+        float4 k2 = vortexField( ptclPos + (halfETime * k1) );
+        float4 k3 = vortexField( ptclPos + (etime * k2) );
 
-    // Advance
-    ptclPos = ptclPos + etime*(1.0f/6.0f)* ( k0 + (2.0f*k1) + (2.0f*k2) + k3 );
-    ptclPos.w = 1.0f;
-    
-    // Forward-Euler
-    // ptclPos = ptclPos + etime* vortexField(ptclPos);
-    // ptclPos.w = 1.0f;
-    ptcls[ptclIdx] = ptclPos;
+        // Advance
+        ptclPos = ptclPos + etime*(1.0f/6.0f)* ( k0 + (2.0f*k1) + (2.0f*k2) + k3 );
+        ptclPos.w = 1.0f;
+        
+        // Forward-Euler
+        // ptclPos = ptclPos + etime* vortexField(ptclPos);
+        // ptclPos.w = 1.0f;
+        ptcls[ptclIdx] = ptclPos;
+    }
 }
 
 
@@ -95,10 +98,10 @@ void traceKernel( float4* ptcls, float etime )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 extern "C" __host__
-void trace( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime )
+void trace( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime, unsigned int numPtcls )
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );
 
-    traceKernel<<< blocks, threads >>>(reinterpret_cast<float4*>(ptcls),etime);
+    traceKernel<<< blocks, threads >>>( (float4*) ptcls,etime, numPtcls);
 }

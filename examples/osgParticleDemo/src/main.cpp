@@ -14,6 +14,7 @@
 */
 #include <iostream>
 #include <sstream>
+#include <cuda_runtime.h>
 #include <osg/ArgumentParser>
 #include <osg/Texture2D>
 #include <osg/Viewport>
@@ -33,93 +34,255 @@
 #include <osgCuda/Program>
 #include <osgCuda/Memory>
 #include <osgCuda/Geometry>
+#include <osgCudaStats/Stats>
 
-#include "PtclMover"
-#include "PtclEmitter"
-
+//////////////////////
+// GLOBAL VARIABLES //
+//////////////////////
 const osg::Vec3f   bbmin = osg::Vec3f(0,0,0);
 const osg::Vec3f   bbmax = osg::Vec3f(4,4,4);
 const unsigned int numParticles = 64000;
 
-//------------------------------------------------------------------------------
-osg::Geode* getBoundingBox()
+//////////////////////////
+// ADDITIONAL RESOURCES //
+//////////////////////////
+/**
+*/
+class AdvanceTime : public osgCompute::Resource
 {
-    osg::Geometry* bbgeom = new osg::Geometry;
+public:
+    osg::ref_ptr<osg::FrameStamp> _fs;
+};
 
-    /////////////////////
-    // CREATE GEOMETRY //
-    /////////////////////
-    // vertices
-    osg::Vec3Array* vertices = new osg::Vec3Array();
-    osg::Vec3 center = (bbmin + bbmax) * 0.5f;
-    osg::Vec3 radiusX( bbmax.x() - center.x(), 0, 0 );
-    osg::Vec3 radiusY( 0, bbmax.y() - center.y(), 0 );
-    osg::Vec3 radiusZ( 0, 0, bbmax.z() - center.z() );
-    vertices->push_back( center - radiusX - radiusY - radiusZ ); // 0
-    vertices->push_back( center + radiusX - radiusY - radiusZ ); // 1
-    vertices->push_back( center + radiusX + radiusY - radiusZ ); // 2
-    vertices->push_back( center - radiusX + radiusY - radiusZ ); // 3
-    vertices->push_back( center - radiusX - radiusY + radiusZ ); // 4
-    vertices->push_back( center + radiusX - radiusY + radiusZ ); // 5
-    vertices->push_back( center + radiusX + radiusY + radiusZ ); // 6
-    vertices->push_back( center - radiusX + radiusY + radiusZ ); // 7
-    bbgeom->setVertexArray( vertices );
+/**
+*/
+class EmitterBox : public osgCompute::Resource
+{
+public:
+    osg::Vec3f _min;
+    osg::Vec3f _max;
+};
 
-    // indices
-    osg::DrawElementsUShort* indices = new osg::DrawElementsUShort(GL_LINES);
-    indices->push_back(0);
-    indices->push_back(1);
-    indices->push_back(1);
-    indices->push_back(2);
-    indices->push_back(2);
-    indices->push_back(3);
-    indices->push_back(3);
-    indices->push_back(0);
-
-    indices->push_back(4);
-    indices->push_back(5);
-    indices->push_back(5);
-    indices->push_back(6);
-    indices->push_back(6);
-    indices->push_back(7);
-    indices->push_back(7);
-    indices->push_back(4);
-
-    indices->push_back(1);
-    indices->push_back(5);
-    indices->push_back(2);
-    indices->push_back(6);
-    indices->push_back(3);
-    indices->push_back(7);
-    indices->push_back(0);
-    indices->push_back(4);
-    bbgeom->addPrimitiveSet( indices );
-
-    // color
-    osg::Vec4Array* color = new osg::Vec4Array;
-    color->push_back( osg::Vec4(0.5f, 0.5f, 0.5f, 1.f) );
-    bbgeom->setColorArray( color );
-    bbgeom->setColorBinding( osg::Geometry::BIND_OVERALL );
-
-    ////////////////
-    // SETUP BBOX //
-    ////////////////
-    osg::Geode* bbox = new osg::Geode;
-    bbox->addDrawable( bbgeom );
-    bbox->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-
-    return bbox;
-}
+//////////////////////
+// EXTERN FUNCTIONS //
+//////////////////////
+//------------------------------------------------------------------------------
+extern "C" void reseed( 
+              unsigned int numBlocks,
+              unsigned int numThreads,
+              void* ptcls,
+              void* seeds,
+              unsigned int seedCount,
+              unsigned int seedIdx,
+              float3 bbmin,
+              float3 bbmax,
+              unsigned int numPtcls );
 
 //------------------------------------------------------------------------------
-osg::Geode* getGeode()
-{
-    osg::Geode* geode = new osg::Geode;
+extern "C" void move( 
+              unsigned int numBlocks, 
+              unsigned int numThreads, 
+              void* ptcls, 
+              float etime,
+              unsigned int numPtcls );
 
-    //////////////
-    // GEOMETRY //
-    //////////////
+//////////////////
+// COMPUTATIONS //
+//////////////////
+/**
+*/
+class PtclMover : public osgCompute::Computation 
+{
+public:
+    virtual void launch()
+    {
+        if( !_ptcls.valid() || !_advanceTime.valid() )
+        {
+            osg::notify( osg::WARN )
+                << "PtclMover::launch(): resources are missing."
+                << std::endl;
+
+            return;
+        }
+
+        void* ptclPos = _ptcls->map( osgCompute::MAP_DEVICE_TARGET );
+        if( ptclPos == NULL  )
+            return;
+
+        if( !_timer.valid() )
+        {
+            _timer = new osgCuda::Timer;
+            _timer->setName( "PtclMover");
+            _timer->init();
+        }
+
+        _timer->start();
+
+        /////////////////////
+        // ADVANCE IN TIME //
+        /////////////////////
+        float time = (float)(_advanceTime->_fs)->getSimulationTime();
+        if( _firstFrame )
+        {
+            _lastTime = time;
+            _firstFrame = false;
+        }
+
+        float elapsedtime = static_cast<float>(time - _lastTime);
+        _lastTime = time;
+
+        ////////////////////
+        // MOVE PARTICLES //
+        ////////////////////
+        unsigned int numBlocks = (_ptcls->getDimension(0) / 128)+1;
+        unsigned int numThreads = 128;
+
+        move( numBlocks, 
+              numThreads, 
+              ptclPos, 
+              elapsedtime,
+              _ptcls->getDimension(0) );
+
+        _timer->stop();
+    }
+
+    virtual void acceptResource( osgCompute::Resource& resource )
+    {
+        if( resource.isIdentifiedBy("PTCL_BUFFER") )
+            _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
+
+        if( resource.isIdentifiedBy("PTCL_ADVANCETIME") )
+            _advanceTime = dynamic_cast<AdvanceTime*>( &resource );
+    }
+
+private:
+    osg::ref_ptr<osgCuda::Timer>        _timer;
+    double                              _lastTime;
+    bool						        _firstFrame;
+    osg::ref_ptr<AdvanceTime>           _advanceTime;
+    osg::ref_ptr<osgCompute::Memory>    _ptcls;
+};
+
+/**
+*/
+class PtclEmitter : public osgCompute::Computation 
+{
+public:
+    virtual void launch()
+    {
+        if( !_ptcls.valid() || !_box.valid() )
+        {
+            osg::notify( osg::WARN )
+                << "ParticleEmitter::launch() resources are missing."
+                << std::endl;
+
+            return;
+        }        
+        
+
+        void* ptclPos = _ptcls->map( osgCompute::MAP_DEVICE_TARGET );
+        void* seedPos = _seeds->map( osgCompute::MAP_DEVICE_SOURCE );
+        if( ptclPos == NULL || seedPos == NULL )
+            return;
+
+        if( !_timer.valid() )
+        {
+            _timer = new osgCuda::Timer;
+            _timer->setName( "PtclEmitter");
+            _timer->init();
+        }
+
+        _timer->start();
+
+        //////////////////////
+        // RESEED PARTICLES //
+        //////////////////////
+        unsigned int numBlocks = (_ptcls->getDimension(0) / 128) + 1;
+        unsigned int numThreads = 128;
+
+        float3 bbmin = { _box->_min.x(), _box->_min.y(), _box->_min.z() };
+        float3 bbmax = { _box->_max.x(), _box->_max.y(), _box->_max.z() };
+
+        reseed(
+            numBlocks,
+            numThreads,
+            ptclPos,
+            seedPos,
+            _seeds->getDimension(0),
+            static_cast<unsigned int>(rand()),
+            bbmin,
+            bbmax,
+            _ptcls->getDimension(0) );
+
+        _timer->stop();
+    }
+
+    virtual void acceptResource( osgCompute::Resource& resource )
+    {
+        if( resource.isIdentifiedBy("PTCL_BUFFER") )
+            _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
+        if( resource.isIdentifiedBy("PTCL_SEEDS") )
+            _seeds = dynamic_cast<osgCompute::Memory*>( &resource );
+        if( resource.isIdentifiedBy("EMITTER_BOX") )
+            _box = dynamic_cast<EmitterBox*>( &resource );
+    }
+
+private:
+    osg::ref_ptr<osgCuda::Timer>                      _timer;
+    osg::ref_ptr<EmitterBox>                          _box;
+    osg::ref_ptr<osgCompute::Memory>                  _ptcls;
+    osg::ref_ptr<osgCompute::Memory>                  _seeds;
+};
+
+//////////////////////
+// UPDATE OPERATION //
+//////////////////////
+// You do not need to use programs in order to launch modules. In this example
+// we use an updaet operation to update particle geometry with CUDA
+class PtclOperation : public osg::Operation
+{
+public:
+    virtual void init( osgCompute::ResourceVisitor& rv )
+    {
+        setKeep( true );
+
+        _emitter = new PtclEmitter; 
+        _mover = new PtclMover;
+
+        osgCompute::ResourceSet resources = rv.getResources();
+        for( osgCompute::ResourceSetItr itr = resources.begin(); itr != resources.end(); ++itr )
+        {
+            _emitter->acceptResource( *(*itr) );
+            _mover->acceptResource( *(*itr) );
+        }
+    }
+
+    virtual void operator() (osg::Object*)
+    {
+        _emitter->launch();
+        _mover->launch();
+    }
+
+private:
+    osg::ref_ptr<osgCompute::Computation> _emitter;
+    osg::ref_ptr<osgCompute::Computation> _mover;
+};
+
+
+//////////////////////
+// GLOBAL FUNCTIONS //
+//////////////////////
+//------------------------------------------------------------------------------
+osg::ref_ptr<osg::Node> getScene()
+{
+    osg::ref_ptr<osg::Group> scene = new osg::Group;
+
+    //////////////////////////////
+    // CREATE PARTICLE GEOMETRY //
+    //////////////////////////////
+    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
     osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
+    ptclGeom->setName("PARTICLE BUFFER");
 
     // Initialize the Particles
     osg::Vec4Array* coords = new osg::Vec4Array(numParticles);
@@ -131,18 +294,14 @@ osg::Geode* getGeode()
     ptclGeom->addIdentifier( "PTCL_BUFFER" );
     geode->addDrawable( ptclGeom.get() );
 
-    ////////////
-    // SPRITE //
-    ////////////
+    // Sprite 
     geode->getOrCreateStateSet()->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
 
-    ////////////
-    // SHADER //
-    ////////////
-    osg::Program* program = new osg::Program;
+    // Shader 
+    osg::ref_ptr<osg::Program> program = new osg::Program;
 
     const std::string vtxShader=
     "uniform vec2 pixelsize;                                                                \n"
@@ -197,20 +356,70 @@ osg::Geode* getGeode()
     pixelsize->set( osg::Vec2(1.0f,50.0f) );
     geode->getOrCreateStateSet()->addUniform( pixelsize );
     geode->setCullingActive( false );
+    scene->addChild( geode );
 
-    return geode;
-}
+    /////////////////////////
+    // CREATE BOUNDING BOX //
+    /////////////////////////
+    osg::Geometry* bbgeom = new osg::Geometry;
+    // vertices
+    osg::Vec3Array* vertices = new osg::Vec3Array();
+    osg::Vec3 center = (bbmin + bbmax) * 0.5f;
+    osg::Vec3 radiusX( bbmax.x() - center.x(), 0, 0 );
+    osg::Vec3 radiusY( 0, bbmax.y() - center.y(), 0 );
+    osg::Vec3 radiusZ( 0, 0, bbmax.z() - center.z() );
+    vertices->push_back( center - radiusX - radiusY - radiusZ ); // 0
+    vertices->push_back( center + radiusX - radiusY - radiusZ ); // 1
+    vertices->push_back( center + radiusX + radiusY - radiusZ ); // 2
+    vertices->push_back( center - radiusX + radiusY - radiusZ ); // 3
+    vertices->push_back( center - radiusX - radiusY + radiusZ ); // 4
+    vertices->push_back( center + radiusX - radiusY + radiusZ ); // 5
+    vertices->push_back( center + radiusX + radiusY + radiusZ ); // 6
+    vertices->push_back( center - radiusX + radiusY + radiusZ ); // 7
+    bbgeom->setVertexArray( vertices );
 
-//------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Program> getProgram()
-{
-    osg::ref_ptr<osgCompute::Program> programEmitter = new osgCuda::Program;
-    programEmitter->addComputation( *new PtclDemo::PtclEmitter );  
-    osg::ref_ptr<osgCompute::Program> programMover = new osgCuda::Program;
-    programMover->addComputation( *new PtclDemo::PtclMover );
-    programMover->addChild( programEmitter );
+    // indices
+    osg::DrawElementsUShort* indices = new osg::DrawElementsUShort(GL_LINES);
+    indices->push_back(0);
+    indices->push_back(1);
+    indices->push_back(1);
+    indices->push_back(2);
+    indices->push_back(2);
+    indices->push_back(3);
+    indices->push_back(3);
+    indices->push_back(0);
 
-    return programMover;
+    indices->push_back(4);
+    indices->push_back(5);
+    indices->push_back(5);
+    indices->push_back(6);
+    indices->push_back(6);
+    indices->push_back(7);
+    indices->push_back(7);
+    indices->push_back(4);
+
+    indices->push_back(1);
+    indices->push_back(5);
+    indices->push_back(2);
+    indices->push_back(6);
+    indices->push_back(3);
+    indices->push_back(7);
+    indices->push_back(0);
+    indices->push_back(4);
+    bbgeom->addPrimitiveSet( indices );
+
+    // color
+    osg::Vec4Array* color = new osg::Vec4Array;
+    color->push_back( osg::Vec4(0.5f, 0.5f, 0.5f, 1.f) );
+    bbgeom->setColorArray( color );
+    bbgeom->setColorBinding( osg::Geometry::BIND_OVERALL );
+
+    osg::Geode* bbox = new osg::Geode;
+    bbox->addDrawable( bbgeom );
+    bbox->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+    scene->addChild( bbox );
+
+    return scene;
 }
 
 //------------------------------------------------------------------------------
@@ -226,14 +435,14 @@ osg::ref_ptr<osgCompute::ResourceVisitor> getVisitor( osg::FrameStamp* fs )
     // located in the graph.
 
     // EMITTER BOX
-    osg::ref_ptr<PtclDemo::EmitterBox> emitterBox = new PtclDemo::EmitterBox;
+    osg::ref_ptr<EmitterBox> emitterBox = new EmitterBox;
     emitterBox->addIdentifier( "EMITTER_BOX" );
     emitterBox->_min = bbmin;
     emitterBox->_max = bbmax;
     rv->addResource( *emitterBox );
 
     // FRAME STAMP
-    osg::ref_ptr<PtclDemo::AdvanceTime> advanceTime = new PtclDemo::AdvanceTime;
+    osg::ref_ptr<AdvanceTime> advanceTime = new AdvanceTime;
     advanceTime->addIdentifier( "PTCL_ADVANCETIME" );
     advanceTime->_fs = fs;
     rv->addResource( *advanceTime );
@@ -248,7 +457,7 @@ osg::ref_ptr<osgCompute::ResourceVisitor> getVisitor( osg::FrameStamp* fs )
 
     osg::ref_ptr<osgCuda::Memory> seedBuffer = new osgCuda::Memory;
     seedBuffer->setElementSize( sizeof(float) );
-    seedBuffer->setName( "ptclSeedBuffer" );
+    seedBuffer->setName( "PARTICLE SEEDS" );
     seedBuffer->setDimension(0,numParticles);
     seedBuffer->setImage( seedValues );
     seedBuffer->addIdentifier( "PTCL_SEEDS" );
@@ -267,6 +476,8 @@ int main(int argc, char *argv[])
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.setUpViewInWindow( 50, 50, 640, 480);
     viewer.addEventHandler(new osgViewer::StatsHandler);
+    viewer.addEventHandler(new osgCuda::StatsHandler);
+    viewer.addEventHandler(new osgViewer::HelpHandler);
 
     //////////////////
     // SETUP VIEWER //
@@ -276,13 +487,7 @@ int main(int argc, char *argv[])
     /////////////////
     // SETUP SCENE //
     /////////////////
-    // Creat an arbitrary graph
-    osg::ref_ptr<osg::Group> scene = new osg::Group;
-    osg::ref_ptr<osg::Group> program = getProgram();
-    scene->addChild( program );
-    program->addChild( getGeode() );
-    scene->addChild( getBoundingBox() );
-    viewer.setSceneData( scene );
+    viewer.setSceneData( getScene() );
 
     //////////////////////
     // RESOURCE VISITOR //
@@ -293,7 +498,22 @@ int main(int argc, char *argv[])
     // and in a second traversal it distributes them among the
     // programs in a graph.
     osg::ref_ptr<osgCompute::ResourceVisitor> visitor = getVisitor( viewer.getFrameStamp() );
-    visitor->apply( *scene );
+    visitor->setMode( osgCompute::ResourceVisitor::COLLECT );
+    visitor->apply( *viewer.getSceneData() );
 
+    ////////////////////////////
+    // SETUP UPDATE OPERATION //
+    ////////////////////////////
+    // In this example we use an update operation to update the
+    // particle geometry over time. Usually if you update
+    // sceen graph structures you would like to prefer an osgCompute::Program
+    // in order to launch modules.
+    osg::ref_ptr<PtclOperation> ptclOperation = new PtclOperation;
+    ptclOperation->init( *visitor );
+    viewer.addUpdateOperation( ptclOperation );
+
+    ///////////////
+    // RUN SCENE //
+    ///////////////
     return viewer.run();
 }

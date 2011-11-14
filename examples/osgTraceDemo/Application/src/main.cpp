@@ -33,6 +33,7 @@
 #include <osgCuda/Program>
 #include <osgCuda/Memory>
 #include <osgCuda/Geometry>
+#include <osgCudaStats/Stats>
 
 //------------------------------------------------------------------------------
 osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
@@ -118,6 +119,7 @@ osg::Geode* getGeode( unsigned int numParticles )
     // GEOMETRY //
     //////////////
     osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
+    ptclGeom->setName("PARTICLE GEOMETRY");
 
     // Initialize the Particles
     osg::Vec4Array* coords = new osg::Vec4Array(numParticles);
@@ -214,9 +216,7 @@ osg::ref_ptr<osgCompute::Program> setupProgram()
     programTracer->setName( "trace particles program" );
 
     // Execute the program during the update traversal before the subgraph is handled. 
-    // This is the default behaviour. Use the following line to execute the program in
-    // the rendering traversal after the subgraph has been rendered.
-    //osgCompute::Program::ComputeOrder order = osgCompute::Program::PRERENDER_AFTERCHILDREN;
+    // This is the default behaviour.
     osgCompute::Program::ComputeOrder order = osgCompute::Program::UPDATE_BEFORECHILDREN;
     programEmitter->setComputeOrder( order );
     programTracer->setComputeOrder( order );
@@ -263,15 +263,23 @@ int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
 
+    //////////////////
+    // SETUP VIEWER //
+    //////////////////
     osgViewer::Viewer viewer(osg::ArgumentParser(&argc, argv));
     viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.setUpViewInWindow( 50, 50, 640, 480);
     viewer.addEventHandler(new osgViewer::StatsHandler);
+    viewer.addEventHandler(new osgCuda::StatsHandler);
+    viewer.addEventHandler(new osgViewer::HelpHandler);
 
-    //////////////////
-    // SETUP VIEWER //
-    //////////////////
+    ///////////////////////
+    // LINK CUDA AND OSG //
+    ///////////////////////
+    // setupOsgCudaAndViewer() creates
+    // the OpenGL context and binds
+    // it to the CUDA context of the thread.
     osgCuda::setupOsgCudaAndViewer( viewer );
 
     /////////////////
@@ -296,5 +304,8 @@ int main(int argc, char *argv[])
     osg::ref_ptr<osgCompute::ResourceVisitor> rv = new osgCompute::ResourceVisitor;
     rv->apply( *scene );
 
+    ///////////////
+    // RUN SCENE //
+    ///////////////
     return viewer.run();
 }

@@ -120,14 +120,14 @@ namespace osgCuda
 		OpenGL and CUDA.
 		@return Returns a pointer to the GL buffer resource. 
 		*/
-        virtual osgCompute::Memory* getMemory();
+        virtual osgCompute::GLMemory* getMemory();
 
 		/** Returns a pointer to a GLMemory object which has access to the internal 
 		OpenGL buffer handles. The memory object does the interoperability between 
 		OpenGL and CUDA.
 		@return Returns a pointer to the GL buffer resource. 
 		*/
-        virtual const osgCompute::Memory* getMemory() const;
+        virtual const osgCompute::GLMemory* getMemory() const;
 
 		/** Adds an identifier to the GLMemory object. GLMemoryAdapters will share these identifiers 
 		with its GLMemory adaptees.
@@ -157,24 +157,17 @@ namespace osgCuda
 		*/ 	
 		virtual const osgCompute::IdentifierSet& getIdentifiers() const;
 
-		/** The usage hint specifies is not used for geometries as they are
-		handled as GL_SOURCE_COMPUTE_TARGET
-		@param[in] usage not used.
-		*/
-		virtual void setUsage( unsigned int usage ) {}
-
-		/** The usage hint specifies in which context a GLMemory resource
-		is changed frequently. Geometries are always declared as GL_SOURCE_COMPUTE_TARGET.
-		@return Returns the usage hint of an GLMemoryAdapter.
-		*/
-		virtual unsigned int getUsage() const { return osgCompute::GL_SOURCE_COMPUTE_TARGET; }
-
 		/** Overloaded rendering function from osg::Geometry. Checks
 		if is necessary to unmap the memory from the CUDA context and afterwards
 		calls osg::Geometry::drawImplementation().
 		@param[in] renderInfo reference to the current render information.
 		*/
         virtual void drawImplementation(osg::RenderInfo& renderInfo) const;
+
+        /** Notify adapter when it is bound as an render target by OpenGL. 
+            Currently, geometry objects cannot be bound as a render target.
+        */
+        virtual void applyAsRenderTarget() const;
         
 		/** Overloaded from osg::Geometry. Will unregister the memory from 
 		the CUDA context if state is connected to the CUDA device.

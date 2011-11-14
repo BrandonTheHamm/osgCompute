@@ -24,8 +24,16 @@ float lerp(float a, float b, float t)
 }
 
 //------------------------------------------------------------------------------
+inline __device__ 
+float4 operator+(float4 a, float4 b)
+{
+    return make_float4(a.x + b.x, a.y + b.y, a.z + b.z,  a.w + b.w);
+}
+
+
+//------------------------------------------------------------------------------
 inline __device__
-float4 reseed( float* seeds, unsigned int seedCount, unsigned int seedIdx, unsigned int ptclIdx, float3 bbmin, float3 bbmax )
+float4 seed( float* seeds, unsigned int seedCount, unsigned int seedIdx, unsigned int ptclIdx, float3 bbmin, float3 bbmax )
 {
     // random seed idx
     unsigned int idx1 = (seedIdx + ptclIdx) % seedCount;
@@ -58,29 +66,50 @@ unsigned int thIdx()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void reseedKernel( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int seedIdx, float3 bbmin, float3 bbmax )
+void reseedKernel( float4* ptcls, 
+                   float* seeds, 
+                   unsigned int seedCount, 
+                   unsigned int seedIdx, 
+                   float3 bbmin, 
+                   float3 bbmax, 
+                   unsigned int numPtcls )
 {
     // Receive particle pos
     unsigned int ptclIdx = thIdx();
-    float4 curPtcl = ptcls[ptclIdx];
+    if( ptclIdx < numPtcls )
+    {
+        float4 curPtcl = ptcls[ptclIdx];
 
-    // Reseed Particles if they
-    // have moved out of the bounding box
-    if( curPtcl.x < bbmin.x ||
-        curPtcl.y < bbmin.y ||
-        curPtcl.z < bbmin.z ||
-        curPtcl.x > bbmax.x ||
-        curPtcl.y > bbmax.y ||
-        curPtcl.z > bbmax.z )
-        ptcls[ptclIdx] = reseed( seeds, seedCount, seedIdx, ptclIdx, bbmin, bbmax );
+        // Reseed Particles if they
+        // have moved out of the bounding box
+        if( curPtcl.x < bbmin.x ||
+            curPtcl.y < bbmin.y ||
+            curPtcl.z < bbmin.z ||
+            curPtcl.x > bbmax.x ||
+            curPtcl.y > bbmax.y ||
+            curPtcl.z > bbmax.z )
+            ptcls[ptclIdx] = seed( seeds, seedCount, seedIdx, ptclIdx, bbmin, bbmax );
+    }
+}
+
+//------------------------------------------------------------------------------
+__global__
+void moveKernel( float4* ptcls, 
+                 float etime, 
+                 unsigned int numPtcls )
+{
+    unsigned int ptclIdx = thIdx();
+    if( ptclIdx < numPtcls )
+    {
+        // perform a euler step
+        ptcls[ptclIdx] = ptcls[ptclIdx] + make_float4(0,etime,0,0);
+    }
 }
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // HOST FUNCTIONS ////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//#include <osg/Vec3f>
-
 //------------------------------------------------------------------------------
 extern "C" __host__
 void reseed(unsigned int numBlocks, 
@@ -90,17 +119,36 @@ void reseed(unsigned int numBlocks,
             unsigned int seedCount, 
             unsigned int seedIdx, 
             float3 bbmin, 
-            float3 bbmax )
+            float3 bbmax,
+            unsigned int numPtcls)
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );
 
 
     reseedKernel<<< blocks, threads >>>(
-        reinterpret_cast<float4*>(ptcls),
-        reinterpret_cast<float*>(seeds),
+        (float4*)ptcls,
+        (float*)seeds,
         seedCount,
         seedIdx,
         bbmin,
-        bbmax );
+        bbmax,
+        numPtcls );
+}
+
+//------------------------------------------------------------------------------
+extern "C" __host__
+void move( unsigned int numBlocks, 
+           unsigned int numThreads, 
+           void* ptcls, 
+           float etime,
+           unsigned int numPtcls )
+{
+    dim3 blocks( numBlocks, 1, 1 );
+    dim3 threads( numThreads, 1, 1 );
+
+    moveKernel<<< blocks, threads >>>( 
+        (float4*)ptcls,
+        etime,
+        numPtcls );
 }

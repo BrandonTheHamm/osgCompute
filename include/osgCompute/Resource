@@ -20,6 +20,8 @@
 #include <set>
 #include <map>
 #include <osg/ref_ptr>
+#include <osg/Observer>
+#include <osg/observer_ptr>
 #include <osg/Referenced>
 #include <osgCompute/Export>
 #include <osgCompute/Callback>
@@ -37,6 +39,61 @@ namespace osgCompute
     typedef std::set< osg::ref_ptr<Resource> >                                  ResourceSet;
     typedef std::set< osg::ref_ptr<Resource> >::iterator                        ResourceSetItr;
     typedef std::set< osg::ref_ptr<Resource> >::const_iterator                  ResourceSetCnstItr;
+
+    typedef std::list< const osg::observer_ptr<Resource> >                      ResourceClassList;
+    typedef std::list< const osg::observer_ptr<Resource> >::iterator            ResourceClassListItr;
+    typedef std::list< const osg::observer_ptr<Resource> >::const_iterator      ResourceClassListCnstItr;
+
+    typedef std::multimap< std::string, Resource* >                             ObserverMap;
+    typedef std::multimap< std::string, Resource* >::iterator                   ObserverMapItr;
+    typedef std::multimap< std::string, Resource* >::const_iterator             ObserverMapCnstItr;
+
+
+
+    //! Base class to observe all existing resources.
+    /**
+    */
+    class LIBRARY_EXPORT ResourceObserver : public osg::Observer, public osg::Referenced
+    {
+    public:
+        /** Returns singleton pointer. If it does not exist it will be allocated first.
+            @param[in] erase if true the ResourceObserver will be deleted.
+            @return Returns a pointer to the ResourceObserver 
+        */
+        static ResourceObserver* instance();
+
+        /** Returns all resources of the specified resource type.
+            @param[in] classIdentifier the unique name of the resource class which has the following structure: "libraryName::className".
+            @return Returns a list of const pointers of all resources with class name.
+        */
+        ResourceClassList getResources( std::string classIdentifier ) const;
+        
+        /** Add new resource to observer. Will be called in resource constructor.
+            @param[in] resource a reference to the resource.
+        */
+        virtual void observeResource( Resource& resource );
+    protected:
+        friend class Resource;
+
+        /** Constructor
+        */
+        ResourceObserver();
+
+        /** Destructor
+        */
+        virtual ~ResourceObserver();
+
+
+        /** Removes resource from resource observer.
+            @param[in] object a pointer to the deleted resource.
+        */
+        virtual void objectDeleted(void* object);
+
+    private:
+
+        ObserverMap                             _observedObjects;
+        static osg::ref_ptr<ResourceObserver>   s_resourceObserver;
+    };
 
 	//! Base class for resources 
     /** 

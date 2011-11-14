@@ -2,7 +2,7 @@
 # Set target name und set path to data folder of the target
 #########################################################################
 
-SET(TARGETNAME osgTraceDemo)
+SET(TARGETNAME osgRTTDemo)
 SET(TARGET_DATA_PATH "${DATA_PATH}/${TARGETNAME}")
 
 
@@ -19,7 +19,7 @@ INCLUDE(FindosgGA)
 INCLUDE(FindosgDB)
 # check for cuda
 INCLUDE(FindCuda) 
-
+ 
 
 
 
@@ -28,7 +28,7 @@ INCLUDE(FindCuda)
 #########################################################################
 
 # set include dirs
-SET(HEADER_PATH ${PROJECT_SOURCE_DIR}/examples/${TARGETNAME}/include)
+SET(HEADER_PATH ${osgCompute_SOURCE_DIR}/examples/${TARGETNAME}/include)
 INCLUDE_DIRECTORIES(
     ${HEADER_PATH}
     ${OSG_INCLUDE_DIR}
@@ -47,7 +47,7 @@ SET(TARGET_H
 
 
 SET(MY_CUDA_SOURCE_FILES
-
+	TexFilter.cu
 )
 
 # Use the WRAP_CUDA macro.
@@ -92,7 +92,6 @@ INCLUDE(GroupInstall)
 
 # now set up the ADDITIONAL_FILES variable to ensure that the files will be visible in the project
 SET(ADDITIONAL_FILES
-    #${MY_SHADER_FILES}
 )
 
 
@@ -121,13 +120,7 @@ SET(TARGET_VARS_LIBRARIES
 	OSGDB_LIBRARY
     CUDA_RUNTIME_LIBRARY
 )
-
-# if a dependency to a lib is necessary which has NOT been linked already (e.g. plugins, modules)
-# then put it here!
-SET(MODULE_DEPENDENCIES
-    osgcuda_ptclemitter
-    osgcuda_ptcltracer
-)
+	
 
 #########################################################################
 # Example setup and install

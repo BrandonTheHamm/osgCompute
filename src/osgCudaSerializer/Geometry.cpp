@@ -51,70 +51,11 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCuda::Geometry& geometry
 }
 
 //------------------------------------------------------------------------------
-static bool checkUsage( const osgCuda::Geometry& geometry )
-{
-	if( geometry.getUsage() != osgCompute::GL_SOURCE_COMPUTE_SOURCE )
-		return true;
-	else
-		return false;
-}
-
-//------------------------------------------------------------------------------
-static bool writeUsage( osgDB::OutputStream& os, const osgCuda::Geometry& geometry )
-{	
-
-	switch( geometry.getUsage() )
-	{
-	case osgCompute::GL_TARGET_COMPUTE_SOURCE:
-		os.writeWrappedString(" GL_TARGET_COMPUTE_SOURCE ");
-        os << std::endl;
-		break;
-	case osgCompute::GL_SOURCE_COMPUTE_TARGET:
-		os.writeWrappedString(" GL_SOURCE_COMPUTE_TARGET ");
-        os << std::endl;
-		break;
-	case osgCompute::GL_TARGET_COMPUTE_TARGET:
-		os.writeWrappedString(" GL_TARGET_COMPUTE_TARGET ");
-        os << std::endl;
-		break;
-	default:
-		os.writeWrappedString(" GL_SOURCE_COMPUTE_SOURCE ");
-        os << std::endl;
-        break;
-	}
-
-	return true;
-}
-
-//------------------------------------------------------------------------------
-static bool readUsage( osgDB::InputStream& is, osgCuda::Geometry& geometry )
-{
-	//is >> osgDB::PROPERTY("Usage");
-
-	std::string interopUsage;
-    is.readWrappedString(interopUsage);
-    interopUsage = osgCuda::trim( interopUsage );
-    
-
-	if( interopUsage == "GL_TARGET_COMPUTE_SOURCE" )
-		geometry.setUsage( osgCompute::GL_TARGET_COMPUTE_SOURCE );
-	else if( interopUsage == "GL_SOURCE_COMPUTE_TARGET" )
-		geometry.setUsage( osgCompute::GL_SOURCE_COMPUTE_TARGET );
-	else if( interopUsage == "GL_TARGET_COMPUTE_TARGET" )
-		geometry.setUsage( osgCompute::GL_TARGET_COMPUTE_TARGET );
-	else
-		geometry.setUsage( osgCompute::GL_SOURCE_COMPUTE_SOURCE );
-
-	return true;
-}
-
-//------------------------------------------------------------------------------
 REGISTER_OBJECT_WRAPPER(osgCuda_Geometry,
 						new osgCuda::Geometry,
 						osgCuda::Geometry,
 						"osg::Object osg::Drawable osg::Geometry osgCuda::Geometry" )
 {
-	ADD_USER_SERIALIZER( Usage );
 	ADD_USER_SERIALIZER( Identifiers );
 }
 

@@ -24,7 +24,7 @@ float lerp(float a, float b, float t)
 }
 
 //------------------------------------------------------------------------------
-inline __device__
+inline __device__ 
 float4 reseed( float* seeds, unsigned int seedCount, unsigned int seedIdx, unsigned int ptclIdx, float3 bbmin, float3 bbmax )
 {
     // random seed idx
@@ -58,21 +58,24 @@ unsigned int thIdx()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void reseedKernel( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int seedIdx, float3 bbmin, float3 bbmax )
+void reseedKernel( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int seedIdx, float3 bbmin, float3 bbmax, unsigned int numPtcls )
 {
     // Receive particle pos
     unsigned int ptclIdx = thIdx();
-    float4 curPtcl = ptcls[ptclIdx];
+    if( ptclIdx < numPtcls )
+    {
+        float4 curPtcl = ptcls[ptclIdx];
 
-    // Reseed Particles if they
-    // moved out of the bounding box
-    if( curPtcl.x < bbmin.x ||
-        curPtcl.y < bbmin.y ||
-        curPtcl.z < bbmin.z ||
-        curPtcl.x > bbmax.x ||
-        curPtcl.y > bbmax.y ||
-        curPtcl.z > bbmax.z )
-        ptcls[ptclIdx] = reseed( seeds, seedCount, seedIdx, ptclIdx, bbmin, bbmax );
+        // Reseed Particles if they
+        // moved out of the bounding box
+        if( curPtcl.x < bbmin.x ||
+            curPtcl.y < bbmin.y ||
+            curPtcl.z < bbmin.z ||
+            curPtcl.x > bbmax.x ||
+            curPtcl.y > bbmax.y ||
+            curPtcl.z > bbmax.z )
+            ptcls[ptclIdx] = reseed( seeds, seedCount, seedIdx, ptclIdx, bbmin, bbmax );
+    }
 }
 
 
@@ -88,7 +91,8 @@ void reseed(unsigned int numBlocks,
             unsigned int seedCount, 
             unsigned int seedIdx, 
             float3 bbmin, 
-            float3 bbmax )
+            float3 bbmax,
+            unsigned int numPtcls )
 {
     dim3 blocks( numBlocks, 1, 1 );
     dim3 threads( numThreads, 1, 1 );
@@ -99,5 +103,6 @@ void reseed(unsigned int numBlocks,
         seedCount,
         seedIdx,
         bbmin,
-        bbmax );
+        bbmax,
+        numPtcls);
 }

@@ -43,14 +43,11 @@ INCLUDE_DIRECTORIES(
 # collect all headers
 
 SET(TARGET_H
-	 ${HEADER_PATH}/PtclMover
-	 ${HEADER_PATH}/PtclEmitter
 )
 
 
 SET(MY_CUDA_SOURCE_FILES
-	PtclMover.cu
-	PtclEmitter.cu
+	PtclKernels.cu
 )
 
 # Use the WRAP_CUDA macro.
@@ -59,8 +56,6 @@ WRAP_CUDA( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
 # collect the sources
 SET(TARGET_SRC
 	main.cpp
-	PtclMover.cpp
-	PtclEmitter.cpp
 	${CUDA_FILES}
     ${MY_CUDA_SOURCE_FILES}
 )
@@ -111,6 +106,7 @@ SET(ADDITIONAL_FILES
 SET(TARGET_ADDITIONAL_LIBRARIES
 	osgCompute
 	osgCuda
+	osgCudaStats
 )
 
 

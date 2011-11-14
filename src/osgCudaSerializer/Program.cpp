@@ -6,12 +6,47 @@
 #include <osgCuda/Program>
 #include "Util.h"
 
+BEGIN_USER_TABLE( ComputeOrder, osgCuda::Program );
+ADD_USER_VALUE( UPDATE_AFTERCHILDREN );
+ADD_USER_VALUE( UPDATE_BEFORECHILDREN );
+ADD_USER_VALUE( UPDATE_AFTERCHILDREN_NORENDER );
+ADD_USER_VALUE( UPDATE_BEFORECHILDREN_NORENDER );
+ADD_USER_VALUE( PRE_RENDER );
+ADD_USER_VALUE( POST_RENDER );
+END_USER_TABLE()
+
+USER_READ_FUNC( ComputeOrder, readOrderValue )
+USER_WRITE_FUNC( ComputeOrder, writeOrderValue )
+
+//------------------------------------------------------------------------------
+static bool checkComputeOrder( const osgCuda::Program& program )
+{
+    return true;
+}
+
+//------------------------------------------------------------------------------
+static bool readComputeOrder( osgDB::InputStream& is, osgCuda::Program& program )
+{
+    int order = readOrderValue(is);
+    int orderNumber = 0; is >> orderNumber;
+    program.setComputeOrder( static_cast<osgCuda::Program::ComputeOrder>(order), orderNumber );
+    return true;
+}
+
+//------------------------------------------------------------------------------
+static bool writeComputeOrder( osgDB::OutputStream& os, const osgCuda::Program& program )
+{
+    writeOrderValue( os, (int)program.getComputeOrderNum() );
+    os << program.getComputeOrderNum() << std::endl;
+    return true;
+}
+
 
 //------------------------------------------------------------------------------
 static bool checkResources( const osgCuda::Program& program )
 {
-	if( !program.getResources().empty() ) return true;
-	else return false;
+    if( !program.getResources().empty() ) return true;
+    else return false;
 }
 
 //------------------------------------------------------------------------------
@@ -157,18 +192,21 @@ REGISTER_OBJECT_WRAPPER(osgCuda_Program,
 						osgCuda::Program,
 						"osg::Object osg::Node osg::Group osgCuda::Program" )
 {
-	BEGIN_ENUM_SERIALIZER( ComputeOrder, UPDATE_BEFORECHILDREN ) ;
-		ADD_ENUM_VALUE( UPDATE_AFTERCHILDREN );
-		ADD_ENUM_VALUE( UPDATE_BEFORECHILDREN );
-		ADD_ENUM_VALUE( UPDATE_AFTERCHILDREN_NORENDER );
-		ADD_ENUM_VALUE( UPDATE_BEFORECHILDREN_NORENDER );
-		ADD_ENUM_VALUE( PRERENDER_BEFORECHILDREN );
-		ADD_ENUM_VALUE( PRERENDER_AFTERCHILDREN );
-		ADD_ENUM_VALUE( POSTRENDER_AFTERCHILDREN );
-		ADD_ENUM_VALUE( POSTRENDER_BEFORECHILDREN );
-		ADD_ENUM_VALUE( PRERENDER_NOCHILDREN );
-		ADD_ENUM_VALUE( POSTRENDER_NOCHILDREN );
-	END_ENUM_SERIALIZER();
+	//BEGIN_ENUM_SERIALIZER( ComputeOrder, UPDATE_BEFORECHILDREN ) ;
+	//	ADD_ENUM_VALUE( UPDATE_AFTERCHILDREN );
+	//	ADD_ENUM_VALUE( UPDATE_BEFORECHILDREN );
+	//	ADD_ENUM_VALUE( UPDATE_AFTERCHILDREN_NORENDER );
+	//	ADD_ENUM_VALUE( UPDATE_BEFORECHILDREN_NORENDER );
+	//	ADD_ENUM_VALUE( PRERENDER_BEFORECHILDREN );
+	//	ADD_ENUM_VALUE( PRERENDER_AFTERCHILDREN );
+	//	ADD_ENUM_VALUE( POSTRENDER_AFTERCHILDREN );
+	//	ADD_ENUM_VALUE( POSTRENDER_BEFORECHILDREN );
+	//	ADD_ENUM_VALUE( PRERENDER_NOCHILDREN );
+	//	ADD_ENUM_VALUE( POSTRENDER_NOCHILDREN );
+	//END_ENUM_SERIALIZER();
+
+
+    ADD_USER_SERIALIZER( ComputeOrder );  // _computeOrder & _computeOrderNum
 	ADD_USER_SERIALIZER( Computations );
 	ADD_USER_SERIALIZER( Resources );
 }

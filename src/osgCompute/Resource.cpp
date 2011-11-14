@@ -19,6 +19,91 @@
 namespace osgCompute
 {   
     /////////////////////////////////////////////////////////////////////////////////////////////////
+    // STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    osg::ref_ptr<ResourceObserver> ResourceObserver::s_resourceObserver;
+
+    //------------------------------------------------------------------------------
+    ResourceObserver* ResourceObserver::instance()
+    {
+        if( !s_resourceObserver.valid() )
+            s_resourceObserver = new ResourceObserver;
+
+        return s_resourceObserver.get();
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    ResourceObserver::ResourceObserver() :
+    Observer(),
+        Referenced()
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    ResourceObserver::~ResourceObserver()
+    {
+    }
+
+
+    //------------------------------------------------------------------------------
+    void ResourceObserver::observeResource( Resource& resource )
+    {
+        if( resource.getObserverSet() != NULL )
+        {
+            std::set<Observer*>& observers = resource.getObserverSet()->getObservers();
+            for( std::set<Observer*>::iterator itr = observers.begin(); itr != observers.end(); ++itr )
+            {
+                if( (*itr) == this )
+                    return;// Object is already observed
+            }
+        }
+
+        resource.addObserver( this );
+
+        std::string resourceClassSpecifier = std::string(resource.libraryName()).append("::").append(resource.className());
+        _observedObjects.insert( std::make_pair<std::string,Resource*>( resourceClassSpecifier, &resource ) );
+    }
+
+    //------------------------------------------------------------------------------
+    void ResourceObserver::objectDeleted( void* object )
+    {
+        Resource* resource = static_cast<Resource*>( object );
+        if( resource == NULL ) return;
+
+        std::string resourceClassName = resource->className();
+        std::pair<ObserverMapItr,ObserverMapItr> range = _observedObjects.equal_range( resourceClassName );
+        while( range.first != range.second )
+        {
+            if( range.first->second == resource )
+            {
+                _observedObjects.erase( range.first );
+                return;
+            }
+
+            range.first++;
+        }
+    }
+
+    //------------------------------------------------------------------------------
+    ResourceClassList ResourceObserver::getResources( std::string classIdentifier ) const
+    {
+        ResourceClassList resourceList;
+        std::pair<ObserverMapCnstItr,ObserverMapCnstItr> range = _observedObjects.equal_range( classIdentifier );
+        for(;range.first != range.second; range.first++ )
+        {
+            osg::observer_ptr<Resource> resObs;
+            resObs = (range.first->second);
+            resourceList.push_back( resObs );
+        }
+
+        return resourceList;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
@@ -33,6 +118,8 @@ namespace osgCompute
         if( !isClear() )
             return true;
 
+
+        ResourceObserver::instance()->observeResource( *this );
         _clear = false;
         return true;
     }

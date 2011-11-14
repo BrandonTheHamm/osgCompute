@@ -17,7 +17,10 @@
 #define OSGCOMPUTE_CALLBACK 1
 
 #include <osg/Object>
+#include <osg/observer_ptr>
 #include <osg/NodeVisitor>
+#include <osg/Drawable>
+#include <osg/Camera>
 #include <osgCompute/Export>
 
 namespace osgCompute
@@ -25,6 +28,7 @@ namespace osgCompute
     class Resource;
     class Computation;
     class Program;
+    class GLMemory;
 
     //! Interface for customized event or update code    
     /** A ComputationCallback is utilized for adding event or update 
@@ -168,6 +172,122 @@ namespace osgCompute
 
         /** Clear local members.*/
         void clearLocal() {}
+    };
+
+    //! Callback for OpenGL memory render targets.
+    /** Callback is either attached to a camera or a drawable object. Each GLMemory object that is updated
+        during rendering, e.g. as a render target (FBO) requires such a callback to be notified. The callback
+        calls mapAsRenderTarget() for each observed object (see GLMemoryTargetCallback::observe()) when it is
+        launched during the rendering traversal (for a camera this is when osgUtil::RenderStage::draw() is running
+        and for a Drawable this is during osgUtil::RenderLeaf::draw()). To properly setup such a callback for GLMemory 
+        use the following lines:
+        \code
+        osg::ref_ptr<osgCompute::GLMemoryTargetCallback> myRTTCallback = new osgCompute::GLMemoryTargetCallback;
+        myRTTCallback->observe( *renderTexture->getMemory() );
+        rttCamera->setPreDrawCallback( myRTTCallback );
+        \endcode
+        In this case rttCamera is a camera which renders into a FrameBufferObject with renderTexture attached.
+        Please see also the osgRTTdemo example how to use it.
+	*/
+    class LIBRARY_EXPORT GLMemoryTargetCallback : public osg::Camera::DrawCallback, public osg::Drawable::DrawCallback
+    {
+    public:
+        /** Constructor. 
+        */
+        GLMemoryTargetCallback();
+
+        META_Object(osgCompute, GLMemoryTargetCallback);
+
+        /**
+        Callback functions for cameras. If callback is attached to camera it notifies all its observed GLMemory
+        objects when drawable is rendered. I.e. it calls mapAsRenderTarget() for all GLMemory objects.
+        @param[in] renderInfo reference to the RenderInfo object.
+        */
+        virtual void operator () (osg::RenderInfo& renderInfo ) const;
+
+        /**
+        Callback functions for cameras. If callback is attached to camera it notifies all its observed GLMemory
+        objects when drawable is rendered. I.e. it calls mapAsRenderTarget() for all GLMemory objects.
+        @param[in] camera the camera object which is activated.
+        */
+        virtual void operator () (const osg::Camera& camera ) const;
+
+        /**
+        Callback functions for drawables. If callback is attached to drawable it notifies all its observed GLMemory
+        objects when drawable is rendered. I.e. it calls mapAsRenderTarget() for all GLMemory objects.
+        @param[in] renderInfo reference to the RenderInfo object.
+        @param[in] drawable the drawable object which is rendered.
+        */
+        virtual void drawImplementation(osg::RenderInfo& renderInfo,const osg::Drawable* drawable ) const;
+
+        /**
+        Add GLMemory object for observation. For each observed object mapAsRenderTarget() is called 
+        when callback is launched.
+        @param[in] memory pointer to the GLmemory object to be notified during GL rendering.
+        */
+        virtual void observe( GLMemory* memory );
+
+        /**
+        Remove GLMemory object.
+        @param[in] memory pointer to the GLmemory object to be removed.
+        */
+        virtual void remove( GLMemory* memory );
+
+        /**
+        Remove GLMemory object with specific identifier.
+        @param[in] identifier identifier of the GLmemory to be removed.
+        */
+        virtual void remove( const std::string& identifier );
+
+        /**
+        Remove all GLMemory objects
+        */
+        virtual void clear();
+                
+        /**
+        Returns the number of observed GLMemory objects.
+        @return Returns the number of observed GLMemory objects.
+        */
+        virtual unsigned int getNumObserved() const;
+                
+        /**
+        Returns true if the GLMemory is observed.
+        @param[in] memory a pointer to the GL memory object.
+        @return Returns true if the GLMemory is observed.
+        */
+        virtual bool observesGLMemory( GLMemory* memory ) const;
+
+        /**
+        Returns true if the GLMemory with identfier is observed.
+        @param[in] identifier the identifier of the GL memory object.
+        @return Returns true if the GLMemory is observed.
+        */
+        virtual bool observesGLMemory( const std::string& identifier ) const;
+
+        /**
+        Returns a reference to the observed GLMemory object list.
+        @return Returns a reference to the observed GLMemory object list.
+        */
+        virtual std::vector< osg::observer_ptr<GLMemory> >& getObservedMemoryList();
+
+        /**
+        Returns a reference to the observed GLMemory object list.
+        @return Returns a reference to the observed GLMemory object list.
+        */
+        virtual const std::vector< osg::observer_ptr<GLMemory> >& getObservedMemoryList() const;
+
+    protected:
+        /** Destructor.
+        */
+        virtual ~GLMemoryTargetCallback() {}
+
+    private:
+        std::vector< osg::observer_ptr<GLMemory> > _memories;
+
+    private:
+        // Copy constructor and operator should not be called
+        GLMemoryTargetCallback( const GLMemoryTargetCallback& , const osg::CopyOp& ) {}
+        GLMemoryTargetCallback& operator=(const GLMemoryTargetCallback&) { return (*this); }
     };
 }
 

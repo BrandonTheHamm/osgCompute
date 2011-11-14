@@ -17,6 +17,8 @@
 #define OSGCOMPUTE_MEMORY 1
 
 #include <osg/GraphicsContext>
+#include <osg/Camera>
+#include <osg/Drawable>
 #include <osgCompute/Resource>                
 
 namespace osgCompute
@@ -218,6 +220,18 @@ namespace osgCompute
         */
         virtual unsigned int getMapping( unsigned int hint = 0 ) const;
 
+        /** Returns the current allocated bytes for a specific mapping area. 
+        @param[in] mapping specifies the memory space and type of the mapping.
+        @param[in] hint [unused] reserved.
+        @return Returns the byte size of specific current mapping, zero if it is not allocated yet.
+        */
+        virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
+
+        /** Returns the total allocated bytes over all mapping areas. 
+        @return Returns the total allocated bytes over all mapping areas.
+        */
+        virtual unsigned int getAllocatedByteSize() const;
+
         /** 2D or 3D memory objects have to allocate some additional memory in order to fulfill the
         alignment requirements of the underlying hardware. With getPitch() the number of Bytes for 
         a single row of memory is returned. This byte count might be different to getDimension(0)*getElementSize().
@@ -376,51 +390,6 @@ namespace osgCompute
     };
 
 
-    enum InteropUsage
-    {
-        COMPUTE_TARGET				= 0x01,
-        GL_TARGET					= 0x10,
-        GL_SOURCE_COMPUTE_SOURCE	= 0x00,
-        GL_SOURCE_COMPUTE_TARGET	= 0x01,
-        GL_TARGET_COMPUTE_SOURCE	= 0x10,
-        GL_TARGET_COMPUTE_TARGET	= 0x11,
-    };
-	/** \enum InteropUsage 
-		The usage flag of a GLMemoryAdapter defines where a GLMemory
-		object is frequently updated. Default is GL_SOURCE_COMPUTE_TARGET which
-		tells osgCompute that the memory is frequently changed during
-		the execution of computations. Use osgCompute::GLMemoryAdapter::setUsage()
-		to change the default behavior:
-		\code
-		osg::ref_ptr<osgCompute::GLMemoryAdapter> memoryAdapter = new osgCuda::Texture2D;
-		memoryAdapter->setUsage( osgCompute::GL_TARGET_COMPUTE_SOURCE );
-		\endcode
-		Be carefull by using GL_TARGET, GL_TARGET_COMPUTE_SOURCE or GL_TARGET_COMPUTE_TARGET.
-		Whenever a resource is defined as GL_TARGET it is synchronized each time 
-		osgCompute::Memory::map() is called. This is due to the fact that OSG does not notice a
-		Texture object when it is set as a render target. So to be safe the GL memory is copied
-		each time map() is called.
-	*/
-	/** \var InteropUsage COMPUTE_TARGET 
-		GLMemory is updated while mapped to the compute memory space
-	*/
-	/** \var InteropUsage GL_TARGET 
-		GLMemory is updated during rendering while mapped to the GL memory space
-	*/
-	/** \var InteropUsage GL_SOURCE_COMPUTE_SOURCE 
-		GLMemory is not mapped as a TARGET.
-	*/					
-	/** \var InteropUsage GL_SOURCE_COMPUTE_TARGET 
-		GLMemory is updated in the compute memory space and is read only during rendering.
-	*/
-	/** \var InteropUsage GL_TARGET_COMPUTE_SOURCE 
-		GLMemory is updated during rendering and is read only in the compute memory space.
-	*/		
-	/** \var InteropUsage GL_TARGET_COMPUTE_TARGET 
-		GLMemory is updated in both memory spaces
-	*/	
-
-    
 	//! Interface for all interoperability (OpenGL-based) objects.
 	/** OpenGL interoperability is implemented by layering using an 
 	adapter design pattern. 
@@ -468,13 +437,13 @@ namespace osgCompute
         OpenGL handles. 
         @return Returns a pointer to the GLMemory resource. NULL if it does not exist.
         */
-        virtual Memory* getMemory() = 0;
+        virtual GLMemory* getMemory() = 0;
 
         /** Returns a pointer to a GLMemory object which has access to the 
         internal OpenGL handles. 
         @return Returns a pointer to the GLMemory resource. NULL if it does not exist.
         */
-        virtual const Memory* getMemory() const = 0;
+        virtual const GLMemory* getMemory() const = 0;
 
         /** Adds an identifier to the GLMemory object. GLMemoryAdapters will share these identifiers 
         with its GLMemory adaptees.
@@ -504,19 +473,10 @@ namespace osgCompute
         */ 	
         virtual const IdentifierSet& getIdentifiers() const = 0;
 
-        /** The usage hint specifies in which context a GLMemory resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the resource is a render target in the OpenGL context.
-        @param[in] usage usage hint for interoperability.
+        /** Notify connected memory when is bound as a render target. Should
+            call mapAsRenderTarget() at GLmemory object.
         */
-        virtual void setUsage( unsigned int usage ) = 0;
-
-        /** The usage hint specifies in which context a GLMemory resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the resource is a render target in the OpenGL context.
-        @return Returns the usage hint of an GLMemoryAdapter.
-        */
-        virtual unsigned int getUsage() const = 0;
+        virtual void applyAsRenderTarget() const = 0;
 
     protected:
         friend class GLMemory;
@@ -529,7 +489,6 @@ namespace osgCompute
         // copy constructor and operator should not be called
         GLMemoryAdapter( const GLMemoryAdapter& , const osg::CopyOp& ) {}
         GLMemoryAdapter& operator=(const GLMemoryAdapter&) { return (*this); }
-
     };
 
 	//! Interface for OpenGL memory interoperability.
@@ -577,19 +536,10 @@ namespace osgCompute
         */
         virtual const GLMemoryAdapter* getAdapter() const = 0;
 
-        /** The usage hint specifies in which context a GLMemory resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the resource is a render target in the OpenGL context.
-        @param[in] usage usage hint for interoperability.
+        /** Called before GLMemory is bound as an render target. Should be implemented
+            by the respective sub-class. 
         */
-        virtual void setUsage( unsigned int usage ) {}
-
-        /** The usage hint specifies in which context a GLMemory resource
-        is changed frequently. E.g. if you set the usage flag to GL_TARGET_COMPUTE_SOURCE 
-        you tell osgCompute that the resource is a render target in the OpenGL context.
-        @return Returns the usage hint of an GLMemoryAdapter.
-        */
-        virtual unsigned int getUsage() const { return GL_SOURCE_COMPUTE_SOURCE; }
+        virtual void mapAsRenderTarget() = 0;
 
         /** Clears this memory object. Calls releaseObjects().
         */
@@ -630,6 +580,9 @@ namespace osgCompute
 
         static osg::observer_ptr<osg::GraphicsContext>    s_context;
     };
+
+    
+
 }
 
 #endif //OSGCOMPUTE_MEMORY

@@ -77,6 +77,8 @@ namespace osgCuda
         virtual void unmap( unsigned int hint = 0 );
         virtual bool reset( unsigned int hint = 0 );
         virtual bool supportsMapping( unsigned int mapping, unsigned int hint = 0 ) const;
+        virtual void mapAsRenderTarget();
+        virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
         virtual void clear();
     protected:
@@ -270,6 +272,11 @@ namespace osgCuda
         clearLocal();
     }
 
+    //------------------------------------------------------------------------------
+    void GeometryMemory::mapAsRenderTarget()
+    {
+        // Do nothing as geometry cannot be mapped as a render target.
+    }
 
     //------------------------------------------------------------------------------
     bool GeometryMemory::init()
@@ -309,13 +316,14 @@ namespace osgCuda
         }
         setElementSize( elementSize );
 
+        setName( _geomref->getName() );
         return osgCompute::GLMemory::init();
     }
 
     //------------------------------------------------------------------------------
     void* GeometryMemory::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
     {
-		if( !_geomref.valid() )
+        if( !_geomref.valid() )
 			return NULL;
 
         if( osgCompute::Resource::isClear() )
@@ -395,7 +403,7 @@ namespace osgCuda
         }
         else if( (mapping & osgCompute::MAP_DEVICE) )
         {
-            if( osgCompute::GLMemory::getContext() == NULL )
+            if( osgCompute::GLMemory::getContext() == NULL || osgCompute::GLMemory::getContext()->getState() == NULL )
                 return NULL;
 
             osg::GLBufferObject* glBO = vbo->getOrCreateGLBufferObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
@@ -558,6 +566,40 @@ namespace osgCuda
             memory._devPtr = NULL;
             memory._mapping = osgCompute::UNMAP;
         }
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int GeometryMemory::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
+    {
+        if( osgCompute::Resource::isClear() )
+            return 0;
+
+        ////////////////////
+        // RECEIVE HANDLE //
+        ////////////////////
+        const GeometryObject* memoryPtr = dynamic_cast<const GeometryObject*>( object() );
+        if( !memoryPtr )
+            return NULL;
+        const GeometryObject& memory = *memoryPtr;
+
+        unsigned int allocSize = 0;
+        switch( mapping )
+        {
+        case osgCompute::MAP_DEVICE: case osgCompute::MAP_DEVICE_TARGET: case osgCompute::MAP_DEVICE_SOURCE:
+            {
+                allocSize = (memory._graphicsResource != NULL)? getByteSize() : 0;
+            }break;
+        case osgCompute::MAP_HOST: case osgCompute::MAP_HOST_TARGET: case osgCompute::MAP_HOST_SOURCE:
+            {
+                allocSize = (memory._hostPtr != NULL)? getByteSize() : 0;
+            }break;
+        case osgCompute::MAP_DEVICE_ARRAY: case osgCompute::MAP_DEVICE_ARRAY_TARGET:
+            {
+                allocSize = 0;
+            }break;
+        }
+
+        return allocSize;
     }
 
     //------------------------------------------------------------------------------
@@ -1092,6 +1134,7 @@ namespace osgCuda
         :  GeometryMemory()
     {
         clearLocal();
+        osgCompute::ResourceObserver::instance()->observeResource( *this );
     }
 
     //------------------------------------------------------------------------------
@@ -1927,13 +1970,13 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::Memory* Geometry::getMemory()
+    osgCompute::GLMemory* Geometry::getMemory()
     {
         return _memory;
     }
 
     //------------------------------------------------------------------------------
-    const osgCompute::Memory* Geometry::getMemory() const
+    const osgCompute::GLMemory* Geometry::getMemory() const
     {
         return _memory;
     }
@@ -1967,6 +2010,12 @@ namespace osgCuda
 	{
 		return _memory->getIdentifiers();
 	}
+
+    //------------------------------------------------------------------------------
+    void Geometry::applyAsRenderTarget() const
+    {
+        // Do nothing as geometry cannot be mapped as a render target.
+    }
 
     //------------------------------------------------------------------------------
     void Geometry::releaseGLObjects( osg::State* state/*=0*/ ) const

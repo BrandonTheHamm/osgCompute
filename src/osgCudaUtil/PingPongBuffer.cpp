@@ -11,7 +11,7 @@ namespace osgCuda
 	PingPongBuffer::PingPongBuffer()
 		: osgCompute::Memory()
 	{
-		clearLocal();
+        clearLocal();
 	}
 
 	//------------------------------------------------------------------------------
@@ -182,6 +182,19 @@ namespace osgCuda
 		osgCompute::Memory* curBuffer = dynamic_cast<osgCompute::Memory*>(_bufferStack[mapIdx].get());
 		curBuffer->unmap();
 	}
+
+    //------------------------------------------------------------------------------
+    unsigned int PingPongBuffer::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
+    {
+        if( osgCompute::Resource::isClear() )
+            return 0;
+
+        unsigned int allocSize = 0;
+        for( unsigned int s = 0; s<_bufferStack.size(); ++s  )
+            allocSize += _bufferStack[s]->getMappingByteSize( mapping );
+
+        return allocSize;
+    }
 
 	//------------------------------------------------------------------------------
 	bool PingPongBuffer::reset( unsigned int bufferIdx /*= 0 */ )

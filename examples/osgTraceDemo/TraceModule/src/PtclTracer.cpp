@@ -20,10 +20,11 @@
 #include <osg/FrameStamp>
 #include <osgCompute/Computation>
 #include <osgCompute/Memory>
+#include <osgCudaUtil/Timer>
 
 //------------------------------------------------------------------------------
 extern "C"
-void trace( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime );
+void trace( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime, unsigned int numPtcls );
 
 namespace PtclDemo
 {
@@ -33,25 +34,15 @@ namespace PtclDemo
     class PtclTracer : public osgCompute::Computation 
     {
     public:
-        PtclTracer() : osgCompute::Computation() {clearLocal();}
-
         virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        virtual void clear() { clearLocal(); osgCompute::Computation::clear(); }
-    protected:
-        virtual ~PtclTracer() {clearLocal();}
-        void clearLocal();
-
+    private:
+        osg::ref_ptr<osgCuda::Timer>        _timer;
         unsigned int                        _numBlocks;
         unsigned int                        _numThreads;
-
         osg::ref_ptr<osgCompute::Memory>    _ptcls;
-
-    private:
-        PtclTracer(const PtclTracer&, const osg::CopyOp& ) {} 
-        inline PtclTracer &operator=(const PtclTracer &) { return *this; }
     };
 
     //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -69,12 +60,17 @@ namespace PtclDemo
             return false;
         }
 
+        if( !_timer.valid() )
+        {
+            _timer = new osgCuda::Timer;
+            _timer->setName( "PtclTracer");
+            _timer->init();
+        }
+
         /////////////////////////
         // COMPUTE KERNEL SIZE //
         /////////////////////////
-        // One Thread handles a single particle
-        // buffer size must be a multiple of 128 x sizeof(float4)
-        _numBlocks = _ptcls->getDimension(0) / 128;
+        _numBlocks = (_ptcls->getNumElements() / 128)+1;
         _numThreads = 128;
 
         return osgCompute::Computation::init();
@@ -83,13 +79,23 @@ namespace PtclDemo
     //------------------------------------------------------------------------------  
     void PtclTracer::launch()
     {
-        if( isClear() )
+        if( !_ptcls.valid() || !_timer.valid() )
             return;
+
+        _timer->start();
 
         ////////////////////
         // MOVE PARTICLES //
         ////////////////////
-        trace( _numBlocks, _numThreads, _ptcls->map(), 0.009f );
+        trace( 
+            _numBlocks, 
+            _numThreads, 
+            _ptcls->map( osgCompute::MAP_DEVICE_TARGET ), 
+            0.009f,
+            _ptcls->getNumElements() );
+
+
+        _timer->stop();
     }
 
     //------------------------------------------------------------------------------
@@ -98,18 +104,6 @@ namespace PtclDemo
         // Search for the particle buffer
         if( resource.isIdentifiedBy("PTCL_BUFFER") )
             _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
-    }
-
-    //////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS ///////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------  
-    void PtclTracer::clearLocal() 
-    { 
-        _numBlocks = 1;
-        _numThreads = 1;
-
-        _ptcls = NULL;
     }
 }
 

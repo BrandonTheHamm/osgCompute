@@ -459,12 +459,8 @@ namespace osgCompute
     public: 
         enum ComputeOrder
         {
-            PRERENDER_AFTERCHILDREN = OSGCOMPUTE_PRERENDER | OSGCOMPUTE_AFTERCHILDREN,
-            PRERENDER_BEFORECHILDREN = OSGCOMPUTE_PRERENDER | OSGCOMPUTE_BEFORECHILDREN,
-            POSTRENDER_AFTERCHILDREN = OSGCOMPUTE_POSTRENDER | OSGCOMPUTE_AFTERCHILDREN,
-            POSTRENDER_BEFORECHILDREN = OSGCOMPUTE_POSTRENDER | OSGCOMPUTE_BEFORECHILDREN,
-            PRERENDER_NOCHILDREN = OSGCOMPUTE_PRERENDER | OSGCOMPUTE_NOCHILDREN,
-            POSTRENDER_NOCHILDREN = OSGCOMPUTE_POSTRENDER | OSGCOMPUTE_NOCHILDREN,
+            PRE_RENDER = OSGCOMPUTE_PRERENDER,
+            POST_RENDER = OSGCOMPUTE_POSTRENDER,
             UPDATE_AFTERCHILDREN = OSGCOMPUTE_UPDATE | OSGCOMPUTE_AFTERCHILDREN,
             UPDATE_BEFORECHILDREN = OSGCOMPUTE_UPDATE | OSGCOMPUTE_BEFORECHILDREN,
             UPDATE_AFTERCHILDREN_NORENDER = OSGCOMPUTE_UPDATE | OSGCOMPUTE_AFTERCHILDREN | OSGCOMPUTE_NORENDER,
@@ -699,11 +695,14 @@ namespace osgCompute
         */
         virtual const LaunchCallback* getLaunchCallback() const;
 
-        /** The compute order is used to decide when to execute 
+        /** Set the computer order of this program's subgraph relative to any camera 
+        or program that this subgraph is nested within.
+        The compute order is used to decide when to execute 
         the computations. (see osgCompute::ComputeOrder for further information).
         @param[in] co the compute order.
+        @param[in] orderNum is used when program is executed during rendering.
         */
-        virtual void setComputeOrder( ComputeOrder co );
+        virtual void setComputeOrder( ComputeOrder co, int orderNum = 0 );
 
         /** Returns the compute order. The compute order is used to 
         decide when to execute the computations. (see osgCompute::ComputeOrder 
@@ -711,6 +710,12 @@ namespace osgCompute
         @return Returns the current compute order of the program.
         */
         virtual ComputeOrder getComputeOrder() const;
+
+        /** Get the compute or rendering order number of this program relative to any sibling 
+        programs or cameras in this subgraph. Only used when program is executed during rendering
+        @return Returns the compute order of the program.
+        */
+        int getComputeOrderNum() const { return _computeOrderNum; }
 
         /** Activates the program (a program is enabled 
         by default). */
@@ -761,9 +766,10 @@ namespace osgCompute
 
         bool                                	_enabled;
         osg::ref_ptr<LaunchCallback>            _launchCallback; 
-        mutable ComputationList                      _computations;
+        mutable ComputationList                 _computations;
         mutable ResourceHandleList              _resources;
         ComputeOrder                        	_computeOrder;
+        int                                     _computeOrderNum;
         static bool								s_deviceReady;
 
         /** Copy constructor. This constructor should not be called.*/

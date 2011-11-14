@@ -1,13 +1,14 @@
 #########################################################################
-# ATTENTION: THIS LIB IS A PLUGIN
+# Set library name and set path to data folder of the library
 #########################################################################
 
-#########################################################################
-# Set library and plugin name
-#########################################################################
+SET(LIB_NAME osgCudaStats)
 
-SET(LIB_NAME osgcuda_ptcltracer)
-SET(LIB_NAME_LABEL "Module ${LIB_NAME}")
+IF(DYNAMIC_LINKING)
+    ADD_DEFINITIONS(-DUSE_LIBRARY_DYN)
+ELSE (DYNAMIC_LINKING)
+    ADD_DEFINITIONS(-DUSE_LIBRARY_STATIC)
+ENDIF(DYNAMIC_LINKING)
 
 
 #########################################################################
@@ -17,20 +18,26 @@ SET(LIB_NAME_LABEL "Module ${LIB_NAME}")
 INCLUDE(FindOpenThreads)
 INCLUDE(Findosg)
 INCLUDE(FindosgDB)
+INCLUDE(FindosgGA)
+INCLUDE(FindosgText)
 INCLUDE(FindCuda)
+
 
 #########################################################################
 # Set basic include directories
 #########################################################################
 
 INCLUDE_DIRECTORIES(
-    ${HEADER_PATH}
 	${OSG_INCLUDE_DIR}
 	${CUDA_INCLUDE_PATH}
 )
 
 
+#########################################################################
+# Set path to header files
+#########################################################################
 
+SET(HEADER_PATH ${PROJECT_SOURCE_DIR}/include/${LIB_NAME})
 
 
 #########################################################################
@@ -38,22 +45,14 @@ INCLUDE_DIRECTORIES(
 #########################################################################
 
 # collect all headers
-
 SET(TARGET_H
+    ${HEADER_PATH}/Stats
 )
 
-SET(MY_CUDA_SOURCE_FILES
-	PtclTracer.cu
-)
-
-# Use the WRAP_CUDA macro.
-WRAP_CUDA( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
 
 # collect the sources
 SET(TARGET_SRC
-	PtclTracer.cpp
-	${CUDA_FILES}
-    ${MY_CUDA_SOURCE_FILES} 
+	Stats.cpp
 )
 
 
@@ -61,60 +60,56 @@ SET(TARGET_SRC
 # Setup groups for resources (mainly for MSVC project folders)
 #########################################################################
 
-# Setup groups for headers (especially for files with no extension)
-SOURCE_GROUP(
-    "Header Files"
-    FILES ${TARGET_H}     
-)
+# First: collect the necessary files which were not collected up to now
+# Therefore, fill the following variables: 
+# MY_ICE_FILES - MY_MODEL_FILES - MY_SHADER_FILES - MY_UI_FILES - MY_XML_FILES
 
-# Setup groups for sources 
-SOURCE_GROUP(
-    "Source Files"
-    FILES ${TARGET_SRC}
-)
+# nothing todo so far in this module :-)
 
 # finally, use module to build groups
-INCLUDE(GroupInstall)
+#INCLUDE(GroupInstall)
+
+# now set up the ADDITIONAL_FILES variable to ensure that the files will be visible in the project
+SET(ADDITIONAL_FILES
+#	${MY_ICE_FILES}
+#	${MY_MODEL_FILES}
+#	${MY_SHADER_FILES}
+#	${MY_UI_FILES}
+#	${MY_XML_FILES}
+)
+
 
 #########################################################################
 # Build Library and prepare install scripts
 #########################################################################
 
-IF(DYNAMIC_LINKING)
-    ADD_LIBRARY(${LIB_NAME} MODULE ${TARGET_SRC} ${TARGET_H})
-ELSE (DYNAMIC_LINKING)
-    ADD_LIBRARY(${LIB_NAME} STATIC ${TARGET_SRC} ${TARGET_H})
-ENDIF(DYNAMIC_LINKING)
+ADD_LIBRARY(${LIB_NAME}
+    ${LINKING_USER_DEFINED_DYNAMIC_OR_STATIC}
+	${TARGET_H}
+    ${TARGET_SRC}
+    ${ADDITIONAL_FILES}
+)
 
-# install the module to the executable of the application 
-INSTALL(TARGETS ${LIB_NAME} LIBRARY DESTINATION share/bin)
-
-SET_TARGET_PROPERTIES(${LIB_NAME} PROPERTIES PROJECT_LABEL "${LIB_NAME_LABEL}")
-
-# ensure that NO debug / release folder is created in "build" directory
-# we need this here explicitly because we do not use INCLUDE(ModuleInstall OPTIONAL) 
-IF(MSVC)
-	SET_TARGET_PROPERTIES(${LIB_NAME} PROPERTIES PREFIX "../")
-ENDIF(MSVC)
-
-
-#########################################################################
-# Linking
-#########################################################################
 
 # link here the project libraries    
 TARGET_LINK_LIBRARIES(${LIB_NAME}
-    osgCompute
-	osgCuda
-	osgCudaUtil
+	osgCompute
+    osgCuda
+    osgCudaUtil
+	#${OPENGL_LIBRARIES}
 )
-
 
 # use this macro for linking with libraries that come from Findxxxx commands
 # this adds automatically "optimized" and "debug" information for cmake 
 LINK_WITH_VARIABLES(${LIB_NAME}
 	OPENTHREADS_LIBRARY
 	OSG_LIBRARY
+	OSGTEXT_LIBRARY
+	OSGGA_LIBRARY
 	OSGDB_LIBRARY
     CUDA_RUNTIME_LIBRARY
 )
+
+LINK_OPENGL_LIBRARIES(${LIB_NAME})
+
+INCLUDE(ModuleInstall OPTIONAL)

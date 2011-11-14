@@ -22,6 +22,7 @@
 #include <osgCompute/Computation>
 #include <osgCompute/Memory>
 #include <osgCuda/Memory>
+#include <osgCudaUtil/Timer>
 
 //------------------------------------------------------------------------------
 extern "C"
@@ -32,7 +33,8 @@ void reseed( unsigned int numBlocks,
             unsigned int seedCount,
             unsigned int seedIdx,
             float3 bbmin,
-            float3 bbmax );
+            float3 bbmax,
+            unsigned int numPtcls );
 
 
 namespace PtclDemo
@@ -42,36 +44,19 @@ namespace PtclDemo
     class PtclEmitter : public osgCompute::Computation 
     {
     public:
-        PtclEmitter() : osgCompute::Computation() {clearLocal();}
-
         virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
-        virtual void clear() { clearLocal(); osgCompute::Computation::clear(); }
     protected:
-        virtual ~PtclEmitter();
-        void clearLocal();
-
+        osg::ref_ptr<osgCuda::Timer>                      _timer;
         unsigned int                                      _numBlocks;
         unsigned int                                      _numThreads;
-
         osg::Vec3f                                        _seedBoxMin;
         osg::Vec3f                                        _seedBoxMax;
         osg::ref_ptr<osgCompute::Memory>                  _ptcls;
         osg::ref_ptr<osgCompute::Memory>                  _seeds;
-
-    private:
-        PtclEmitter(const PtclEmitter&, const osg::CopyOp& ) {} 
-        inline PtclEmitter &operator=(const PtclEmitter &) { return *this; }
     };
-
-
-    //------------------------------------------------------------------------------
-    PtclEmitter::~PtclEmitter()
-    {
-        clearLocal();
-    }
 
     //------------------------------------------------------------------------------
     bool PtclEmitter::init()
@@ -109,8 +94,17 @@ namespace PtclDemo
         /////////////////////////
         // One Thread handles a single particle
         // buffer size must be a multiple of 128 x sizeof(float4)
-        _numBlocks = _ptcls->getDimension(0) / 128;
+        _numBlocks = (_ptcls->getDimension(0) / 128)+1;
         _numThreads = 128;
+
+
+        if( !_timer.valid() )
+        {
+            _timer = new osgCuda::Timer;
+            _timer->setName( "PtclEmitter");
+            _timer->init();
+        }
+
 
         return osgCompute::Computation::init();
     }
@@ -118,8 +112,10 @@ namespace PtclDemo
     //------------------------------------------------------------------------------
     void PtclEmitter::launch()
     {
-        if( isClear() )
+        if( !_seeds.valid() || !_ptcls.valid() || !_timer.valid() )
             return;
+
+        _timer->start();
 
         ////////////
         // PARAMS //
@@ -141,12 +137,15 @@ namespace PtclDemo
         reseed(
             _numBlocks,
             _numThreads,
-            _ptcls->map(),
-            _seeds->map(),
+            _ptcls->map( osgCompute::MAP_DEVICE_TARGET ),
+            _seeds->map( osgCompute::MAP_DEVICE_SOURCE ),
             _seeds->getDimension(0),
             seedIdx,
             bbmin,
-            bbmax );
+            bbmax,
+            _ptcls->getNumElements());
+
+        _timer->stop();
     }
 
     //------------------------------------------------------------------------------
@@ -154,20 +153,6 @@ namespace PtclDemo
     {
         if( resource.isIdentifiedBy("PTCL_BUFFER") )
             _ptcls = dynamic_cast<osgCompute::Memory*>( &resource );
-    }
-
-    //////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS ///////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    void PtclEmitter::clearLocal()
-    {
-        _numBlocks = 1;
-        _numThreads = 1;
-        _ptcls = NULL;
-        _seeds = NULL;
-        _seedBoxMin = osg::Vec3f(0,0,0);
-        _seedBoxMax = osg::Vec3f(0,0,0);
     }
 }
 

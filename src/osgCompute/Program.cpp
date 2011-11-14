@@ -18,7 +18,8 @@
 #include <osg/OperationThread>
 #include <osgDB/Registry>
 #include <osgUtil/CullVisitor>
-#include <osgUtil/RenderBin>
+//#include <osgUtil/RenderBin>
+#include <osgUtil/RenderStage>
 #include <osgUtil/GLObjectsVisitor>
 #include <osgCompute/Visitor>
 #include <osgCompute/Memory>
@@ -26,7 +27,7 @@
 
 namespace osgCompute
 {
-    class LIBRARY_EXPORT ProgramBin : public osgUtil::RenderBin 
+    class LIBRARY_EXPORT ProgramBin : public osgUtil::RenderStage 
     {
     public:
         ProgramBin(); 
@@ -37,7 +38,10 @@ namespace osgCompute
         virtual bool init( Program& program );
         virtual void reset();
 
-        virtual void drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
+        virtual void draw( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
+        virtual void drawImplementation(osg::RenderInfo& renderInfo,osgUtil::RenderLeaf*& previous);
+        virtual void drawInner(osg::RenderInfo& renderInfo,osgUtil::RenderLeaf*& previous, bool& doCopyTexture);
+
         virtual unsigned int computeNumberOfDynamicRenderLeaves() const;
 
 
@@ -63,6 +67,213 @@ namespace osgCompute
         ProgramBin(const ProgramBin&, const osg::CopyOp& ) {}
         ProgramBin &operator=(const ProgramBin &) { return *this; }
     };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    ProgramBin::ProgramBin()
+        : osgUtil::RenderStage()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    ProgramBin::ProgramBin( osgUtil::RenderBin::SortMode mode )
+        : osgUtil::RenderStage( mode )
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    void ProgramBin::clear()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    void ProgramBin::drawInner( osg::RenderInfo& renderInfo,osgUtil::RenderLeaf*& previous, bool& doCopyTexture )
+    {
+        osgUtil::RenderBin::draw(renderInfo,previous);
+    }
+
+    //------------------------------------------------------------------------------
+    void ProgramBin::draw( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
+    { 
+        if (_stageDrawnThisFrame) return;
+        _stageDrawnThisFrame = true;
+
+        // Render all the pre draw callbacks
+        drawPreRenderStages(renderInfo,previous);
+
+        bool doCopyTexture = false;
+        // Draw bins, renderleafs and launch kernels
+        drawInner(renderInfo,previous,doCopyTexture);
+
+        // Render all the post draw callbacks
+        drawPostRenderStages(renderInfo,previous);
+    }
+
+    //------------------------------------------------------------------------------
+    void ProgramBin::drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
+    { 
+        osg::State& state = *renderInfo.getState();
+
+        unsigned int numToPop = (previous ? osgUtil::StateGraph::numToPop(previous->_parent) : 0);
+        if (numToPop>1) --numToPop;
+        unsigned int insertStateSetPosition = state.getStateSetStackSize() - numToPop;
+
+        if (_stateset.valid())
+        {
+            state.insertStateSet(insertStateSetPosition, _stateset.get());
+        }
+
+        ///////////////////
+        // DRAW PRE BINS //
+        ///////////////////
+        osgUtil::RenderBin::RenderBinList::iterator rbitr;
+        for(rbitr = _bins.begin();
+            rbitr!=_bins.end() && rbitr->first<0;
+            ++rbitr)
+        {
+            rbitr->second->draw(renderInfo,previous);
+        }
+
+        if( _program->getLaunchCallback() ) 
+            (*_program->getLaunchCallback())( *_program ); 
+        else launch();  
+
+        // don't forget to decrement dynamic object count
+        renderInfo.getState()->decrementDynamicObjectCount();
+
+        ////////////////////
+        // DRAW POST BINS //
+        ////////////////////
+        for(;
+            rbitr!=_bins.end();
+            ++rbitr)
+        {
+            rbitr->second->draw(renderInfo,previous);
+        }
+
+
+        if (_stateset.valid())
+        {
+            state.removeStateSet(insertStateSetPosition);
+        }
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int ProgramBin::computeNumberOfDynamicRenderLeaves() const
+    {
+        // increment dynamic object count to execute computations
+        return osgUtil::RenderBin::computeNumberOfDynamicRenderLeaves() + 1;
+    }
+
+    //------------------------------------------------------------------------------
+    bool ProgramBin::init( Program& program )
+    {
+        // COMPUTATION 
+        _program = &program;
+
+        // OBJECT 
+        setName( _program->getName() );
+        setDataVariance( _program->getDataVariance() );
+
+        _clear = false;
+        return true;
+    }
+
+    //------------------------------------------------------------------------------
+    void ProgramBin::reset()
+    {
+        clearLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    bool ProgramBin::isClear() const
+    { 
+        return _clear; 
+    }
+
+    //------------------------------------------------------------------------------
+    Program* ProgramBin::getProgram()
+    { 
+        return _program; 
+    }
+
+    //------------------------------------------------------------------------------
+    const Program* ProgramBin::getProgram() const
+    { 
+        return _program; 
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    void ProgramBin::clearLocal()
+    {
+        _stageDrawnThisFrame = false;
+        _program = NULL;
+        _clear = true;
+        osgUtil::RenderStage::reset();
+    }
+
+    //------------------------------------------------------------------------------
+    void ProgramBin::launch()
+    {
+        if( _clear || !_program  )
+            return;
+
+        // Launch computations
+        ComputationList& computations = _program->getComputations();
+        for( ComputationListCnstItr itr = computations.begin(); itr != computations.end(); ++itr )
+        {
+            if( (*itr)->isEnabled() )
+            {
+                if( (*itr)->isClear() )
+                    (*itr)->init();
+
+                (*itr)->launch();
+            }
+        }
+    }
+
+    //------------------------------------------------------------------------------
+    void ProgramBin::drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
+    {
+        // draw fine grained ordering.
+        for(osgUtil::RenderBin::RenderLeafList::iterator rlitr= _renderLeafList.begin();
+            rlitr!= _renderLeafList.end();
+            ++rlitr)
+        {
+            osgUtil::RenderLeaf* rl = *rlitr;
+            rl->render(renderInfo,previous);
+            previous = rl;
+        }
+
+        // draw coarse grained ordering.
+        for(osgUtil::RenderBin::StateGraphList::iterator oitr=_stateGraphList.begin();
+            oitr!=_stateGraphList.end();
+            ++oitr)
+        {
+
+            for(osgUtil::StateGraph::LeafList::iterator dw_itr = (*oitr)->_leaves.begin();
+                dw_itr != (*oitr)->_leaves.end();
+                ++dw_itr)
+            {
+                osgUtil::RenderLeaf* rl = dw_itr->get();
+                rl->render(renderInfo,previous);
+                previous = rl;
+
+            }
+        }
+    }
+
+
+
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
@@ -543,13 +754,14 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void Program::setComputeOrder( Program::ComputeOrder co )
+    void Program::setComputeOrder( Program::ComputeOrder co, int orderNum/* = 0 */)
     {
         // deactivate auto update
         if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
             setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() - 1 );
 
         _computeOrder = co;
+        _computeOrderNum = orderNum;
 
         // set auto update active in case we use the update traversal to compute things
         if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
@@ -656,8 +868,6 @@ namespace osgCompute
             GLMemory::bindToContext( *state.getGraphicsContext() );
     }
 
-    
-
     //------------------------------------------------------------------------------
     void Program::addBin( osgUtil::CullVisitor& cv )
     {
@@ -673,8 +883,8 @@ namespace osgCompute
         if( GLMemory::getContext() == NULL )
             return;
 
-		if( cv.getState()->getContextID() != GLMemory::getContext()->getState()->getContextID() )
-			return;
+        if( cv.getState()->getContextID() != GLMemory::getContext()->getState()->getContextID() )
+            return;
 
         ///////////////////////
         // SETUP REDIRECTION //
@@ -688,36 +898,8 @@ namespace osgCompute
 
             return;
         }
-        const osgUtil::RenderBin::RenderBinList& rbList = oldRB->getRenderBinList();
 
-        // We have to look for a better method to add more program bins
-        // to the same hierarchy level
-        int rbNum = 0;
-        if( (_computeOrder & OSGCOMPUTE_POSTRENDER) !=  OSGCOMPUTE_POSTRENDER )
-        {
-            osgUtil::RenderBin::RenderBinList::const_iterator itr = rbList.begin();
-            if( itr != rbList.end() && (*itr).first < 0 )
-                rbNum = (*itr).first - 1;
-            else
-                rbNum = -1;
-        }
-        else
-        {
-            osgUtil::RenderBin::RenderBinList::const_reverse_iterator ritr = rbList.rbegin();
-            if( ritr != rbList.rend() && (*ritr).first > 0 )
-                rbNum = (*ritr).first + 1;
-            else
-                rbNum = 1;
-        }
-
-        std::string compBinName;
-        compBinName.append( binLibraryName() );
-        compBinName.append( "::" );
-        compBinName.append( binClassName() );
-
-        ProgramBin* pb = 
-            dynamic_cast<ProgramBin*>( oldRB->find_or_insert(rbNum,compBinName) );
-
+        ProgramBin* pb = new ProgramBin;
         if( !pb )
         {
             osg::notify(osg::FATAL)  
@@ -726,7 +908,6 @@ namespace osgCompute
 
             return;
         }
-
         pb->init( *this );
 
         //////////////
@@ -735,6 +916,22 @@ namespace osgCompute
         cv.setCurrentRenderBin( pb );
         cv.apply( *this );
         cv.setCurrentRenderBin( oldRB );
+
+        osgUtil::RenderStage* rs = oldRB->getStage();
+        if( rs )
+        {
+            if( (_computeOrder & OSGCOMPUTE_POSTRENDER) ==  OSGCOMPUTE_POSTRENDER )
+            {
+                rs->addPostRenderStage(pb,_computeOrderNum);
+            }
+            else
+            {
+                rs->addPreRenderStage(pb,_computeOrderNum);
+            }
+        }
+
+
+
     }
 
     //------------------------------------------------------------------------------
@@ -744,14 +941,6 @@ namespace osgCompute
         // or return otherwise
         if( NULL != GLMemory::getContext() && GLMemory::getContext()->isRealized() )
         {       
-                    
-            // Make context the current context
-            // Annotation: better avoid this! It seems to cause problems with several windows (widgets)
-            // which share GL context! And: buffers which are also used in GL do not need to be "mapped" to host
-            // first when using shared contexts.
-            //if( !GLMemory::getContext()->isCurrent() ) 
-            //    GLMemory::getContext()->makeCurrent();
-
             // Launch computations
             if( _launchCallback.valid() ) 
             {
@@ -795,218 +984,5 @@ namespace osgCompute
         }
     }  
 
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	// BIN IMPLEMENTATION ///////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	class RegisterBinProxy
-	{
-	public:
-		RegisterBinProxy( const std::string& binName, osgUtil::RenderBin* proto )
-		{
-			_rb = proto;
-			osgUtil::RenderBin::addRenderBinPrototype( binName, _rb.get() );
-		}
-	protected:
-		osg::ref_ptr<osgUtil::RenderBin> _rb;
-	};
 
-	RegisterBinProxy registerProgramBinProxy("osgCompute::ProgramBin", new osgCompute::ProgramBin );
-
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	//------------------------------------------------------------------------------
-	ProgramBin::ProgramBin()
-		: osgUtil::RenderBin()
-	{
-		clearLocal();
-	}
-
-	//------------------------------------------------------------------------------
-	ProgramBin::ProgramBin( osgUtil::RenderBin::SortMode mode )
-		: osgUtil::RenderBin( mode )
-	{
-		clearLocal();
-	}
-
-	//------------------------------------------------------------------------------
-	void ProgramBin::clear()
-	{
-		clearLocal();
-	}
-
-	//------------------------------------------------------------------------------
-	void ProgramBin::drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
-	{ 
-		osg::State& state = *renderInfo.getState();
-
-		unsigned int numToPop = (previous ? osgUtil::StateGraph::numToPop(previous->_parent) : 0);
-		if (numToPop>1) --numToPop;
-		unsigned int insertStateSetPosition = state.getStateSetStackSize() - numToPop;
-
-		if (_stateset.valid())
-		{
-			state.insertStateSet(insertStateSetPosition, _stateset.get());
-		}
-
-		///////////////////
-		// DRAW PRE BINS //
-		///////////////////
-		osgUtil::RenderBin::RenderBinList::iterator rbitr;
-		for(rbitr = _bins.begin();
-			rbitr!=_bins.end() && rbitr->first<0;
-			++rbitr)
-		{
-			rbitr->second->draw(renderInfo,previous);
-		}
-
-
-		if( (_program->getComputeOrder() & OSGCOMPUTE_BEFORECHILDREN ) == OSGCOMPUTE_BEFORECHILDREN )
-		{
-			if( _program->getLaunchCallback() ) 
-				(*_program->getLaunchCallback())( *_program ); 
-			else launch(); 
-
-			// don't forget to decrement dynamic object count
-			renderInfo.getState()->decrementDynamicObjectCount();
-		}
-
-		// render sub-graph leafs
-		if( (_program->getComputeOrder() & OSGCOMPUTE_NOCHILDREN ) != OSGCOMPUTE_NOCHILDREN )
-			drawLeafs(renderInfo, previous );
-
-		if( (_program->getComputeOrder() & OSGCOMPUTE_BEFORECHILDREN ) != OSGCOMPUTE_BEFORECHILDREN )
-		{
-			if( _program->getLaunchCallback() ) 
-				(*_program->getLaunchCallback())( *_program ); 
-			else launch();  
-
-			// don't forget to decrement dynamic object count
-			renderInfo.getState()->decrementDynamicObjectCount();
-		}
-
-		////////////////////
-		// DRAW POST BINS //
-		////////////////////
-		for(;
-			rbitr!=_bins.end();
-			++rbitr)
-		{
-			rbitr->second->draw(renderInfo,previous);
-		}
-
-
-		if (_stateset.valid())
-		{
-			state.removeStateSet(insertStateSetPosition);
-		}
-	}
-
-	//------------------------------------------------------------------------------
-	unsigned int ProgramBin::computeNumberOfDynamicRenderLeaves() const
-	{
-		// increment dynamic object count to execute computations
-		return osgUtil::RenderBin::computeNumberOfDynamicRenderLeaves() + 1;
-	}
-
-	//------------------------------------------------------------------------------
-	bool ProgramBin::init( Program& program )
-	{
-		// COMPUTATION 
-		_program = &program;
-
-		// OBJECT 
-		setName( _program->getName() );
-		setDataVariance( _program->getDataVariance() );
-
-		_clear = false;
-		return true;
-	}
-
-	//------------------------------------------------------------------------------
-	void ProgramBin::reset()
-	{
-		clearLocal();
-	}
-
-	//------------------------------------------------------------------------------
-	bool ProgramBin::isClear() const
-	{ 
-		return _clear; 
-	}
-
-	//------------------------------------------------------------------------------
-	Program* ProgramBin::getProgram()
-	{ 
-		return _program; 
-	}
-
-	//------------------------------------------------------------------------------
-	const Program* ProgramBin::getProgram() const
-	{ 
-		return _program; 
-	}
-
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	//------------------------------------------------------------------------------
-	void ProgramBin::clearLocal()
-	{
-		_program = NULL;
-		_clear = true;
-
-		osgUtil::RenderBin::reset();
-	}
-
-	//------------------------------------------------------------------------------
-	void ProgramBin::launch()
-	{
-		if( _clear || !_program  )
-			return;
-
-		// Launch computations
-		ComputationList& computations = _program->getComputations();
-		for( ComputationListCnstItr itr = computations.begin(); itr != computations.end(); ++itr )
-		{
-			if( (*itr)->isEnabled() )
-			{
-				if( (*itr)->isClear() )
-					(*itr)->init();
-
-				(*itr)->launch();
-			}
-		}
-	}
-
-	//------------------------------------------------------------------------------
-	void ProgramBin::drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
-	{
-		// draw fine grained ordering.
-		for(osgUtil::RenderBin::RenderLeafList::iterator rlitr= _renderLeafList.begin();
-			rlitr!= _renderLeafList.end();
-			++rlitr)
-		{
-			osgUtil::RenderLeaf* rl = *rlitr;
-			rl->render(renderInfo,previous);
-			previous = rl;
-		}
-
-		// draw coarse grained ordering.
-		for(osgUtil::RenderBin::StateGraphList::iterator oitr=_stateGraphList.begin();
-			oitr!=_stateGraphList.end();
-			++oitr)
-		{
-
-			for(osgUtil::StateGraph::LeafList::iterator dw_itr = (*oitr)->_leaves.begin();
-				dw_itr != (*oitr)->_leaves.end();
-				++dw_itr)
-			{
-				osgUtil::RenderLeaf* rl = dw_itr->get();
-				rl->render(renderInfo,previous);
-				previous = rl;
-
-			}
-		}
-	}
 } 

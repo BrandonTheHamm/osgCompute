@@ -29,10 +29,144 @@
 #include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Program>
 #include <osgCuda/Geometry>
-#include "Warp"
+#include <osgCuda/Memory>
+#include <osgCudaStats/Stats>
+
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Program> setupProgram()
+extern "C" void warp(
+          unsigned int numBlocks, 
+          unsigned int numThreads, 
+          void* vertices,
+          unsigned int numVertices,
+          void* initPos,
+          void* initNormals,
+          float simTime );
+
+/**
+*/
+class Warp : public osgCompute::Computation 
+{
+public:
+    // Use the init function to initialize a module once.
+    // You can also setup internal resources here.
+    virtual bool init()
+    {
+        if( !_vertices.valid() )
+        {
+            osg::notify( osg::WARN )
+                << "Warp::init(): buffer is missing."
+                << std::endl;
+
+            return false;
+        }
+
+
+        _timer = new osgCuda::Timer;
+        _timer->setName( "Warp");
+        _timer->init();
+
+        // We need to read the geometry information.
+        osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::GLMemory*)_vertices.get())->getAdapter() );
+        if( !geometry )
+            return false;
+
+        // Create the static reference buffers
+        osg::ref_ptr<osgCuda::Memory> normals= new osgCuda::Memory;
+        normals->setName( "NORMALS" );
+        normals->setElementSize( geometry->getNormalArray()->getDataSize() * sizeof(float) );
+        normals->setDimension( 0, geometry->getNormalArray()->getNumElements() );
+        if( !normals->init() )
+        {
+            osg::notify( osg::WARN )
+                << "Warp::init(): cannot create normal array."
+                << std::endl;
+
+            return false;
+        }
+        _initNormals = normals;
+
+        osg::ref_ptr<osgCuda::Memory> positions = new osgCuda::Memory;
+        positions->setName( "POSITIONS" );
+        positions->setElementSize( geometry->getVertexArray()->getDataSize() * sizeof(float) );
+        positions->setDimension( 0, geometry->getVertexArray()->getNumElements() );
+        if( !positions->init() )
+        {
+            osg::notify( osg::WARN )
+                << "Warp::init(): cannot create position array."
+                << std::endl;
+
+            return false;
+        }
+        _initPos = positions;
+
+        // Map the initial buffers to host memory and
+        // copy the vertex data.
+        memcpy( _initNormals->map(osgCompute::MAP_HOST_TARGET),
+            geometry->getNormalArray()->getDataPointer(),
+            _initNormals->getByteSize() );
+
+        memcpy( _initPos->map(osgCompute::MAP_HOST_TARGET),
+            geometry->getVertexArray()->getDataPointer(),
+            _initPos->getByteSize() );
+
+        /////////////////////////
+        // COMPUTE KERNEL SIZE //
+        /////////////////////////
+        _numBlocks = _vertices->getDimension(0) / 128;
+        if( _vertices->getDimension(0) % 128 != 0 )
+            _numBlocks+=1;
+
+        _numThreads = 128;
+        _simulationTime = 0.0f;
+        return osgCompute::Computation::init();
+    }
+
+    virtual void launch()
+    {
+        if( isClear() )
+            return;
+
+        _timer->start();
+
+        _simulationTime += 0.01f;
+
+        ///////////////////
+        // MOVE VERTICES //
+        ///////////////////
+        warp(_numBlocks,
+            _numThreads,
+            _vertices->map(),			
+            _vertices->getNumElements(),
+            _initPos->map(),
+            _initNormals->map(),
+            _simulationTime );
+
+        // Read out new vertex position on the CPU or change the values with
+        // osgCompute::MAP_HOST_TARGET
+        //_verts = (float*)_vertices->map( osgCompute::MAP_HOST_SOURCE );
+
+        _timer->stop();
+    }
+
+    virtual void acceptResource( osgCompute::Resource& resource )
+    {
+        if( resource.isIdentifiedBy( "WARP_GEOMETRY" ) )
+            _vertices = dynamic_cast<osgCompute::Memory*>( &resource );
+    }
+
+private:
+    unsigned int                                      _numBlocks;
+    unsigned int                                      _numThreads;
+    osg::ref_ptr<osgCuda::Timer>                      _timer;
+    osg::ref_ptr<osgCompute::Memory>                  _vertices;
+    osg::ref_ptr<osgCompute::Memory>				  _initNormals;
+    osg::ref_ptr<osgCompute::Memory>				  _initPos;
+    float                                             _simulationTime;
+};
+
+//------------------------------------------------------------------------------
+osg::ref_ptr<osg::Node> setupScene()
 {
 	osg::ref_ptr<osgCompute::Program> program = new osgCuda::Program;
 
@@ -49,7 +183,7 @@ osg::ref_ptr<osgCompute::Program> setupProgram()
 	osg::ref_ptr<osg::Geometry> cowGeometry = dynamic_cast<osg::Geometry*>( cowGeode->getDrawable(0) );
 	// Configure osgCuda::Geometry
 	osgCuda::Geometry* geometry = new osgCuda::Geometry;
-	geometry->setName("dynamic cow geometry");
+	geometry->setName("GEOMETRY");
 	geometry->setVertexArray( cowGeometry->getVertexArray() );
 	geometry->addPrimitiveSet( cowGeometry->getPrimitiveSet(0) );
 	geometry->setStateSet( cowGeometry->getOrCreateStateSet() );
@@ -77,18 +211,11 @@ osg::ref_ptr<osgCompute::Program> setupProgram()
 	//////////////////
 	// SETUP MODULE //
 	//////////////////
-    osg::ref_ptr<osgCompute::Computation> warpComputation = new GeometryDemo::Warp;
+    osg::ref_ptr<osgCompute::Computation> warpComputation = new Warp;
     warpComputation->setLibraryName("osgcuda_warp");
 	warpComputation->addIdentifier("osgcuda_warp");
 	program->addComputation( *warpComputation );
     program->addResource( *geometry->getMemory() );
-
-	// Serialize the program to file by activating the
-    // following line of code:
-	// osgDB::writeNodeFile( *program, "geomdemo.osgt" );
-    // Afterwards you can load it via:
-    // osg::ref_ptr<osg::Node> program = osgDB::readNodeFile( "PATH_TO_FILE/geomdemo.osgt" );
-
     return program;
 }
 
@@ -96,21 +223,28 @@ osg::ref_ptr<osgCompute::Program> setupProgram()
 int main(int argc, char *argv[])
 {
     osg::setNotifyLevel( osg::WARN );
-    osgViewer::Viewer viewer(osg::ArgumentParser(&argc,argv));
-    viewer.setUpViewInWindow( 50, 50, 640, 480);
-    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
-    viewer.addEventHandler(new osgViewer::StatsHandler);
 
     //////////////////
     // SETUP VIEWER //
     //////////////////
+    osgViewer::Viewer viewer(osg::ArgumentParser(&argc,argv));
+    viewer.setUpViewInWindow( 50, 50, 640, 480);
+    viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
+    viewer.addEventHandler(new osgViewer::StatsHandler);
+    viewer.addEventHandler(new osgCuda::StatsHandler);
+    viewer.addEventHandler(new osgViewer::HelpHandler);
+
+    ///////////////////////
+    // LINK CUDA AND OSG //
+    ///////////////////////
+    // setupOsgCudaAndViewer() creates
+    // the OpenGL context and binds
+    // it to the CUDA context of the thread.
     osgCuda::setupOsgCudaAndViewer( viewer );
 
 	/////////////////
 	// SETUP SCENE //
 	/////////////////
-    osg::ref_ptr<osgCompute::Program> program = setupProgram();  
-    viewer.setSceneData( program );
-
+    viewer.setSceneData( setupScene() );
     return viewer.run();
 }

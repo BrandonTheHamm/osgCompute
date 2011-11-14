@@ -25,7 +25,6 @@
 
 namespace osgCompute
 {
-    class Context;
     class Computation;
 
     typedef std::vector<osg::ref_ptr<osgCompute::Computation> >                          ComputationList;

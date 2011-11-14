@@ -14,6 +14,7 @@
 */
 
 #include <osg/Notify>
+#include <osg/RenderInfo>
 #include <osgCompute/Memory>
 
 namespace osgCompute
@@ -187,7 +188,7 @@ namespace osgCompute
     unsigned int Memory::getPitch( unsigned int hint /*= 0 */ ) const
     {
         if( isClear() )
-            return 0;
+            return computePitch();
 
         if( _pitch == 0 )
             _pitch = computePitch();
@@ -312,7 +313,23 @@ namespace osgCompute
         return NULL;
     }
 
-	/////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    unsigned int Memory::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
+    {
+        return 0;
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int Memory::getAllocatedByteSize() const
+    {
+        unsigned int allocSize = 0;
+        allocSize += getMappingByteSize( MAP_HOST );
+        allocSize += getMappingByteSize( MAP_DEVICE );
+        allocSize += getMappingByteSize( MAP_DEVICE_ARRAY );
+
+        return allocSize;
+    }
+    /////////////////////////////////////////////////////////////////////////////////////////////////
 	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
     osg::observer_ptr<osg::GraphicsContext> GLMemory::s_context = NULL;
@@ -348,29 +365,6 @@ namespace osgCompute
 	//------------------------------------------------------------------------------
 	void GLMemory::releaseObjects()
 	{
-		//if( s_context.valid() )
-		//{
-		//	//osg::GraphicsContext::GraphicsContexts contexts = osg::GraphicsContext::getRegisteredGraphicsContexts(GLMemory::getContextID());
-		//	//if( !contexts.empty() && contexts.front()->isRealized() )
-		//	//{      
-		//	//	// Make context the current context
-		//	//	if( !contexts.front()->isCurrent() )
-		//	//		contexts.front()->makeCurrent();
-		//	//}
-		//	//else if( contexts.empty() )
-		//	//{
-		//	//	osg::notify(osg::FATAL) 
-		//	//		<< "[GLMemory::releaseObjects()]: "
-		//	//		<< "the associated graphics context is not available anymore."
-		//	//		<< "Check that you call releaseGLObjects(state) before removing the context."
-		//	//		<< "Maybe freeing OpenGL related resources is not possible."
-		//	//		<< std::endl;
-		//	//}
-  //          if( !s_context->isCurrent() && s_context->isRealized() )
-  //              s_context->makeCurrent();
-
-		//}
-
 		osgCompute::Memory::releaseObjects();
 	}
 

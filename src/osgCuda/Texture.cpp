@@ -54,6 +54,8 @@ namespace osgCuda
         virtual void unmap( unsigned int hint = 0 );
         virtual bool reset( unsigned int hint = 0 );
         virtual bool supportsMapping( unsigned int mapping, unsigned int hint = 0 ) const;
+        virtual void mapAsRenderTarget();
+        virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
 		virtual void setUsage( unsigned int usage );
 		virtual unsigned int getUsage() const;
@@ -147,8 +149,7 @@ namespace osgCuda
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
     TextureMemory::TextureMemory()
-		: osgCompute::GLMemory(),
-		  _usage(osgCompute::GL_SOURCE_COMPUTE_SOURCE)
+		: osgCompute::GLMemory()
     {
         clearLocal();
     }
@@ -196,6 +197,7 @@ namespace osgCuda
             return false;
         }
 
+        setName( _texref->getName() );
         return osgCompute::GLMemory::init();
     }
 
@@ -282,6 +284,40 @@ namespace osgCuda
 	}
 
     //------------------------------------------------------------------------------
+    unsigned int TextureMemory::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
+    {
+        if( osgCompute::Resource::isClear() )
+            return 0;
+
+        ////////////////////
+        // RECEIVE HANDLE //
+        ////////////////////
+        const TextureObject* memoryPtr = dynamic_cast<const TextureObject*>( object() );
+        if( !memoryPtr )
+            return NULL;
+        const TextureObject& memory = *memoryPtr;
+
+        unsigned int allocSize = 0;
+        switch( mapping )
+        {
+        case osgCompute::MAP_DEVICE: case osgCompute::MAP_DEVICE_TARGET: case osgCompute::MAP_DEVICE_SOURCE:
+            {
+                allocSize = (memory._devPtr != NULL)? getByteSize() : 0;
+            }break;
+        case osgCompute::MAP_HOST: case osgCompute::MAP_HOST_TARGET: case osgCompute::MAP_HOST_SOURCE:
+            {
+                allocSize = (memory._hostPtr != NULL)? getByteSize() : 0;
+            }break;
+        case osgCompute::MAP_DEVICE_ARRAY: case osgCompute::MAP_DEVICE_ARRAY_TARGET:
+            {
+                allocSize = (memory._graphicsResource != NULL)? getByteSize() : 0;
+            }break;
+        }
+
+        return allocSize;
+    }
+
+    //------------------------------------------------------------------------------
     void* TextureMemory::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
     {
 		if( !_texref.valid() )
@@ -304,51 +340,6 @@ namespace osgCuda
         if( !memoryPtr )
             return NULL;
         TextureObject& memory = *memoryPtr;
-
-        if( _usage & osgCompute::GL_TARGET &&
-            !(memory._syncOp & osgCompute::SYNC_ARRAY) && osgCompute::GLMemory::getContext() != NULL)
-        {
-            if( memory._graphicsResource == NULL )
-            {
-                // Initialize texture resource if it is a render target
-                osg::Texture::TextureObject* tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
-                if( !tex )
-                {
-                    osg::State* state = osgCompute::GLMemory::getContext()->getState();
-                    if( NULL == state )
-                    {
-                        osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to find valid state."
-                            << std::endl;
-
-                        return false;
-                    }
-
-                    _texref->compileGLObjects( *state );
-                    tex = _texref->getTextureObject( osgCompute::GLMemory::getContext()->getState()->getContextID() );
-                }
-
-                // Register vertex buffer object for Cuda
-                cudaError res = cudaGraphicsGLRegisterImage( &memory._graphicsResource, tex->id(), tex->_profile._target, cudaGraphicsMapFlagsNone );
-                if( res != cudaSuccess )
-                {
-                    osg::notify(osg::FATAL)
-                        << _texref->getName() 
-                        << " [osgCuda::TextureMemory::alloc()]: unable to register image object (cudaGraphicsGLRegisterImage()). Not all GL formats are supported."
-                        << cudaGetErrorString( res ) <<"."
-                        << std::endl;
-
-                    return false;
-                }
-            }
-
-
-            // Host memory and shadow-copy should be synchronized in next call
-            // We set this flag in general as we do not now if really has been
-            // rendered to the texture
-            memory._syncOp |= osgCompute::SYNC_DEVICE;
-            memory._syncOp |= osgCompute::SYNC_HOST;
-        }
 
         //////////////
         // MAP DATA //
@@ -398,7 +389,7 @@ namespace osgCuda
         }
         else if( (mapping & osgCompute::MAP_DEVICE_ARRAY) == osgCompute::MAP_DEVICE_ARRAY )
         {
-            if( osgCompute::GLMemory::getContext() == NULL )
+            if( osgCompute::GLMemory::getContext() == NULL || osgCompute::GLMemory::getContext()->getState() == NULL )
                 return NULL;
 
             //////////////////////
@@ -706,6 +697,52 @@ namespace osgCuda
             return true;
         default:
             return false;
+        }
+    }
+
+    //------------------------------------------------------------------------------
+    void TextureMemory::mapAsRenderTarget()
+    {
+        if( !_texref.valid() )
+            return;
+
+        if( osgCompute::Resource::isClear() )
+            if( !init() )
+                return;
+
+        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object() );
+        if( !memoryPtr )
+            return;
+        TextureObject& memory = *memoryPtr;
+
+        if( memory._syncOp & osgCompute::SYNC_ARRAY )
+        {
+            if( NULL == map( osgCompute::MAP_DEVICE_ARRAY, 0 ) )
+            {
+                osg::notify(osg::FATAL)
+                    << _texref->getName() << " [osgCuda::TextureMemory::applyAsRenderTarget()]: error during device memory synchronization (map())."
+                    << std::endl;
+
+                return;
+            }
+        }
+
+        // Host memory and device memory should be synchronized in next call to map
+        memory._syncOp |= osgCompute::SYNC_DEVICE;
+        memory._syncOp |= osgCompute::SYNC_HOST;
+
+        if( memory._graphicsArray != NULL )
+        {
+            cudaError res = cudaGraphicsUnmapResources( 1, &memory._graphicsResource );
+            if( cudaSuccess != res )
+            {
+                osg::notify(osg::FATAL)
+                    << _texref->getName() << " [osgCuda::TextureMemory::applyAsRenderTarget()]: error during cudaGLUnmapBufferObject(). "
+                    << cudaGetErrorString( res ) <<"."
+                    << std::endl;
+                return;
+            }
+            memory._graphicsArray = NULL;
         }
     }
 
@@ -1614,13 +1651,13 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::Memory* Texture2D::getMemory()
+    osgCompute::GLMemory* Texture2D::getMemory()
     {
         return _memory;
     }
 
     //------------------------------------------------------------------------------
-    const osgCompute::Memory* Texture2D::getMemory() const
+    const osgCompute::GLMemory* Texture2D::getMemory() const
     {
         return _memory;
     }
@@ -1655,18 +1692,6 @@ namespace osgCuda
 		return _memory->getIdentifiers();
 	}
 
-	//------------------------------------------------------------------------------
-	void Texture2D::setUsage( unsigned int usage )
-	{
-		_memory->setUsage(usage);
-	}
-
-	//------------------------------------------------------------------------------
-	unsigned int Texture2D::getUsage() const
-	{
-		return _memory->getUsage();
-	}
-
     //------------------------------------------------------------------------------
     void Texture2D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
@@ -1693,6 +1718,12 @@ namespace osgCuda
             _memory->unmap();
 
         osg::Texture2D::apply( state );
+    }
+
+    //------------------------------------------------------------------------------
+    void Texture2D::applyAsRenderTarget() const
+    {
+        static_cast<osgCompute::GLMemory*>( _memory )->mapAsRenderTarget();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1736,13 +1767,13 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::Memory* Texture3D::getMemory()
+    osgCompute::GLMemory* Texture3D::getMemory()
     {
         return _memory;
     }
 
     //------------------------------------------------------------------------------
-    const osgCompute::Memory* Texture3D::getMemory() const
+    const osgCompute::GLMemory* Texture3D::getMemory() const
     {
         return _memory;
     }
@@ -1777,18 +1808,6 @@ namespace osgCuda
 		return _memory->getIdentifiers();
 	}
 
-	//------------------------------------------------------------------------------
-	void Texture3D::setUsage( unsigned int usage )
-	{
-		_memory->setUsage( usage );
-	}
-
-	//------------------------------------------------------------------------------
-	unsigned int Texture3D::getUsage() const
-	{
-		return _memory->getUsage();
-	}
-
     //------------------------------------------------------------------------------
     void Texture3D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
@@ -1815,6 +1834,12 @@ namespace osgCuda
             _memory->unmap();
 
         osg::Texture3D::apply( state );
+    }
+
+    //------------------------------------------------------------------------------
+    void Texture3D::applyAsRenderTarget() const
+    {
+        static_cast<osgCompute::GLMemory*>( _memory )->mapAsRenderTarget();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1859,13 +1884,13 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    osgCompute::Memory* TextureRectangle::getMemory()
+    osgCompute::GLMemory* TextureRectangle::getMemory()
     {
         return _memory;
     }
 
     //------------------------------------------------------------------------------
-    const osgCompute::Memory* TextureRectangle::getMemory() const
+    const osgCompute::GLMemory* TextureRectangle::getMemory() const
     {
         return _memory;
     }
@@ -1900,19 +1925,6 @@ namespace osgCuda
 		return _memory->getIdentifiers();
 	}
 
-
-	//------------------------------------------------------------------------------
-	void TextureRectangle::setUsage( unsigned int usage )
-	{
-		_memory->setUsage( usage );
-	}
-
-	//------------------------------------------------------------------------------
-	unsigned int TextureRectangle::getUsage() const
-	{
-		return _memory->getUsage();
-	}
-
     //------------------------------------------------------------------------------
     void TextureRectangle::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
@@ -1939,6 +1951,12 @@ namespace osgCuda
             _memory->unmap();
 
         osg::TextureRectangle::apply( state );
+    }
+
+    //------------------------------------------------------------------------------
+    void TextureRectangle::applyAsRenderTarget() const
+    {
+        static_cast<osgCompute::GLMemory*>( _memory )->mapAsRenderTarget();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////

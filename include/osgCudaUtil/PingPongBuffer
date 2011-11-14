@@ -27,6 +27,7 @@ namespace osgCuda
         virtual bool supportsMapping( unsigned int mapping, unsigned int bufferIdx = 0 ) const;
         virtual unsigned int getMapping( unsigned int bufferIdx = 0 ) const;
         virtual unsigned int getPitch( unsigned int bufferIdx = 0 ) const;
+        virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
 		virtual void swap( unsigned int incr = 1 );
 

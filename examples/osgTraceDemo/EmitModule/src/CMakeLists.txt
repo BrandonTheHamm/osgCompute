@@ -114,6 +114,7 @@ ENDIF(MSVC)
 TARGET_LINK_LIBRARIES(${LIB_NAME}
     osgCompute
 	osgCuda
+	osgCudaUtil
 )
 
 
