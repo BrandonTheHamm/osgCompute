@@ -36,7 +36,7 @@
 #include <osgCudaStats/Stats>
 
 //------------------------------------------------------------------------------
-osg::Geode* getBoundingBox( osg::Vec3& bbmin, osg::Vec3& bbmax )
+osg::Geode* getBoundingBox( const osg::Vec3& bbmin, const osg::Vec3& bbmax )
 {
     osg::Geometry* bbgeom = new osg::Geometry;
 
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
     //////////////////
     // SETUP VIEWER //
     //////////////////
-    osgViewer::Viewer viewer(osg::ArgumentParser(&argc, argv));
+    osgViewer::Viewer viewer;
     viewer.getCamera()->setComputeNearFarMode( osg::Camera::DO_NOT_COMPUTE_NEAR_FAR );
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.setUpViewInWindow( 50, 50, 640, 480);

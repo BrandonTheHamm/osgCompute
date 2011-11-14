@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
     //////////////////
     // SETUP VIEWER //
     //////////////////
-    osgViewer::Viewer viewer( osg::ArgumentParser(&argc, argv) );
+    osgViewer::Viewer viewer;
     viewer.addEventHandler(new osgViewer::StatsHandler);
     viewer.addEventHandler(new osgCuda::StatsHandler);
     viewer.addEventHandler(new osgViewer::HelpHandler);

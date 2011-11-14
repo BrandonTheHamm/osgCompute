@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
     //////////////////
     // SETUP VIEWER //
     //////////////////
-    osgViewer::Viewer viewer(osg::ArgumentParser(&argc,argv));
+    osgViewer::Viewer viewer;
     viewer.setUpViewInWindow( 50, 50, 640, 480);
     viewer.getCamera()->setClearColor( osg::Vec4(0.15, 0.15, 0.15, 1.0) );
     viewer.addEventHandler(new osgViewer::StatsHandler);

@@ -29,8 +29,8 @@ namespace osgCuda
     public:
         //------------------------------------------------------------------------------
         TimeBlockCallback( osgCompute::ResourceClassList& timerList, float blockStart, float maxBlockLength, Type type )
-            : _blockStart(blockStart),
-              _maxBlockLength(maxBlockLength),
+            : _maxBlockLength(maxBlockLength),
+			  _blockStart(blockStart),
               _type( type )
         {
             _timerList = timerList;
@@ -322,7 +322,6 @@ namespace osgCuda
         std::string font("fonts/arial.ttf");
 
         float leftPos = 10.0f;
-        float startBlocks = 150.0f;
         float characterSize = 18.0f;
         osg::Vec4 colorFR(1.0f,1.0f,1.0f,1.0f);
 
@@ -488,7 +487,6 @@ namespace osgCuda
         float startY = _statsHeight-24.0f;
         osg::Vec3 pos(startX, startY,0.0f);
         std::string font("fonts/arial.ttf");
-        float startBlocks = 150.0f;
         float characterSize = 18.0f;
         osg::Vec4 colorFR(1.0f,1.0f,1.0f,1.0f);
 

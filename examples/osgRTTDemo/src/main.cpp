@@ -158,7 +158,6 @@ osg::ref_ptr<osg::Node> setupScene()
     // Create the camera node to do the render to texture
     osg::ref_ptr<osg::Camera> rttCamera = new osg::Camera;
     {    
-        osg::Camera* camera = new osg::Camera;
         rttCamera->setName( "PRERENDER_TO_TEXTURE_CAMERA" );
 
         // set up the background color and clear mask.
@@ -276,7 +275,7 @@ int main(int argc, char *argv[])
     //////////////////
     // SETUP VIEWER //
     //////////////////
-    osgViewer::Viewer viewer( osg::ArgumentParser(&argc, argv) );
+    osgViewer::Viewer viewer;
     viewer.addEventHandler(new osgViewer::StatsHandler);
     viewer.addEventHandler(new osgCuda::StatsHandler);
     viewer.addEventHandler(new osgViewer::HelpHandler);
