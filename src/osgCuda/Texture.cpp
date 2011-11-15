@@ -1016,6 +1016,9 @@ namespace osgCuda
                 }
 
                 _texref->compileGLObjects( *state );
+                // unbind texture after compilation
+                glBindTexture( _texref->getTextureTarget(), 0 );
+
                 tex = _texref->getTextureObject(osgCompute::GLMemory::getContext()->getState()->getContextID() );
             }
 

@@ -21,7 +21,7 @@ namespace osgCuda
         cudaError res = cudaGetDeviceCount( &deviceCount );
         if( cudaSuccess != res )
         {
-            osg::notify(osg::FATAL)  << "osgCuda::Program::setupDevice(): error during cudaGetDeviceCount()."
+            osg::notify(osg::FATAL)  << "setupDevice(): error during cudaGetDeviceCount()."
                 << cudaGetErrorString(res)
                 << std::endl;
 
@@ -30,7 +30,7 @@ namespace osgCuda
 
         if( device > deviceCount - 1 )
         {
-            osg::notify(osg::FATAL)  << "osgCuda::Program::setupDevice(): device \""<<device<<"\" does not exist."
+            osg::notify(osg::FATAL)  << "setupDevice(): device \""<<device<<"\" does not exist."
                 << std::endl;
 
             return false;
@@ -40,7 +40,7 @@ namespace osgCuda
         if( cudaSuccess != res )
         {
             osg::notify(osg::FATAL)  
-                << "osgCuda::Program::setupDevice(): cannot setup device."
+                << "setupDevice(): cannot setup device."
                 << cudaGetErrorString(res) 
                 << std::endl;
             return false;
@@ -50,7 +50,7 @@ namespace osgCuda
         if( cudaSuccess != res )
         {
             osg::notify(osg::FATAL)  
-                << "osgCuda::Program::setupDevice(): cannot share device with OpenGL."
+                << "setupDevice(): cannot share device with OpenGL."
                 << cudaGetErrorString(res) 
                 << std::endl;
             return false;
@@ -61,13 +61,11 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool setupOsgCudaAndViewer( osgViewer::ViewerBase& viewer, int device /*= 0 */, bool realize /*= true*/ )
+    // Setup viewer to properly handle osgCuda.
+    bool setupOsgCudaAndViewer( osgViewer::ViewerBase& viewer, bool realize /*= true*/, int device /*= 0 */, int ctxID /*= -1*/  )
     {
-        // Setup viewer to properly handle osgCuda.
-
         // You must use single threaded version since osgCompute currently
-        // does only support single threaded applications. Please ask in the
-        // forum for the multi-threaded version if you need it.
+        // does only support single threaded applications. 
         viewer.setThreadingModel( osgViewer::ViewerBase::SingleThreaded );
 
         // Does create a single OpenGL context
@@ -78,22 +76,51 @@ namespace osgCuda
         if( realize )
         {
             // Create the current OpenGL context and make it current
-            viewer.realize();
+            if( !viewer.isRealized() )
+                viewer.realize();
+
             osgViewer::ViewerBase::Contexts ctxs;
             viewer.getContexts( ctxs, true );
             if( ctxs.empty() )
             {
-                osg::notify(osg::WARN)<<"Cannot setup CUDA context and viewer as no valid OpenGL context is found"<<std::endl;
+                osg::notify(osg::FATAL)<<"setupOsgCudaAndViewer(): no valid OpenGL context is found."<<std::endl;
                 return false;
             }
-            ctxs.front()->makeCurrent();
 
-            // Bind Context to osgCompute::GLMemory
-            osgCompute::GLMemory::bindToContext( *ctxs.front() );
+            if( ctxID != -1 )
+            {   // Find context with ctxID and make it current.
+                for( unsigned int c=0; c<ctxs.size(); ++c )
+                {
+                    if( ctxs[c]->getState()->getContextID() == ctxID )
+                    {   // Make the context current
+                        ctxs[c]->makeCurrent();
+                        // Bind Context to osgCompute::GLMemory
+                        osgCompute::GLMemory::bindToContext( *ctxs.front() );
+                    }
+                }
+            }
+            else
+            {   // Use first context to be found and make it current.
+                ctxs.front()->makeCurrent();
+                // Bind Context to osgCompute::GLMemory
+                osgCompute::GLMemory::bindToContext( *ctxs.front() );
+            }
+
+            if( NULL == osgCompute::GLMemory::getContext() )
+            {
+                osg::notify(osg::FATAL)<<"setupOsgCudaAndViewer(): cannot find valid OpenGL context."<<std::endl;
+                return false;
+            }
+
+            // Connect the CUDA device with OpenGL
+            if( !setupDevice(device) )
+            {
+                osg::notify(osg::FATAL)<<"setupOsgCudaAndViewer(): cannot setup CUDA context."<<std::endl;
+                return false;
+            }
         }
 
-
-        return setupDevice( device );
+        return true;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////

@@ -22,6 +22,7 @@
 #include <osgCompute/Computation>
 #include <osgCompute/Memory>
 #include <osgCuda/Memory>
+#include <osgCuda/Geometry>
 #include <osgCudaUtil/Timer>
 
 //------------------------------------------------------------------------------

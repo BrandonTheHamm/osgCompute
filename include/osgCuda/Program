@@ -42,11 +42,12 @@ namespace osgCuda
     can only use a single device. The current implementation of osgCuda does not support handling of
 	multiple devices. The default device is the first to be found.
     @param[in] viewer The viewer for which CUDA should be initialized.
-    @param[in] device The ID of the CUDA device.
     @param[in] realize Realize contexts. Note that if it is set to false you have to wait for a GLObjectVisitor before you can launch CUDA functions
+    @param[in] device The ID of the CUDA device.
+    @param[in] ctxID The OpenGL context ID to connect with the CUDA context.
     @return Returns true on success.
 	*/
-    bool LIBRARY_EXPORT setupOsgCudaAndViewer( osgViewer::ViewerBase& viewer, int device = 0, bool realize = true );
+    bool LIBRARY_EXPORT setupOsgCudaAndViewer( osgViewer::ViewerBase& viewer, bool realize = true, int device = 0, int ctxID = -1 );
 
 	//! Class for CUDA computations and resources.
 	/** The osgCuda::Program class implements the CUDA device handling. The 

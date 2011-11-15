@@ -964,7 +964,22 @@ namespace osgCuda
             }
 
             if( glBO->isDirty() )
+            {
+                osg::GLBufferObject::Extensions* ext = osg::GLBufferObject::getExtensions( osgCompute::GLMemory::getContext()->getState()->getContextID(), true );
+                if( !ext )
+                {
+                    osg::notify(osg::FATAL)
+                        << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: cannot find required extensions to compile buffer object."
+                        << std::endl;
+
+                    return false;
+                }
+
                 glBO->compileBuffer();
+                // Unbind buffer objects
+                ext->glBindBuffer(GL_ARRAY_BUFFER_ARB,0);
+                ext->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER_ARB,0);
+            }
 
             // Avoid copy operation during osgCompute::MAP_HOST
             memory._lastModifiedCount.clear();

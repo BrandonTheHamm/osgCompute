@@ -23,7 +23,9 @@
 #include <osg/Point>
 #include <osg/Array>
 #include <osg/PointSprite>
+#include <osg/BufferObject>
 #include <osg/Geometry>
+#include <osg/ShapeDrawable>
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
 #include <osgDB/FileUtils>
@@ -119,16 +121,15 @@ osg::Geode* getGeode( unsigned int numParticles )
     // GEOMETRY //
     //////////////
     osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
-    ptclGeom->setName("PARTICLE GEOMETRY");
+    ptclGeom->addIdentifier( "PTCL_BUFFER" );
 
     // Initialize the Particles
     osg::Vec4Array* coords = new osg::Vec4Array(numParticles);
     for( unsigned int v=0; v<coords->size(); ++v )
-        (*coords)[v].set(-1,-1,-1,0);
+        (*coords)[v].set(-1,-1,-1,1);
 
     ptclGeom->setVertexArray(coords);
     ptclGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
-    ptclGeom->addIdentifier( "PTCL_BUFFER" );
 
     // Add particles
     geode->addDrawable( ptclGeom.get() );
@@ -291,9 +292,9 @@ int main(int argc, char *argv[])
     osg::ref_ptr<osgCompute::Program> program = loadProgram();
     
     osg::Group* scene = new osg::Group;
-    scene->addChild( program );
     scene->addChild( getBoundingBox( osg::Vec3(-1.f,-1.f,-1.f), osg::Vec3(1.f,1.f,1.f) ) );
     scene->addChild( getGeode( 64000 ) );
+    scene->addChild( program );
     viewer.setSceneData( scene );
 
     //////////////////////
