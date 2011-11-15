@@ -46,9 +46,9 @@ namespace osgCompute
     typedef std::list< osg::observer_ptr< Resource > >::iterator            ResourceClassListItr;
     typedef std::list< osg::observer_ptr< Resource > >::const_iterator      ResourceClassListCnstItr;
 
-    typedef std::multimap< std::string, Resource* >                             ObserverMap;
-    typedef std::multimap< std::string, Resource* >::iterator                   ObserverMapItr;
-    typedef std::multimap< std::string, Resource* >::const_iterator             ObserverMapCnstItr;
+    typedef std::multimap< std::string, osg::observer_ptr<Resource> >                             ObserverMap;
+    typedef std::multimap< std::string, osg::observer_ptr<Resource> >::iterator                   ObserverMapItr;
+    typedef std::multimap< std::string, osg::observer_ptr<Resource> >::const_iterator             ObserverMapCnstItr;
 
 
 

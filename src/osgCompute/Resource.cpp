@@ -65,7 +65,7 @@ namespace osgCompute
         resource.addObserver( this );
 
         std::string resourceClassSpecifier = std::string(resource.libraryName()).append("::").append(resource.className());
-        _observedObjects.insert( std::make_pair<std::string,Resource*>( resourceClassSpecifier, &resource ) );
+        _observedObjects.insert( std::make_pair<std::string, osg::observer_ptr<Resource> >( resourceClassSpecifier, &resource ) );
     }
 
     //------------------------------------------------------------------------------
@@ -78,7 +78,7 @@ namespace osgCompute
         std::pair<ObserverMapItr,ObserverMapItr> range = _observedObjects.equal_range( resourceClassName );
         while( range.first != range.second )
         {
-            if( range.first->second == resource )
+            if( range.first->second.valid() && range.first->second == resource )
             {
                 _observedObjects.erase( range.first );
                 return;
@@ -95,9 +95,12 @@ namespace osgCompute
         std::pair<ObserverMapCnstItr,ObserverMapCnstItr> range = _observedObjects.equal_range( classIdentifier );
         for(;range.first != range.second; range.first++ )
         {
-            osg::observer_ptr<Resource> resObs;
-            resObs = (range.first->second);
-            resourceList.push_back( resObs );
+            if( range.first->second.valid() )
+            {
+                osg::observer_ptr<Resource> resObs;
+                resObs = (range.first->second);
+                resourceList.push_back( resObs );
+            }
         }
 
         return resourceList;
