@@ -55,7 +55,9 @@ namespace osgCuda
         virtual bool reset( unsigned int hint = 0 );
         virtual bool supportsMapping( unsigned int mapping, unsigned int hint = 0 ) const;
         virtual void mapAsRenderTarget();
-        virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
+        virtual unsigned int getAllocatedByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
+        virtual unsigned int getByteSize( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int hint = 0 ) const;
+        //virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
 		virtual void setUsage( unsigned int usage );
 		virtual unsigned int getUsage() const;
@@ -284,7 +286,7 @@ namespace osgCuda
 	}
 
     //------------------------------------------------------------------------------
-    unsigned int TextureMemory::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
+     unsigned int TextureMemory::getAllocatedByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
     {
         if( osgCompute::Resource::isClear() )
             return 0;
@@ -302,20 +304,102 @@ namespace osgCuda
         {
         case osgCompute::MAP_DEVICE: case osgCompute::MAP_DEVICE_TARGET: case osgCompute::MAP_DEVICE_SOURCE:
             {
-                allocSize = (memory._devPtr != NULL)? getByteSize() : 0;
+                allocSize = (memory._devPtr != NULL)? getByteSize( mapping, hint ) : 0;
+
             }break;
         case osgCompute::MAP_HOST: case osgCompute::MAP_HOST_TARGET: case osgCompute::MAP_HOST_SOURCE:
             {
-                allocSize = (memory._hostPtr != NULL)? getByteSize() : 0;
+                allocSize = (memory._hostPtr != NULL)? getByteSize( mapping, hint ) : 0;
+
             }break;
         case osgCompute::MAP_DEVICE_ARRAY: case osgCompute::MAP_DEVICE_ARRAY_TARGET:
             {
-                allocSize = (memory._graphicsResource != NULL)? getByteSize() : 0;
+                allocSize = (memory._graphicsResource != NULL)? getByteSize( mapping, hint ) : 0;
+
             }break;
         }
 
         return allocSize;
     }
+
+    //------------------------------------------------------------------------------
+    unsigned int TextureMemory::getByteSize( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int hint /*= 0 */  ) const
+    {
+        if( osgCompute::Resource::isClear() )
+            return 0;
+
+        ////////////////////
+        // RECEIVE HANDLE //
+        ////////////////////
+        const TextureObject* memoryPtr = dynamic_cast<const TextureObject*>( object() );
+        if( !memoryPtr )
+            return NULL;
+        const TextureObject& memory = *memoryPtr;
+
+        unsigned int allocSize = 0;
+        switch( mapping )
+        {
+        case osgCompute::MAP_DEVICE: case osgCompute::MAP_DEVICE_TARGET: case osgCompute::MAP_DEVICE_SOURCE:
+            {
+                unsigned int dimensions = getNumDimensions();
+                allocSize = getPitch();
+
+                for( unsigned int d=1; d<dimensions; ++d )
+                    allocSize *= getDimension(d);
+
+            }break;
+        case osgCompute::MAP_HOST: case osgCompute::MAP_HOST_TARGET: case osgCompute::MAP_HOST_SOURCE:
+            {
+                allocSize = getElementSize() * getNumElements();
+
+            }break;
+        case osgCompute::MAP_DEVICE_ARRAY: case osgCompute::MAP_DEVICE_ARRAY_TARGET:
+            {
+                unsigned int dimensions = getNumDimensions();
+                allocSize = getPitch();
+
+                for( unsigned int d=1; d<dimensions; ++d )
+                    allocSize *= getDimension(d);
+
+            }break;
+        }
+
+        return allocSize;
+    }
+
+    //------------------------------------------------------------------------------
+    //unsigned int TextureMemory::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
+    //{
+    //    if( osgCompute::Resource::isClear() )
+    //        return 0;
+
+    //    ////////////////////
+    //    // RECEIVE HANDLE //
+    //    ////////////////////
+    //    const TextureObject* memoryPtr = dynamic_cast<const TextureObject*>( object() );
+    //    if( !memoryPtr )
+    //        return NULL;
+    //    const TextureObject& memory = *memoryPtr;
+
+    //    unsigned int allocSize = 0;
+    //    switch( mapping )
+    //    {
+    //    case osgCompute::MAP_DEVICE: case osgCompute::MAP_DEVICE_TARGET: case osgCompute::MAP_DEVICE_SOURCE:
+    //        {
+    //            allocSize = (memory._devPtr != NULL)? getByteSize() : 0;
+    //        }break;
+    //    case osgCompute::MAP_HOST: case osgCompute::MAP_HOST_TARGET: case osgCompute::MAP_HOST_SOURCE:
+    //        {
+    //            allocSize = (memory._hostPtr != NULL)? getByteSize() : 0;
+    //        }break;
+    //    case osgCompute::MAP_DEVICE_ARRAY: case osgCompute::MAP_DEVICE_ARRAY_TARGET:
+    //        {
+    //            allocSize = (memory._graphicsResource != NULL)? getByteSize() : 0;
+    //        }break;
+    //    }
+
+    //    return allocSize;
+    //}
 
     //------------------------------------------------------------------------------
     void* TextureMemory::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )
@@ -615,7 +699,7 @@ namespace osgCuda
         // Reset host memory
         if( memory._hostPtr != NULL && _texref->getImage(0) == NULL )
         {
-            if( !memset( memory._hostPtr, 0x0, getByteSize() ) )
+            if( !memset( memory._hostPtr, 0x0, getByteSize( osgCompute::MAP_HOST ) ) )
             {
                 osg::notify(osg::FATAL)
                     << _texref->getName() << " [osgCuda::TextureMemory::reset()]: error during memset() for host memory."
@@ -661,7 +745,7 @@ namespace osgCuda
             }
             else
             {
-                res = cudaMemset( memory._devPtr, 0x0, getByteSize() );
+                res = cudaMemset( memory._devPtr, 0x0, getByteSize( osgCompute::MAP_DEVICE ) );
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
@@ -762,6 +846,10 @@ namespace osgCuda
         // Proof paramters
         if( getDimension(0) == 0 || getElementSize() == 0 ) 
             return 0;
+
+        // 1-dimensional layout
+        if ( getNumDimensions() < 2 )
+            return getElementSize() * getNumElements();
 
         int device;
         cudaGetDevice( &device );
@@ -908,7 +996,7 @@ namespace osgCuda
             }
             else
             {
-                cudaError res = cudaMemcpy( memory._devPtr, data, getByteSize(), cudaMemcpyHostToDevice );
+                cudaError res = cudaMemcpy( memory._devPtr, data, getByteSize( osgCompute::MAP_HOST ), cudaMemcpyHostToDevice );
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
@@ -942,7 +1030,7 @@ namespace osgCuda
                 return false;
             }
 
-            cudaError res = cudaMemcpy( memory._hostPtr, data, getByteSize(), cudaMemcpyHostToHost );
+            cudaError res = cudaMemcpy( memory._hostPtr, data, getByteSize( osgCompute::MAP_HOST ), cudaMemcpyHostToHost );
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
@@ -985,7 +1073,7 @@ namespace osgCuda
             if( memory._hostPtr != NULL )
                 return true;
 
-            memory._hostPtr = malloc( getByteSize() );
+            memory._hostPtr = malloc( getByteSize( osgCompute::MAP_HOST ) );
             if( NULL == memory._hostPtr )
             {
                 osg::notify(osg::FATAL)
@@ -1079,7 +1167,7 @@ namespace osgCuda
             }
             else
             {
-                cudaError res = cudaMalloc( &memory._devPtr, getByteSize() );
+                cudaError res = cudaMalloc( &memory._devPtr, getByteSize( osgCompute::MAP_DEVICE ) );
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
@@ -1152,7 +1240,7 @@ namespace osgCuda
                 // Copy from host memory
                 if( getNumDimensions() < 2 )
                 {
-                    res = cudaMemcpyToArray( memory._graphicsArray, 0, 0, memory._hostPtr, getByteSize(), cudaMemcpyHostToDevice);
+                    res = cudaMemcpyToArray( memory._graphicsArray, 0, 0, memory._hostPtr, getByteSize( osgCompute::MAP_HOST ), cudaMemcpyHostToDevice);
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
@@ -1209,7 +1297,7 @@ namespace osgCuda
                 // Copy from device memory
                 if( getNumDimensions() < 2 )
                 {
-                    res = cudaMemcpyToArray( memory._graphicsArray, 0, 0, memory._devPtr, getByteSize(), cudaMemcpyDeviceToDevice);
+                    res = cudaMemcpyToArray( memory._graphicsArray, 0, 0, memory._devPtr, getByteSize( osgCompute::MAP_DEVICE ), cudaMemcpyDeviceToDevice);
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
@@ -1336,7 +1424,7 @@ namespace osgCuda
                 // Copy from array
                 if( getNumDimensions() == 1 )
                 {
-                    res = cudaMemcpyFromArray( memory._devPtr, memory._graphicsArray, 0, 0, getByteSize(), cudaMemcpyDeviceToDevice );
+                    res = cudaMemcpyFromArray( memory._devPtr, memory._graphicsArray, 0, 0, getByteSize( osgCompute::MAP_DEVICE_ARRAY ), cudaMemcpyDeviceToDevice );
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
@@ -1402,7 +1490,7 @@ namespace osgCuda
             else 
             {
                 // Copy from host memory
-                res = cudaMemcpy( memory._devPtr, memory._hostPtr, getByteSize(), cudaMemcpyHostToDevice );
+                res = cudaMemcpy( memory._devPtr, memory._hostPtr, getByteSize( osgCompute::MAP_HOST ), cudaMemcpyHostToDevice );
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
@@ -1488,7 +1576,7 @@ namespace osgCuda
                 // Copy from array
                 if( getNumDimensions() == 1 )
                 {
-                    res = cudaMemcpyFromArray( memory._hostPtr, memory._graphicsArray, 0, 0, getByteSize(), cudaMemcpyDeviceToHost );
+                    res = cudaMemcpyFromArray( memory._hostPtr, memory._graphicsArray, 0, 0, getByteSize( osgCompute::MAP_DEVICE_ARRAY ), cudaMemcpyDeviceToHost );
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
@@ -1605,7 +1693,7 @@ namespace osgCuda
                 }
                 else
                 {
-                    res = cudaMemcpy( memory._hostPtr, memory._devPtr, getByteSize(), cudaMemcpyDeviceToHost );
+                    res = cudaMemcpy( memory._hostPtr, memory._devPtr, getByteSize( osgCompute::MAP_DEVICE ), cudaMemcpyDeviceToHost );
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)

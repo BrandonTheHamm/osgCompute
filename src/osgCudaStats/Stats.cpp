@@ -329,13 +329,8 @@ namespace osgCuda
         if( !_hudCamera.valid() )
             return;
 
-        //osg::Geode* geode = new osg::Geode();
-        //geode->setName("Memory");
-        //_hudCamera->addChild( geode );
         _hudCamera->addChild( _memorySwitch );
         
-        
-        //osg::StateSet* stateset = geode->getOrCreateStateSet();
         osg::StateSet* stateset = _memorySwitch->getOrCreateStateSet();
         stateset->setMode(GL_LIGHTING,osg::StateAttribute::OFF);
         stateset->setMode(GL_BLEND,osg::StateAttribute::ON);
@@ -428,7 +423,11 @@ namespace osgCuda
             maxX = osg::maximum( curX, maxX );
         }
 
-        float overallByteSize = 0.0f;
+        float overallGPUByteSize = 0.0f;
+        float hostByteSize = 0.0f;
+        float deviceByteSize = 0.0f;
+        float arrayByteSize = 0.0f;
+
         unsigned int counter = 0;
         unsigned int pageCount = 1;
         osg::Geode* geode = NULL;
@@ -458,7 +457,7 @@ namespace osgCuda
                 curPageInfo->setPosition(pos);
 
                 std::stringstream pagestream;
-                pagestream << "Page " << pageCount << " of " << numPages << " (use SHIFT + c for showing next page):";
+                pagestream << "Page " << pageCount << " of " << numPages << " (use SHIFT + c for next page):";
                 curPageInfo->setText(pagestream.str());
                 pageCount++;
                 pos.y() -= characterSize*2.5f;
@@ -496,18 +495,33 @@ namespace osgCuda
             for( unsigned int d=0; d<memory->getNumDimensions(); ++d )
                     consstream <<  memory->getDimension(d)<< " ";
             consstream << ") "; 
-            consstream << "Host= "<<memory->getMappingByteSize(osgCompute::MAP_HOST)/(1048576.0f)<<" MB; "; 
-            consstream << "Device= "<<memory->getMappingByteSize(osgCompute::MAP_DEVICE)/(1048576.0f)<<" MB; "; 
-            consstream << "Array= "<<memory->getMappingByteSize(osgCompute::MAP_DEVICE_ARRAY)/(1048576.0f)<<" MB; "; 
-            consstream << "Sum= " << memory->getAllocatedByteSize()/(1048576.0f) << " MB";
+            //consstream << "Host= "<< memory->getMappingByteSize(osgCompute::MAP_HOST)/(1048576.0f)<<" MB; "; 
+            //consstream << "Device= "<<memory->getMappingByteSize(osgCompute::MAP_DEVICE)/(1048576.0f)<<" MB; "; 
+            //consstream << "Array= "<<memory->getMappingByteSize(osgCompute::MAP_DEVICE_ARRAY)/(1048576.0f)<<" MB; "; 
+            //consstream << "Sum= " << memory->getAllocatedByteSize()/(1048576.0f) << " MB";
+
+            unsigned int tmpHost   = memory->getAllocatedByteSize(osgCompute::MAP_HOST);
+            unsigned int tmpDevice = memory->getAllocatedByteSize(osgCompute::MAP_DEVICE);
+            unsigned int tmpArray  = memory->getAllocatedByteSize(osgCompute::MAP_DEVICE_ARRAY);
+
+
+            consstream << "Host= "   << tmpHost  /(1048576.0f)<<" MB; "; 
+            consstream << "Device= " << tmpDevice/(1048576.0f)<<" MB; "; 
+            consstream << "Array= "  << tmpArray /(1048576.0f)<<" MB; "; 
+            consstream << "Sum (D+A) = " << tmpDevice/(1048576.0f) + tmpArray/(1048576.0f) << " MB";
 
             curValue->setText(consstream.str());
             pos.y() -= characterSize*1.5f;
 
-            overallByteSize += memory->getAllocatedByteSize();
+            //overallByteSize += memory->getAllocatedByteSize();
+            hostByteSize    += tmpHost;
+            deviceByteSize  += tmpDevice;
+            arrayByteSize   += tmpArray;
+
         }
 
 
+         overallGPUByteSize = deviceByteSize + arrayByteSize;
          osg::ref_ptr<osgText::Text> overallLabel = new osgText::Text;
          geode->addDrawable( overallLabel.get() );
          pos.x() = leftPos;
@@ -515,7 +529,10 @@ namespace osgCuda
 
          std::stringstream consstream;
          consstream.precision(5);
-         consstream << "Overall CUDA memory consumption = " << overallByteSize/(1048576.0f) << " MB";
+         consstream << "Total Host   (CPU)  memory: "  << hostByteSize/(1048576.0f)   << " MB" << "\n" 
+                    << "Total Device (CUDA) memory: "  << deviceByteSize/(1048576.0f) << " MB" << "\n" 
+                    << "Total Array  (CUDA) memory: "  << arrayByteSize/(1048576.0f)  << " MB" << "\n\n" 
+                    << "Total CUDA memory (Device+Array): " << overallGPUByteSize/(1048576.0f) << " MB";
 
          overallLabel->setColor(colorFR);
          overallLabel->setFont(font);

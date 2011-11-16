@@ -295,7 +295,7 @@ virtual void launch()
 {
     void* hostPtr = _myresource->map( osgCompute::MAP_HOST_TARGET );
     // Change resource on the host
-    memset( hostPtr, 0x0, _myresource->getByteSize() );
+    memset( hostPtr, 0x0, _myresource->getByteSize( osgCompute::MAP_HOST ) );
 }
 \endcode
 If the memory resource is allocated on host and device memory a memory object will take care of synchronization

@@ -97,9 +97,10 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    unsigned int Memory::getByteSize() const 
+    unsigned int Memory::getByteSize( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int hint /*= 0 */ ) const 
     { 
-        return getElementSize() * getNumElements(); 
+        //return getElementSize() * getNumElements(); 
+        return 0;
     }
 
     //------------------------------------------------------------------------------
@@ -314,20 +315,22 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    unsigned int Memory::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
-    {
-        return 0;
-    }
+    //unsigned int Memory::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
+    //{
+    //    return 0;
+    //}
 
     //------------------------------------------------------------------------------
-    unsigned int Memory::getAllocatedByteSize() const
+    unsigned int Memory::getAllocatedByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
     {
-        unsigned int allocSize = 0;
-        allocSize += getMappingByteSize( MAP_HOST );
-        allocSize += getMappingByteSize( MAP_DEVICE );
-        allocSize += getMappingByteSize( MAP_DEVICE_ARRAY );
+        return 0;
 
-        return allocSize;
+        //unsigned int allocSize = 0;
+        //allocSize += getMappingByteSize( MAP_HOST );
+        //allocSize += getMappingByteSize( MAP_DEVICE );
+        //allocSize += getMappingByteSize( MAP_DEVICE_ARRAY );
+
+        //return allocSize;
     }
     /////////////////////////////////////////////////////////////////////////////////////////////////
 	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////

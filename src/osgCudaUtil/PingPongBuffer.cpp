@@ -115,7 +115,7 @@ namespace osgCuda
 			// Check the byte size to be consistent 
 			// among buffers
 			osgCompute::Memory* curBuffer = dynamic_cast<osgCompute::Memory*>(_bufferStack.at(b).get());
-			if( byteSize != curBuffer->getByteSize() )
+			if( byteSize != curBuffer->getByteSize( osgCompute::MAP_DEVICE ) )
 			{
 				osg::notify(osg::WARN) 
 					<< "PingPongBuffer::init() of buffer \""<<getName()<<"\": Buffers have different sizes."
@@ -184,17 +184,43 @@ namespace osgCuda
 	}
 
     //------------------------------------------------------------------------------
-    unsigned int PingPongBuffer::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
+    unsigned int PingPongBuffer::getAllocatedByteSize( unsigned int mapping, unsigned int bufferIdx /*= 0 */ ) const
     {
         if( osgCompute::Resource::isClear() )
             return 0;
 
-        unsigned int allocSize = 0;
-        for( unsigned int s = 0; s<_bufferStack.size(); ++s  )
-            allocSize += _bufferStack[s]->getMappingByteSize( mapping );
+        unsigned int mapIdx = (_stackIdx + bufferIdx) % _bufferStack.size();
+        if( !_bufferStack[mapIdx].valid() )
+            return 0;
 
-        return allocSize;
+         return _bufferStack[mapIdx]->getAllocatedByteSize( mapping );
     }
+
+    //------------------------------------------------------------------------------
+    unsigned int PingPongBuffer::getByteSize( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int bufferIdx /*= 0 */  ) const
+    {
+        if( osgCompute::Resource::isClear() )
+            return 0;
+
+         unsigned int mapIdx = (_stackIdx + bufferIdx) % _bufferStack.size();
+         if( !_bufferStack[mapIdx].valid() )
+             return 0;
+
+         return _bufferStack[mapIdx]->getByteSize( mapping );
+    }
+
+    //------------------------------------------------------------------------------
+    //unsigned int PingPongBuffer::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
+    //{
+    //    if( osgCompute::Resource::isClear() )
+    //        return 0;
+
+    //    unsigned int allocSize = 0;
+    //    for( unsigned int s = 0; s<_bufferStack.size(); ++s  )
+    //        allocSize += _bufferStack[s]->getMappingByteSize( mapping );
+
+    //    return allocSize;
+    //}
 
 	//------------------------------------------------------------------------------
 	bool PingPongBuffer::reset( unsigned int bufferIdx /*= 0 */ )

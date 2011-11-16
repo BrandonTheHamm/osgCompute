@@ -77,7 +77,7 @@ public:
                       threads,
                       _trgBuffer->map( osgCompute::MAP_DEVICE_TARGET ),
                       _srcBuffer->map( osgCompute::MAP_DEVICE_SOURCE ),
-                      _srcBuffer->getByteSize() );
+                      _srcBuffer->getByteSize( osgCompute::MAP_DEVICE ) );
 
 
         _timer->stop();

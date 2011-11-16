@@ -104,11 +104,11 @@ public:
         // copy the vertex data.
         memcpy( _initNormals->map(osgCompute::MAP_HOST_TARGET),
             geometry->getNormalArray()->getDataPointer(),
-            _initNormals->getByteSize() );
+            _initNormals->getByteSize( osgCompute::MAP_HOST ) );
 
         memcpy( _initPos->map(osgCompute::MAP_HOST_TARGET),
             geometry->getVertexArray()->getDataPointer(),
-            _initPos->getByteSize() );
+            _initPos->getByteSize( osgCompute::MAP_HOST ) );
 
         /////////////////////////
         // COMPUTE KERNEL SIZE //

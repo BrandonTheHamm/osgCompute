@@ -225,12 +225,14 @@ namespace osgCompute
         @param[in] hint [unused] reserved.
         @return Returns the byte size of specific current mapping, zero if it is not allocated yet.
         */
-        virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
+        //virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
-        /** Returns the total allocated bytes over all mapping areas. 
-        @return Returns the total allocated bytes over all mapping areas.
+        /** Returns the current bytes for a specific mapping area. Returns Check is specific mapping area is valid/has allocated memory.
+        @param[in] mapping specifies the memory space and type of the mapping.
+        @param[in] hint [unused] reserved.
+        @return Returns the byte size of specific current mapping, zero if it is not allocated yet..
         */
-        virtual unsigned int getAllocatedByteSize() const;
+        virtual unsigned int getAllocatedByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
         /** 2D or 3D memory objects have to allocate some additional memory in order to fulfill the
         alignment requirements of the underlying hardware. With getPitch() the number of Bytes for 
@@ -248,16 +250,16 @@ namespace osgCompute
         virtual void setElementSize( unsigned int elementSize );
 
         /** Returns the byte size of a singe element.
-        @return Returns the byte size of a single element.
+        @return Returns the byte size of a single element. 
         */
         virtual unsigned int getElementSize() const;
 
-        /** Returns the overall byte size. For 2D or 3D memory blocks this might be 
-        not the same as the allocated memory size, because the allocated pitch might differ from 
-        getDimension(0)*getElementSize() (see cudaMallocPitch()). 
-        @return Returns the byte size required by all elements.
+        /** Returns the current bytes for a specific mapping area.
+        @param[in] mapping specifies the memory space and type of the mapping (default is MAP_DEVICE).
+        @param[in] hint [unused] reserved.
+        @return Returns the byte size of specific current mapping, zero if it is not allocated yet.
         */
-        virtual unsigned int getByteSize() const;
+        virtual unsigned int getByteSize( unsigned int mapping = MAP_DEVICE, unsigned int hint = 0 ) const;
 
         /** Set the number of elements for the specified dimension.
         @param[in] dimIdx index of dimension.
@@ -369,7 +371,7 @@ namespace osgCompute
         virtual MemoryObject* createObject() const;
 
         /** Computes the pitch of the memory resource.
-        @return Returns the memory bitch in bytes.
+        @return Returns the memory pitch in bytes.
         */
         virtual unsigned int computePitch() const = 0;
 

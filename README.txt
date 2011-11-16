@@ -99,17 +99,14 @@ system should help guide you through the process:
 OpenSceneGraph-Version
 ===============================
 OpenSceneGraph (http://www.openscenegraph.org) is currently available in the official
-version: 2.8. Although osgCompute has been tested with this version it should also run with
+version: 3.0.1. Although osgCompute has been tested with this version it should also run with
 previous versions of OpenSceneGraph.
-Attention: a current SVN version of OpenSceneGraph (2.9.1 or later) is recommended
-for support of multithreading with osgCuda!
 
 
 
 CUDA-Version
 ===============================
-osgCuda supports the Runtime API of CUDA 2.1 which also includes the debugging of the
-graphics kernels. The Driver API is currently not supported by osgCuda. 
+osgCuda supports the Runtime API of CUDA 4.0. The Driver API is currently not supported by osgCuda. 
 
 
 
