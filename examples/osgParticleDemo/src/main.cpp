@@ -50,7 +50,7 @@ const unsigned int numParticles = 64000;
 */
 class AdvanceTime : public osgCompute::Resource
 {
-public:
+public: 
     osg::ref_ptr<osg::FrameStamp> _fs;
 };
 
@@ -67,7 +67,7 @@ public:
 // EXTERN FUNCTIONS //
 //////////////////////
 //------------------------------------------------------------------------------
-extern "C" void reseed( 
+extern "C" void reseed(  
               unsigned int numBlocks,
               unsigned int numThreads,
               void* ptcls,

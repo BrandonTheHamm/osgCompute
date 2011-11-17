@@ -73,6 +73,7 @@ public:
             _trgBuffer->getDimension(0)/16, 
             _trgBuffer->getDimension(1)/16, 1 );
 
+
         sobelFilter(  blocks, 
                       threads,
                       _trgBuffer->map( osgCompute::MAP_DEVICE_TARGET ),
