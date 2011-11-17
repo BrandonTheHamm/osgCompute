@@ -113,18 +113,11 @@ namespace osgCuda
         virtual unsigned int getAllocatedByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
         /** Returns the current allocated bytes for a specific mapping area.
-        @param[in] mapping specifies the memory space and type of the mapping (default is MAP_DEVICE).
-        @param[in] hint [unused] reserved.
-        @return Returns the byte size of specific current mapping, zero if it is not allocated yet.
-        */
-        virtual unsigned int getByteSize( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int hint = 0 ) const;
-
-        /** Returns the current allocated bytes for a specific mapping area. 
         @param[in] mapping specifies the memory space and type of the mapping.
         @param[in] hint [unused] reserved.
-        @return Returns the byte size of specific current mapping, zero if it is not allocated yet.
+        @return Returns the byte size of specific current mapping.
         */
-        // /virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
+        virtual unsigned int getByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
 		/** Image will be copied during the next call of map(). It is only copied once, since
 		other memory spaces will be synchronized. However, a call to osg::Image::dirty() will

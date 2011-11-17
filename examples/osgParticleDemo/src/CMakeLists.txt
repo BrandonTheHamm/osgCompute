@@ -32,7 +32,7 @@ SET(HEADER_PATH ${osgCompute_SOURCE_DIR}/examples/${TARGETNAME}/include)
 INCLUDE_DIRECTORIES(
     ${HEADER_PATH}
     ${OSG_INCLUDE_DIR}
-    ${CUDA_INCLUDE_PATH}
+    ${CUDA_TOOLKIT_INCLUDE}
 )
 
 
@@ -50,13 +50,12 @@ SET(MY_CUDA_SOURCE_FILES
 	PtclKernels.cu
 )
 
-# Use the WRAP_CUDA macro.
-WRAP_CUDA( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
+# Use the CUDA_COMPILE macro.
+CUDA_COMPILE( CUDA_FILES ${MY_CUDA_SOURCE_FILES} )
 
 # collect the sources
 SET(TARGET_SRC
 	main.cpp
-	${CUDA_FILES}
     ${MY_CUDA_SOURCE_FILES}
 )
 
@@ -93,6 +92,8 @@ INCLUDE(GroupInstall)
 
 # now set up the ADDITIONAL_FILES variable to ensure that the files will be visible in the project
 SET(ADDITIONAL_FILES
+#${CUDA_FILES}
+    #${CUDA_FILES} # not sure if this is necessary - check this
 	#${MY_SHADER_FILES}
 )
 
@@ -119,7 +120,7 @@ SET(TARGET_VARS_LIBRARIES
 	OSGVIEWER_LIBRARY
 	OSGGA_LIBRARY
 	OSGDB_LIBRARY
-    CUDA_RUNTIME_LIBRARY
+    CUDA_CUDART_LIBRARY
 )
 	
 

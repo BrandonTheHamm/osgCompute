@@ -57,7 +57,6 @@ namespace osgCuda
         virtual void mapAsRenderTarget();
         virtual unsigned int getAllocatedByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
         virtual unsigned int getByteSize( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int hint = 0 ) const;
-        //virtual unsigned int getMappingByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
 		virtual void setUsage( unsigned int usage );
 		virtual unsigned int getUsage() const;
@@ -366,40 +365,6 @@ namespace osgCuda
 
         return allocSize;
     }
-
-    //------------------------------------------------------------------------------
-    //unsigned int TextureMemory::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
-    //{
-    //    if( osgCompute::Resource::isClear() )
-    //        return 0;
-
-    //    ////////////////////
-    //    // RECEIVE HANDLE //
-    //    ////////////////////
-    //    const TextureObject* memoryPtr = dynamic_cast<const TextureObject*>( object() );
-    //    if( !memoryPtr )
-    //        return NULL;
-    //    const TextureObject& memory = *memoryPtr;
-
-    //    unsigned int allocSize = 0;
-    //    switch( mapping )
-    //    {
-    //    case osgCompute::MAP_DEVICE: case osgCompute::MAP_DEVICE_TARGET: case osgCompute::MAP_DEVICE_SOURCE:
-    //        {
-    //            allocSize = (memory._devPtr != NULL)? getByteSize() : 0;
-    //        }break;
-    //    case osgCompute::MAP_HOST: case osgCompute::MAP_HOST_TARGET: case osgCompute::MAP_HOST_SOURCE:
-    //        {
-    //            allocSize = (memory._hostPtr != NULL)? getByteSize() : 0;
-    //        }break;
-    //    case osgCompute::MAP_DEVICE_ARRAY: case osgCompute::MAP_DEVICE_ARRAY_TARGET:
-    //        {
-    //            allocSize = (memory._graphicsResource != NULL)? getByteSize() : 0;
-    //        }break;
-    //    }
-
-    //    return allocSize;
-    //}
 
     //------------------------------------------------------------------------------
     void* TextureMemory::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint/* = 0*/ )

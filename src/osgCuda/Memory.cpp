@@ -1366,7 +1366,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    unsigned int Memory::getByteSize( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int hint /*= 0 */ ) const
+    unsigned int Memory::getByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
     {
         if( osgCompute::Resource::isClear() )
             return 0;
@@ -1409,40 +1409,6 @@ namespace osgCuda
 
         return allocSize;
     }
-
-    //------------------------------------------------------------------------------
-    //unsigned int Memory::getMappingByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
-    //{
-    //    if( osgCompute::Resource::isClear() )
-    //        return 0;
-
-    //    ////////////////////
-    //    // RECEIVE HANDLE //
-    //    ////////////////////
-    //    const MemoryObject* memoryPtr = dynamic_cast<const MemoryObject*>( object() );
-    //    if( !memoryPtr )
-    //        return NULL;
-    //    const MemoryObject& memory = *memoryPtr;
-
-    //    unsigned int allocSize = 0;
-    //    switch( mapping )
-    //    {
-    //    case osgCompute::MAP_DEVICE: case osgCompute::MAP_DEVICE_TARGET: case osgCompute::MAP_DEVICE_SOURCE:
-    //        {
-    //            allocSize = (memory._devPtr != NULL)? getByteSize() : 0;
-    //        }break;
-    //    case osgCompute::MAP_HOST: case osgCompute::MAP_HOST_TARGET: case osgCompute::MAP_HOST_SOURCE:
-    //        {
-    //            allocSize = (memory._hostPtr != NULL)? getByteSize() : 0;
-    //        }break;
-    //    case osgCompute::MAP_DEVICE_ARRAY: case osgCompute::MAP_DEVICE_ARRAY_TARGET:
-    //        {
-    //            allocSize = (memory._devArray != NULL)? getByteSize() : 0;
-    //        }break;
-    //    }
-
-    //    return allocSize;
-    //}
 
     //------------------------------------------------------------------------------
     osg::Image* Memory::getImage()

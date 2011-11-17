@@ -18,13 +18,6 @@ SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModule
 # set custom .cmake CUDA scripts also to the module path
 SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModules/cuda")
 
-# set custom .cmake CUDAEMU scripts also to the module path
-SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModules/cudaemu")
-
-# set custom .cmake CUDANSIGHT scripts also to the module path
-#SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${osgCompute_SOURCE_DIR}/CMakeModules/cudansight")
-
-
 
 
 ################################################################################
@@ -62,7 +55,7 @@ IF(WIN32)
     IF(MSVC)
         ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
         ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
-        SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /ZI")
+        SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi")
         SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Gy")
     ENDIF(MSVC)
 ENDIF(WIN32)
@@ -76,8 +69,6 @@ ENDIF(WIN32)
 # check for some libs and scrips.
 INCLUDE(Findosg)    # sets OSG_FOUND
 INCLUDE(FindCuda)   # sets CUDA_FOUND
-#INCLUDE(FindCudaEmu)# sets CUDA_EMU_FOUND
-#INCLUDE(FindCudaNsight)# sets CUDA_NSIGHT_FOUND
 
 
 

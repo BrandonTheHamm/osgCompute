@@ -99,7 +99,7 @@ After installation please make sure that the environment variables OSG_BIN_PATH,
 \section Environment Install CUDA environment
 For CUDA integration you need to install the current 
 <a href="http://developer.nvidia.com/object/gpucomputing.html">CUDA Toolkit</a>. 
-The environment variable CUDA_BIN_PATH, CUDA_INCLUDE_PATH and CUDA_LIB_PATH should be defined 
+The environment variable CUDA_BIN_PATH, CUDA_TOOLKIT_INCLUDE and CUDA_LIB_PATH should be defined 
 for proper work with CUDA. They should point to the binary, include and lib path of your CUDA installation.
 
 \section Library Install osgCompute
