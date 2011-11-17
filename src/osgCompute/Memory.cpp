@@ -99,9 +99,6 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     unsigned int Memory::getAllElementsSize( unsigned int hint /*= 0 */ ) const 
     { 
-        if( !isClear() )
-            return 0;
-
         return getElementSize() * getNumElements(); 
     }
     

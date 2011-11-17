@@ -609,14 +609,6 @@ namespace osgCuda
         if( osgCompute::Resource::isClear() )
             return 0;
 
-        ////////////////////
-        // RECEIVE HANDLE //
-        ////////////////////
-        const GeometryObject* memoryPtr = dynamic_cast<const GeometryObject*>( object() );
-        if( !memoryPtr )
-            return NULL;
-        const GeometryObject& memory = *memoryPtr;
-
         unsigned int allocSize = 0;
         switch( mapping )
         {
@@ -662,7 +654,7 @@ namespace osgCuda
         ////////////////////////
         if( memory._hostPtr != NULL )
         {
-            if( !memset( memory._hostPtr, 0x0, getByteSize( osgCompute::MAP_HOST ) ) )
+            if( !memset( memory._hostPtr, 0x0, getAllElementsSize() ) )
             {
                 osg::notify(osg::FATAL)
                     << _geomref->getName() << " [osgCuda::Buffer::reset()] : error during memset() for host memory."
@@ -701,7 +693,7 @@ namespace osgCuda
                 }
             }
 
-            cudaError res = cudaMemset( memory._devPtr, 0x0, getByteSize( osgCompute::MAP_DEVICE ) );
+            cudaError res = cudaMemset( memory._devPtr, 0x0, getAllElementsSize() );
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
@@ -943,7 +935,7 @@ namespace osgCuda
             if( memory._hostPtr != NULL )
                 return true;
 
-            memory._hostPtr = malloc( getByteSize( osgCompute::MAP_HOST ) );
+            memory._hostPtr = malloc( getAllElementsSize() );
             if( NULL == memory._hostPtr )
             {
                 osg::notify(osg::FATAL)
@@ -1068,7 +1060,7 @@ namespace osgCuda
             if( !(memory._syncOp & osgCompute::SYNC_DEVICE) )
                 return true;
 
-            res = cudaMemcpy( memory._devPtr, memory._hostPtr, getByteSize( osgCompute::MAP_HOST ), cudaMemcpyHostToDevice );
+            res = cudaMemcpy( memory._devPtr, memory._hostPtr, getAllElementsSize(), cudaMemcpyHostToDevice );
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
@@ -1153,7 +1145,7 @@ namespace osgCuda
             /////////////////
             // COPY MEMORY //
             /////////////////
-            res = cudaMemcpy( memory._hostPtr, memory._devPtr, getByteSize( osgCompute::MAP_DEVICE ), cudaMemcpyDeviceToHost );
+            res = cudaMemcpy( memory._hostPtr, memory._devPtr, getAllElementsSize(), cudaMemcpyDeviceToHost );
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
