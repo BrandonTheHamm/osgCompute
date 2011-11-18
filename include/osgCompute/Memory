@@ -176,12 +176,6 @@ namespace osgCompute
         */
         Memory();
 
-        /** Init will check for memory parameters. However init will not allocate
-        any memory as this is done during the first call to map().
-        @return Returns true on success.
-        */
-        virtual bool init();
-
         /** Map will return a pointer to the respective memory space, e.g. device memory or host memory. 
         If the memory space differs from the last call to map() the
         function will check if synchronization between memory spaces is required. If the memory is 
@@ -236,8 +230,8 @@ namespace osgCompute
         */
         virtual unsigned int getPitch( unsigned int hint = 0 ) const;
 
-        /** Set the byte size of a single element. Can only be set before init. 
-        Use clear() before you change the element size.
+        /** Set the byte size of a single element. Will call releaseObjects() 
+        if memory has already been allocated.
         @param[in] elementSize Size of a single element in bytes.
         */
         virtual void setElementSize( unsigned int elementSize );
@@ -260,7 +254,8 @@ namespace osgCompute
         */
         virtual unsigned int getByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
 
-        /** Set the number of elements for the specified dimension.
+        /** Set the number of elements for the specified dimension. Will call releaseObjects() 
+        if memory has already been allocated.
         @param[in] dimIdx index of dimension.
         @param[in] dimSize number of elements for dimension dimIdx.
         */
@@ -283,7 +278,8 @@ namespace osgCompute
         virtual unsigned int getNumElements() const;
 
         /** Sets a specific allocation hint. Allocation hints are applied
-        during the first call to map().
+        during the first call to map(). Will call releaseObjects() 
+        if memory has already been allocated.
         @param[in] allocHint the allocation hint.
         */
         virtual void setAllocHint( unsigned int allocHint );
@@ -319,6 +315,7 @@ namespace osgCompute
 
         /** Setup the current active blocks/target index.
         Blocks are utilized e.g. by pingpong buffers. By default there is only one block/target.
+        Will call releaseObjects() if memory has already been allocated.
         @param[in] sIdx current swap index.
         */
         virtual void setSwapIdx( unsigned int sIdx );
@@ -329,8 +326,8 @@ namespace osgCompute
         */
         virtual unsigned int getSwapIdx() const;
 
-        /** Setup the number of blocks/targets. Cannot be set after init() is called. You need to call
-        clear first.
+        /** Setup the number of blocks/targets. Will call releaseObjects() 
+        if memory has already been allocated.
         @param[in] sc number of swap blocks/targets.
         */
         virtual void setSwapCount( unsigned int sc = 1 );
@@ -341,12 +338,7 @@ namespace osgCompute
         */
         virtual unsigned int getSwapCount() const;
 
-        /** Will release all allocated memory and resources. Calls releaseObjects().
-        */
-        virtual void clear();
-
-        /** Will release all allocated host and device memory for this object. 
-        Is implicitly called during Resource::clear().
+        /** Will release all allocated host and device memory.
         */
         virtual void releaseObjects();
 
@@ -358,11 +350,11 @@ namespace osgCompute
         /** Returns the memory resource and allocates it when it does not exist.
         @return Returns the current memory resource.
         */
-        virtual MemoryObject* object();
+        virtual MemoryObject* object( bool create = true );
         /** Returns the memory resource and allocates it when it does not exist.
         @return Returns the current memory resource.
         */
-        virtual const MemoryObject* object() const;
+        virtual const MemoryObject* object( bool create = true ) const;
 
         /** Allocates the memory resource.
         @return Returns a pointer to the resource on success and NULL otherwise.
@@ -378,8 +370,6 @@ namespace osgCompute
         // Copy constructor and operator should not be called
         Memory( const Memory&, const osg::CopyOp& ) {}
         Memory& operator=( const Memory& copy ) { return (*this); }
-
-        void clearLocal();
 
         unsigned int                                        _allocHint;
         std::vector<unsigned int>                           _dimensions;
@@ -542,25 +532,15 @@ namespace osgCompute
         */
         virtual void mapAsRenderTarget() = 0;
 
-        /** Clears this memory object. Calls releaseObjects().
-        */
-        virtual void clear();
-
-        /** Release all memory. Each GL memory handle is registered in the
-        respective compute context is unregistered and allocations on the 
-        CPU are deallocated.
-        */
-        virtual void releaseObjects();
-
         /** Sets the OpenGL context for all GLMemory resources. Please note that
         GL interoperability can only use a single GL context. 
         @param[in] context pointer to the OpenGL context of all resources.
         */
         static void bindToContext( osg::GraphicsContext& context );
 
-        /** Clear the OpenGL context.
+        /** Removes the OpenGL context.
         */	
-        static void clearContext();
+        static void releaseContext();
 
         /** Returns the OpenGL context ID of all GLMemory resources.
         @return Returns the OpenGL context ID.
@@ -570,14 +550,12 @@ namespace osgCompute
     protected:
         /** Destructor. Unregisters all GL handles.
         */
-        virtual ~GLMemory() {clearLocal();}
+        virtual ~GLMemory() {}
 
     private:
         // Copy constructor and operator should not be called
         GLMemory( const GLMemory& , const osg::CopyOp& ) {}
         GLMemory& operator=(const GLMemory&) { return (*this); }
-
-        void clearLocal();
 
         static osg::observer_ptr<osg::GraphicsContext>    s_context;
     };

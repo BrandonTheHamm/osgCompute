@@ -52,19 +52,30 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void ResourceObserver::observeResource( Resource& resource )
     {
+        std::string resourceClassSpecifier = std::string(resource.libraryName()).append("::").append(resource.className());
+
         if( resource.getObserverSet() != NULL )
         {
             std::set<Observer*>& observers = resource.getObserverSet()->getObservers();
             for( std::set<Observer*>::iterator itr = observers.begin(); itr != observers.end(); ++itr )
             {
                 if( (*itr) == this )
-                    return;// Object is already observed
+                {   // Object is already observed, so change the className and libraryName
+                    for( ObserverMapItr obsItr = _observedObjects.begin(); obsItr != _observedObjects.end(); ++obsItr )
+                    {
+                        if( obsItr->second == &resource )
+                        {
+                            _observedObjects.erase( obsItr );
+                            _observedObjects.insert( std::make_pair<std::string, osg::observer_ptr<Resource> >( resourceClassSpecifier, &resource ) );
+                            return;
+                        }
+                    }
+
+                }
             }
         }
 
         resource.addObserver( this );
-
-        std::string resourceClassSpecifier = std::string(resource.libraryName()).append("::").append(resource.className());
         _observedObjects.insert( std::make_pair<std::string, osg::observer_ptr<Resource> >( resourceClassSpecifier, &resource ) );
     }
 
@@ -74,8 +85,8 @@ namespace osgCompute
         Resource* resource = static_cast<Resource*>( object );
         if( resource == NULL ) return;
 
-        std::string resourceClassName = resource->className();
-        std::pair<ObserverMapItr,ObserverMapItr> range = _observedObjects.equal_range( resourceClassName );
+        std::string resourceClassSpecifier = std::string(resource->libraryName()).append("::").append(resource->className());
+        std::pair<ObserverMapItr,ObserverMapItr> range = _observedObjects.equal_range( resourceClassSpecifier );
         while( range.first != range.second )
         {
             if( range.first->second.valid() && range.first->second == resource )
@@ -112,19 +123,6 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     Resource::Resource()
     {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    bool Resource::init()
-    {
-        if( !isClear() )
-            return true;
-
-
-        ResourceObserver::instance()->observeResource( *this );
-        _clear = false;
-        return true;
     }
 
     //------------------------------------------------------------------------------
@@ -171,15 +169,9 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool Resource::isClear() const 
-    { 
-        return _clear; 
-    }
-
-    //------------------------------------------------------------------------------
-    void Resource::clear()
+    void Resource::removeAllIdentifiers()
     {
-        clearLocal();
+        _identifiers.clear();
     }
 
     //------------------------------------------------------------------------------
@@ -193,18 +185,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     Resource::~Resource()
     {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    void Resource::clearLocal()
-    {
-        _clear = true;
-        _identifiers.clear();
-        
-        // free memory
+        // free a resource's allocations
         releaseObjects();
-    } 
-
-
+    }
 } 

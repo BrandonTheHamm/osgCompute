@@ -37,6 +37,11 @@ namespace osgCuda
         _overallTime(0.0f)
     {
         clearLocal();
+        // Please note that virtual functions className() and libraryName() are called
+        // during observeResource() which will only develop until this class.
+        // However if contructor of a subclass calls this function again observeResource
+        // will change the className and libraryName of the observed pointer.
+        osgCompute::ResourceObserver::instance()->observeResource( *this );
     }
 
     //------------------------------------------------------------------------------
@@ -46,23 +51,13 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool Timer::init()
-    {
-        cudaEventCreate(&_start); 
-        cudaEventCreate(&_stop);
-
-        return Resource::init();
-    }
-
-    //------------------------------------------------------------------------------
     void Timer::start()
     {
         if( !timerEnabled() )
             return;
 
-        if( isClear() )
-            if( !init() )
-                return;
+        if( _start == NULL )
+            cudaEventCreate(&_start); 
 
         cudaEventRecord( _start );
     }
@@ -70,8 +65,11 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Timer::stop()
     {
-        if( isClear() || !timerEnabled() )
+        if( !timerEnabled() )
             return;
+
+        if( _stop == NULL )
+            cudaEventCreate(&_stop);
 
         cudaEventRecord( _stop );
 
@@ -113,10 +111,15 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    void Timer::clear()
+    void Timer::releaseObjects()
     {
-        clearLocal();
-        Resource::clear();
+        if( _start != NULL )
+            cudaEventDestroy(_start); 
+        _start = NULL;
+
+        if( _stop != NULL )
+            cudaEventDestroy(_stop);
+        _stop = NULL;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,14 +128,6 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Timer::clearLocal()
     {
-        if( _start != NULL )
-            cudaEventDestroy(_start); 
-        _start = NULL;
-        
-        if( _stop != NULL )
-            cudaEventDestroy(_stop);
-        _stop = NULL    ;
-
         _lastTime = 0.0f;
         _peakTime = 0.0f;
         _overallTime = 0.0f;

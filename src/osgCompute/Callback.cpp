@@ -71,7 +71,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    void GLMemoryTargetCallback::clear()
+    void GLMemoryTargetCallback::removeAll()
     {
         _memories.clear();
     }

@@ -34,14 +34,11 @@ namespace PtclDemo
     class PtclTracer : public osgCompute::Computation 
     {
     public:
-        virtual bool init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
     private:
         osg::ref_ptr<osgCuda::Timer>        _timer;
-        unsigned int                        _numBlocks;
-        unsigned int                        _numThreads;
         osg::ref_ptr<osgCompute::Memory>    _ptcls;
     };
 
@@ -49,51 +46,31 @@ namespace PtclDemo
     // PUBLIC FUNCTIONS //////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------  
-    bool PtclTracer::init() 
-    { 
-        if( !_ptcls )
-        {
-            osg::notify( osg::WARN ) 
-                << "PtclDemo::PtclTracer::init(): particle buffer is missing."
-                << std::endl;
-
-            return false;
-        }
+    void PtclTracer::launch()
+    {
+        if( !_ptcls.valid() )
+            return;
 
         if( !_timer.valid() )
         {
             _timer = new osgCuda::Timer;
             _timer->setName( "PtclTracer");
-            _timer->init();
         }
-
-        /////////////////////////
-        // COMPUTE KERNEL SIZE //
-        /////////////////////////
-        _numBlocks = (_ptcls->getNumElements() / 128)+1;
-        _numThreads = 128;
-
-        return osgCompute::Computation::init();
-    }
-
-    //------------------------------------------------------------------------------  
-    void PtclTracer::launch()
-    {
-        if( !_ptcls.valid() || !_timer.valid() )
-            return;
 
         _timer->start();
 
         ////////////////////
         // MOVE PARTICLES //
         ////////////////////
+        unsigned int numBlocks = (_ptcls->getNumElements() / 128)+1;
+        unsigned int numThreads = 128;
+
         trace( 
-            _numBlocks, 
-            _numThreads, 
+            numBlocks, 
+            numThreads, 
             _ptcls->map( osgCompute::MAP_DEVICE_TARGET ), 
             0.009f,
             _ptcls->getNumElements() );
-
 
         _timer->stop();
     }

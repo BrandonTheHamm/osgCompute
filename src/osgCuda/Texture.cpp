@@ -46,9 +46,10 @@ namespace osgCuda
 		virtual osgCompute::GLMemoryAdapter* getAdapter(); 
 		virtual const osgCompute::GLMemoryAdapter* getAdapter() const; 
 
-        virtual bool init();
-        virtual bool initDimension();
-        virtual bool initElementSize();
+        virtual unsigned int getElementSize() const;
+        virtual unsigned int getDimension( unsigned int dimIdx ) const;
+        virtual unsigned int getNumDimensions() const;
+        virtual unsigned int getNumElements() const;
 
         virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
         virtual void unmap( unsigned int hint = 0 );
@@ -58,14 +59,12 @@ namespace osgCuda
         virtual unsigned int getAllocatedByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
         virtual unsigned int getByteSize( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int hint = 0 ) const;
 
-        virtual void clear();
     protected:
         friend class Texture1D;
         friend class Texture2D;
         friend class Texture3D;
         friend class TextureRectangle;
         virtual ~TextureMemory();
-        void clearLocal();
 
         bool setup( unsigned int mapping );
         bool alloc( unsigned int mapping );
@@ -148,20 +147,16 @@ namespace osgCuda
     TextureMemory::TextureMemory()
 		: osgCompute::GLMemory()
     {
-        clearLocal();
+        // Please note that virtual functions className() and libraryName() are called
+        // during observeResource() which will only develop until this class.
+        // However if contructor of a subclass calls this function again observeResource
+        // will change the className and libraryName of the observed pointer.
+        osgCompute::ResourceObserver::instance()->observeResource( *this );
     }
 
     //------------------------------------------------------------------------------
     TextureMemory::~TextureMemory()
     {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    void TextureMemory::clear()
-    {
-        osgCompute::GLMemory::clear();
-        clearLocal();
     }
 
 	//------------------------------------------------------------------------------
@@ -177,107 +172,152 @@ namespace osgCuda
 	}
 
     //------------------------------------------------------------------------------
-    bool TextureMemory::init()
-    {
-        if( !isClear() || !_texref.valid() )
-            return true;
-
-        if( !initElementSize() )
+    unsigned int TextureMemory::getElementSize() const 
+    { 
+        if( osgCompute::Memory::getElementSize() == 0 )
         {
-            clear();
-            return false;
+            if( !_texref.valid() )
+                return 0;
+
+            unsigned int elementSize = 0;
+            unsigned int elementBitSize;
+            if( _texref->getImage(0) )
+            {
+                elementBitSize = osg::Image::computePixelSizeInBits(
+                    _texref->getImage(0)->getPixelFormat(),
+                    _texref->getImage(0)->getDataType() );
+
+            }
+            else
+            {
+                GLenum format = osg::Image::computePixelFormat( _texref->getInternalFormat() );
+                GLenum type = osg::Image::computeFormatDataType( _texref->getInternalFormat() );
+
+                elementBitSize = osg::Image::computePixelSizeInBits( format, type );
+            }
+
+            elementSize = ((elementBitSize % 8) == 0)? elementBitSize/8 : elementBitSize/8 +1;
+            const_cast<osgCuda::TextureMemory*>(this)->setElementSize( elementSize );
         }
 
-        if( !initDimension() )
-        {
-            clear();
-            return false;
-        }
-
-        setName( _texref->getName() );
-        return osgCompute::GLMemory::init();
+        return osgCompute::Memory::getElementSize(); 
     }
 
     //------------------------------------------------------------------------------
-    bool TextureMemory::initDimension()
-    {
-        unsigned int dim[3];
-        if( _texref->getImage(0) )
+    unsigned int TextureMemory::getDimension( unsigned int dimIdx ) const
+    { 
+        if( osgCompute::Memory::getNumDimensions() == 0 )
         {
-            dim[0] = _texref->getImage(0)->s();
-            dim[1] = _texref->getImage(0)->t();
-            dim[2] = _texref->getImage(0)->r();
-        }
-        else
-        {
-            dim[0] = _texref->getTextureWidth();
-            dim[1] = _texref->getTextureHeight();
-            dim[2] = _texref->getTextureDepth();
+            if( !_texref.valid() )
+                return 0;
+
+            unsigned int dim[3];
+            if( _texref->getImage(0) )
+            {
+                dim[0] = _texref->getImage(0)->s();
+                dim[1] = _texref->getImage(0)->t();
+                dim[2] = _texref->getImage(0)->r();
+            }
+            else
+            {
+                dim[0] = _texref->getTextureWidth();
+                dim[1] = _texref->getTextureHeight();
+                dim[2] = _texref->getTextureDepth();
+            }
+
+            if( dim[0] == 0 )
+                return 0;
+
+            unsigned int d = 0;
+            while( dim[d] > 1 && d < 3 )
+            {
+                const_cast<osgCuda::TextureMemory*>(this)->setDimension( d, dim[d] );
+                ++d;
+            }
         }
 
-        if( dim[0] == 0 )
-        {
-            osg::notify(osg::FATAL)
-                << _texref->getName() << " [osgCuda::TextureMemory::initDimension()]: no dimensions defined for texture! set the texture dimensions first."
-                << std::endl;
-
-            return false;
-        }
-
-        unsigned int d = 0;
-        while( dim[d] > 1 && d < 3 )
-        {
-            setDimension( d, dim[d] );
-            ++d;
-        }
-
-        return true;
+        return osgCompute::Memory::getDimension(dimIdx);
     }
 
     //------------------------------------------------------------------------------
-    bool TextureMemory::initElementSize()
+    unsigned int TextureMemory::getNumDimensions() const
     {
-        unsigned int elementSize = 0;
-        unsigned int elementBitSize;
-        if( _texref->getImage(0) )
+        if( osgCompute::Memory::getNumDimensions() == 0 )
         {
-            elementBitSize = osg::Image::computePixelSizeInBits(
-                _texref->getImage(0)->getPixelFormat(),
-                _texref->getImage(0)->getDataType() );
+            if( !_texref.valid() )
+                return 0;
 
+            unsigned int dim[3];
+            if( _texref->getImage(0) )
+            {
+                dim[0] = _texref->getImage(0)->s();
+                dim[1] = _texref->getImage(0)->t();
+                dim[2] = _texref->getImage(0)->r();
+            }
+            else
+            {
+                dim[0] = _texref->getTextureWidth();
+                dim[1] = _texref->getTextureHeight();
+                dim[2] = _texref->getTextureDepth();
+            }
+
+            if( dim[0] == 0 )
+                return 0;
+
+            unsigned int d = 0;
+            while( dim[d] > 1 && d < 3 )
+            {
+                const_cast<osgCuda::TextureMemory*>(this)->setDimension( d, dim[d] );
+                ++d;
+            }
         }
-        else
+
+        return osgCompute::Memory::getNumDimensions();
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int TextureMemory::getNumElements() const
+    {
+        if( osgCompute::Memory::getNumElements() == 0 )
         {
-            GLenum format = osg::Image::computePixelFormat( _texref->getInternalFormat() );
-            GLenum type = osg::Image::computeFormatDataType( _texref->getInternalFormat() );
+            if( !_texref.valid() )
+                return 0;
 
-            elementBitSize = osg::Image::computePixelSizeInBits( format, type );
+            unsigned int dim[3];
+            if( _texref->getImage(0) )
+            {
+                dim[0] = _texref->getImage(0)->s();
+                dim[1] = _texref->getImage(0)->t();
+                dim[2] = _texref->getImage(0)->r();
+            }
+            else
+            {
+                dim[0] = _texref->getTextureWidth();
+                dim[1] = _texref->getTextureHeight();
+                dim[2] = _texref->getTextureDepth();
+            }
+
+            if( dim[0] == 0 )
+                return 0;
+
+            unsigned int d = 0;
+            while( dim[d] > 1 && d < 3 )
+            {
+                const_cast<osgCuda::TextureMemory*>(this)->setDimension( d, dim[d] );
+                ++d;
+            }
         }
 
-        elementSize = ((elementBitSize % 8) == 0)? elementBitSize/8 : elementBitSize/8 +1;
-        if( elementSize == 0 )
-        {
-            osg::notify(osg::FATAL)
-                << _texref->getName() << " [osgCuda::TextureMemory::initElementSize()]: cannot determine element size."
-                << std::endl;
-
-            return false;
-        }
-
-        setElementSize( elementSize );
-        return true;
+        return osgCompute::Memory::getNumElements();
     }
 
     //------------------------------------------------------------------------------
      unsigned int TextureMemory::getAllocatedByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
     {
-        if( osgCompute::Resource::isClear() )
-            return 0;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        const TextureObject* memoryPtr = dynamic_cast<const TextureObject*>( object() );
+        const TextureObject* memoryPtr = dynamic_cast<const TextureObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         const TextureObject& memory = *memoryPtr;
@@ -308,9 +348,6 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int TextureMemory::getByteSize( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int hint /*= 0 */  ) const
     {
-        if( osgCompute::Resource::isClear() )
-            return 0;
-
         unsigned int allocSize = 0;
         switch( mapping )
         {
@@ -348,10 +385,6 @@ namespace osgCuda
 		if( !_texref.valid() )
 			return NULL;
 
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return NULL;
-
         if( mapping == osgCompute::UNMAP )
         {
             unmap( hint );
@@ -361,7 +394,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object() );
+        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object(true) );
         if( !memoryPtr )
             return NULL;
         TextureObject& memory = *memoryPtr;
@@ -557,14 +590,10 @@ namespace osgCuda
 		if( !_texref.valid() )
 			return;
 
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object() );
+        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object(false) );
         if( !memoryPtr )
             return;
         TextureObject& memory = *memoryPtr;
@@ -583,15 +612,6 @@ namespace osgCuda
 
                 return;
             }
-        }
-
-        if( memory._mapping == osgCompute::UNMAP && 
-            _texref->getImage(0) != NULL &&
-            _texref->getImage(0)->getModifiedCount() != memory._lastModifiedCount )
-        {
-            // Array is initialized during rendering. Sync others.
-            memory._syncOp = osgCompute::SYNC_DEVICE | osgCompute::SYNC_HOST;
-            memory._lastModifiedCount = _texref->getImage(0)->getModifiedCount();
         }
 
         // Change current context to render context
@@ -618,14 +638,10 @@ namespace osgCuda
         if( !_texref.valid()  )
 			return false;
 
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return false;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object() );
+        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         TextureObject& memory = *memoryPtr;
@@ -731,11 +747,7 @@ namespace osgCuda
         if( !_texref.valid() )
             return;
 
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return;
-
-        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object() );
+        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object(true) );
         if( !memoryPtr )
             return;
         TextureObject& memory = *memoryPtr;
@@ -775,17 +787,10 @@ namespace osgCuda
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void TextureMemory::clearLocal()
-    {
-        // Do not call _texref = NULL;
-        // Do not change _usage;
-    }
-
-    //------------------------------------------------------------------------------
     unsigned int TextureMemory::computePitch() const
     {
         // Proof paramters
-        if( getDimension(0) == 0 || getElementSize() == 0 ) 
+        if( getNumDimensions() == 0 || getElementSize() == 0 ) 
             return 0;
 
         // 1-dimensional layout
@@ -810,7 +815,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object() );
+        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         TextureObject& memory = *memoryPtr;
@@ -1001,7 +1006,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object() );
+        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object(true) );
         if( !memoryPtr )
             return NULL;
         TextureObject& memory = *memoryPtr;
@@ -1152,7 +1157,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object() );
+        TextureObject* memoryPtr = dynamic_cast<TextureObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         TextureObject& memory = *memoryPtr;
@@ -1672,8 +1677,6 @@ namespace osgCuda
 		memory->_texref = this;
 		_memory = memory;
 
-        clearLocal();
-
         // some flags for textures are not available right now
         // like resize to a power of two and mip-maps
         asTexture()->setResizeNonPowerOfTwoHint( false );
@@ -1744,8 +1747,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::apply(osg::State& state) const
     {
-        if( !_memory->isClear() && 
-            osgCompute::GLMemory::getContext() != NULL && 
+        if( osgCompute::GLMemory::getContext() != NULL && 
             state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->unmap();
 
@@ -1766,14 +1768,8 @@ namespace osgCuda
     {
 		// _memory object is not deleted until this point
 		// as reference count is increased in constructor
-		clearLocal();
+        _memory->releaseObjects();
 		_memory = NULL;
-    }
-
-    //------------------------------------------------------------------------------
-    void Texture2D::clearLocal()
-    {
-        _memory->clear();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1787,8 +1783,6 @@ namespace osgCuda
 		TextureMemory* memory = new TextureMemory;
 		memory->_texref = this;
 		_memory = memory;
-
-        clearLocal();
 
         // some flags for textures are not available right now
         // like resize to a power of two and mip-maps
@@ -1860,8 +1854,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::apply(osg::State& state) const
     {
-        if( !_memory->isClear() && 
-            osgCompute::GLMemory::getContext() != NULL && 
+        if( osgCompute::GLMemory::getContext() != NULL && 
             state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->unmap();
 
@@ -1882,16 +1875,9 @@ namespace osgCuda
     {
 		// _memory object is not deleted until this point
 		// as reference count is increased in constructor
-		clearLocal();
+        _memory->releaseObjects();
 		_memory = NULL;
     }
-
-    //------------------------------------------------------------------------------
-    void Texture3D::clearLocal()
-    {
-        _memory->clear();
-    }
-
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
@@ -1904,8 +1890,6 @@ namespace osgCuda
 		TextureMemory* memory = new TextureMemory;
 		memory->_texref = this;
 		_memory = memory;
-
-        clearLocal();
 
         // some flags for textures are not available right now
         // like resize to a power of two and mip-maps
@@ -1977,8 +1961,7 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::apply(osg::State& state) const
     {
-        if( !_memory->isClear() && 
-            osgCompute::GLMemory::getContext() != NULL && 
+        if( osgCompute::GLMemory::getContext() != NULL && 
             state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
             _memory->unmap();
 
@@ -1999,13 +1982,7 @@ namespace osgCuda
     {
 		// _memory object is not deleted until this point
 		// as reference count is increased in constructor
-		clearLocal();
+        _memory->releaseObjects();
 		_memory = NULL;
-    }
-
-    //------------------------------------------------------------------------------
-    void TextureRectangle::clearLocal()
-    {
-        _memory->clear();
     }
 }

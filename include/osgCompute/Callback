@@ -40,21 +40,21 @@ namespace osgCompute
     public:
         /** Constructor. The object will be initialized with 
         default values. */
-        inline ComputationCallback() { clearLocal(); }
+        inline ComputationCallback() {}
+
+
+        META_Object( osgCompute, ComputationCallback );
 
         /** Do customized event or update callback code.
         @param[in] computation Reference to the computation the callback is attached to.
         @param[in] nv Reference to the node visitor.
         */
-        virtual void operator()( Computation& computation, osg::NodeVisitor& nv ) = 0;
+        virtual void operator()( Computation& computation, osg::NodeVisitor& nv ) {};
 
-        /** Restore the object's default state. 
-        */
-        virtual void clear() { clearLocal(); }
     protected:
         /** Destructor. 
         */
-        virtual ~ComputationCallback() { clearLocal(); }
+        virtual ~ComputationCallback() {}
 
 
     private:
@@ -63,9 +63,6 @@ namespace osgCompute
 
         /** Copy operator. This operator should not be called. */
         ComputationCallback &operator=(const ComputationCallback &) { return *this; }
-
-        /** Clear local members.*/
-        void clearLocal() {}
     };
 
     //! Interface for customized subload operations.
@@ -81,11 +78,9 @@ namespace osgCompute
     public:
         /** Constructor. The object will be initialized 
         with default values. */
-        inline SubloadCallback() { clearLocal(); }
+        inline SubloadCallback() {}
 
-        /** Restore object's default state. 
-        */
-        virtual void clear() { clearLocal(); }
+        META_Object( osgCompute, SubloadCallback );
 
         /** Do customized callback code. Overload this method
         to change the memory before returning form a memorie's map() function. 
@@ -94,7 +89,7 @@ namespace osgCompute
         @param[in] offset byte offset to the memory space.
         @param[in] resource reference to the resource managing the memory.
         */
-        virtual void subload( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& resource ) const = 0;
+        virtual void subload( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& resource ) const {};
 
         /** Do customized callback code. Overload this method
         to initialize the respective memory during the first call to map().
@@ -103,12 +98,12 @@ namespace osgCompute
         @param[in] offset Byte offset to the memory space.
         @param[in] resource Reference to the memory resource.
         */
-        virtual void load( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& resource ) const = 0;
+        virtual void load( void* mappedPtr, unsigned int mapping, unsigned int offset, const Resource& resource ) const {};
 
     protected:
         /** Destructor.
         */
-        virtual ~SubloadCallback() { clearLocal(); }
+        virtual ~SubloadCallback() {}
 
 
     private:
@@ -117,9 +112,6 @@ namespace osgCompute
 
         /** Copy operator. This operator should not be called.*/
         SubloadCallback &operator=(const SubloadCallback&) { return *this; }
-
-        /** Clear local members.*/
-        void clearLocal() {}
     };
 
     //! Interface for customized launch order of computations.
@@ -147,21 +139,19 @@ namespace osgCompute
     public:
         /** Constructor. The object will be initialized 
         with default values. */
-        inline LaunchCallback() { clearLocal(); }
+        inline LaunchCallback() {}
 
-        /** Restore the object's default state. 
-        */
-        virtual void clear() { clearLocal(); }
+        META_Object( osgCompute, LaunchCallback );
 
         /** Overwrite the default launch behavior for a program node.
         Is called whenever the program is executed. 
         @param[in] program Reference to the program
         */
-        virtual void operator()( Program& program ) = 0;
+        virtual void operator()( Program& program ) {};
 
     protected:
         /** Destructor. Release the memory by calling clearLocal(). */
-        virtual ~LaunchCallback() { clearLocal(); }
+        virtual ~LaunchCallback() {}
 
     private:
         /** Copy constructor. This constructor should not be called. */
@@ -169,9 +159,6 @@ namespace osgCompute
 
         /** Copy operator. This operator should not be called. */
         LaunchCallback &operator=(const LaunchCallback &) { return *this; }
-
-        /** Clear local members.*/
-        void clearLocal() {}
     };
 
     //! Callback for OpenGL memory render targets.
@@ -242,7 +229,7 @@ namespace osgCompute
         /**
         Remove all GLMemory objects
         */
-        virtual void clear();
+        virtual void removeAll();
                 
         /**
         Returns the number of observed GLMemory objects.

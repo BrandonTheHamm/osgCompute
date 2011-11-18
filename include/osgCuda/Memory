@@ -64,16 +64,6 @@ namespace osgCuda
 
         META_Object(osgCuda,Memory);
 
-		/** Method proofs applied parameters to be valid. Function is called automatically in map(). 
-		No memory will be allocated.
-		@return Returns true on success
-		*/
-        virtual bool init();
-
-		/**  Will release all allocated memory and resources. Calls osgCompute::clear().
-		*/
-        virtual void clear();
-
 		/** Map will return a pointer to the respective memory space, e.g. device memory or host memory. 
 		If the memory space differs from the last call to map() the
 		function will check if synchronization between memory spaces is required. Before using 
@@ -154,14 +144,12 @@ namespace osgCuda
     protected:
 		/** Destructor.
 		*/
-        virtual ~Memory() { clearLocal(); }
+        virtual ~Memory() {}
 
     private:
         // Copy constructor and operator should not be called
         Memory( const Memory&, const osg::CopyOp& ) {}
 		Memory& operator=( const Memory& copy ) { return (*this); }
-
-		void clearLocal();
 
 		bool setup( unsigned int mapping );
 		bool alloc( unsigned int mapping );

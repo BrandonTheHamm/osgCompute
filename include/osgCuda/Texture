@@ -122,7 +122,7 @@ namespace osgCuda
         /** Notify adapter when it is bound as an FrameBufferObject 
             for rendering with OpenGL. Sets MAP_DEVICE_ARRAY_TARGET for
             connected memory object. Calling map() with MAP_HOST_XXX or 
-            MAP_DEVICE_XXX will cause a memory copy afterwards, before 
+            MAP_DEVICE_XXX afterwards will cause a memory copy before 
             a pointer is returned.
         */
         virtual void applyAsRenderTarget() const;
@@ -144,8 +144,6 @@ namespace osgCuda
         // copy constructor and operator should not be called
         Texture2D( const Texture2D& , const osg::CopyOp& ) {}
         Texture2D& operator=(const Texture2D&) { return (*this); }
-
-        void clearLocal();
 
         mutable osg::ref_ptr<osgCompute::GLMemory> _memory;
     };
@@ -273,8 +271,6 @@ namespace osgCuda
         Texture3D( const Texture3D& , const osg::CopyOp& ) {}
         Texture3D& operator=(const Texture3D&) { return (*this); }
 
-        void clearLocal();
-
         mutable osg::ref_ptr<osgCompute::GLMemory> _memory;
     };
 
@@ -400,8 +396,6 @@ namespace osgCuda
         // copy constructor and operator should not be called
         TextureRectangle( const TextureRectangle& , const osg::CopyOp& ) {}
         TextureRectangle& operator=(const TextureRectangle&) { return (*this); }
-
-        void clearLocal();
 
         mutable osg::ref_ptr<osgCompute::GLMemory> _memory;
     };

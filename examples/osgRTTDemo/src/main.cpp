@@ -63,7 +63,6 @@ public:
         {
             _timer = new osgCuda::Timer;
             _timer->setName( "TexFilter");
-            _timer->init();
         }
 
         _timer->start();

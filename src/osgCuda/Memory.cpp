@@ -79,76 +79,17 @@ namespace osgCuda
     Memory::Memory()
         : osgCompute::Memory()
     {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    void Memory::clear()
-    {
-        clearLocal();
-        osgCompute::Memory::clear();
-    }
-
-    //------------------------------------------------------------------------------
-    bool Memory::init()
-    {
-        unsigned int numElements = 1;
-        for( unsigned int d=0; d<getNumDimensions(); ++d )
-            numElements *= getDimension( d );
-
-        unsigned int byteSize = numElements * getElementSize();
-
-        if( getElementSize() == 0 || getNumDimensions() == 0 )
-        {
-            osg::notify(osg::WARN)
-                << getName() 
-                << " [osgCuda::Memory::init()] \""<<getName()<<"\": "
-                << "no valid buffer size. Call setElementSize() and setDimension() first."
-                << std::endl;
-
-                clear();
-                return false;
-        }
-
-        // Check image data
-        if( _image.valid() )
-        {
-            if( _image->getNumMipmapLevels() > 1 )
-            {
-                osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Memory::init()] \""<<getName()<<"\": Image \""
-                    << _image->getName() << "\" uses MipMaps which are currently"
-                    << "not supported."
-                    << std::endl;
-
-                clear();
-                return false;
-            }
-
-            if( _image->getTotalSizeInBytes() != byteSize )
-            {
-                osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Memory::init()] \""<<getName()<<"\": size of image \""
-                    << _image->getName() << "\" is wrong."
-                    << std::endl;
-
-                clear();
-                return false;
-            }
-        }
-
-        // The ChannelFormatDescription should be checked by the application
-
-        return osgCompute::Memory::init();
+        memset( &_formatDesc, 0x0, sizeof(cudaChannelFormatDesc) );
+        // Please note that virtual functions className() and libraryName() are called
+        // during observeResource() which will only develop until this class.
+        // However if contructor of a subclass calls this function again observeResource
+        // will change the className and libraryName of the observed pointer.
+        osgCompute::ResourceObserver::instance()->observeResource( *this );
     }
 
     //------------------------------------------------------------------------------
     void* Memory::map( unsigned int mapping/* = osgCompute::MAP_DEVICE*/, unsigned int offset/* = 0*/, unsigned int hint )
     {
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return NULL;
-
         if( mapping == osgCompute::UNMAP )
         {
             unmap( hint );
@@ -158,7 +99,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object() );
+        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object(true) );
         if( !memoryPtr )
             return NULL;
         MemoryObject& memory = *memoryPtr;
@@ -323,14 +264,10 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Memory::unmap( unsigned int )
     {
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object() );
+        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object(false) );
         if( !memoryPtr )
             return;
         MemoryObject& memory = *memoryPtr;
@@ -344,14 +281,10 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     bool Memory::reset( unsigned int )
     {
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return false;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object() );
+        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object(false) );
         if( !memoryPtr )
             return false;
         MemoryObject& memory = *memoryPtr;
@@ -454,10 +387,35 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object() );
+        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object(false) );
         if( !memoryPtr )
             return false;
         MemoryObject& memory = *memoryPtr;
+
+        // Check image data
+        if( !_image.valid() )
+            return true;
+
+        if( _image->getNumMipmapLevels() > 1 )
+        {
+            osg::notify(osg::WARN)
+                << getName() << " [osgCuda::Memory::setup()] \""<<getName()<<"\": Image \""
+                << _image->getName() << "\" uses MipMaps which are currently"
+                << "not supported."
+                << std::endl;
+
+            return false;
+        }
+
+        if( _image->getTotalSizeInBytes() != getAllElementsSize() )
+        {
+            osg::notify(osg::WARN)
+                << getName() << " [osgCuda::Memory::setup()] \""<<getName()<<"\": size of image \""
+                << _image->getName() << "\" is wrong."
+                << std::endl;
+
+            return false;
+        }
 
         //////////////////
         // SETUP MEMORY //
@@ -668,7 +626,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object() );
+        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object(true) );
         if( !memoryPtr )
             return false;
         MemoryObject& memory = *memoryPtr;
@@ -863,7 +821,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object() );
+        MemoryObject* memoryPtr = dynamic_cast<MemoryObject*>( object(false) );
         if( !memoryPtr )
             return false;
         MemoryObject& memory = *memoryPtr;
@@ -1298,47 +1256,17 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Memory::setImage( osg::Image* image )
     {
-        if( !osgCompute::Resource::isClear() && image != NULL )
-        {
-            if( image->getNumMipmapLevels() > 1 )
-            {
-                osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Memory::setImage()] \""<<getName()<<"\": image \""
-                    << image->getName() << "\" uses MipMaps which are currently"
-                    << "not supported." 
-                    << std::endl;
-
-                return;
-            }
-
-            if( image->getTotalSizeInBytes() != getAllElementsSize() )
-            {
-                osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Memory::setImage()] \""<<getName()<<"\": size of image \""
-                    << image->getName() << "\" is wrong."
-                    << std::endl;
-
-                return;
-            }
-        }
-
-
         _image = image;
         resetModifiedCounts();
     }
 
-    
-
     //------------------------------------------------------------------------------
     unsigned int Memory::getAllocatedByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const 
     { 
-        if( osgCompute::Resource::isClear() )
-            return false;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        const MemoryObject* memoryPtr = dynamic_cast<const MemoryObject*>( object() );
+        const MemoryObject* memoryPtr = dynamic_cast<const MemoryObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         const MemoryObject& memory = *memoryPtr;
@@ -1366,17 +1294,6 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int Memory::getByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
     {
-        if( osgCompute::Resource::isClear() )
-            return 0;
-
-        ////////////////////
-        // RECEIVE HANDLE //
-        ////////////////////
-        const MemoryObject* memoryPtr = dynamic_cast<const MemoryObject*>( object() );
-        if( !memoryPtr )
-            return NULL;
-        const MemoryObject& memory = *memoryPtr;
-
         unsigned int allocSize = 0;
         switch( mapping )
         {
@@ -1435,8 +1352,8 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Memory::setChannelFormatDesc(cudaChannelFormatDesc& formatDesc)
     {
-        if( !osgCompute::Resource::isClear() )
-            return;
+        if( object(false) != NULL  )
+            releaseObjects();
 
         _formatDesc = formatDesc;
     }
@@ -1445,17 +1362,10 @@ namespace osgCuda
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void Memory::clearLocal()
-    {
-        _image = NULL;
-        memset( &_formatDesc, 0x0, sizeof(cudaChannelFormatDesc) );
-    }
-
-    //------------------------------------------------------------------------------
     unsigned int Memory::computePitch() const
     {
         // Proof paramters
-        if( getDimension(0) == 0 || getElementSize() == 0 ) 
+        if( getNumDimensions() == 0 || getElementSize() == 0 ) 
             return 0;
 
         // 1-dimensional layout
@@ -1486,7 +1396,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        const MemoryObject* memoryPtr = dynamic_cast<const MemoryObject*>( object() );
+        const MemoryObject* memoryPtr = dynamic_cast<const MemoryObject*>( object(false) );
         if( !memoryPtr )
             return;
         MemoryObject& memory = const_cast<MemoryObject&>(*memoryPtr);

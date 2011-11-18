@@ -61,7 +61,6 @@ namespace osgCompute
 	{
 	public:
 		Warp() {}
-		META_Object(,Warp)
 
 		virtual void launch()
 		{ 
@@ -73,12 +72,10 @@ namespace osgCompute
 	Computations are usually used in combination with program nodes.
 	A computation then is attached to a program node an will be 
 	executed either during the update cycle or during the 
-	render cycle (see osgCompute::Program). A computation's init() 
-	method is called before the launch() method and you can overload 
-	it to define your own initialization procedures.
-	After initialization, launch() is called frequently every time 
+	render cycle (see osgCompute::Program). 
+	launch() is called frequently every time 
 	a program node is traversed. If the computation is disabled the launch()
-	method is not called. During both methods init() and launch() an OpenGL-context
+	method is not called. During launch() an OpenGL-context
 	is available allowing for interoperability resources like
 	textures or geometry objects (see Interoperability).
 	
@@ -120,15 +117,9 @@ namespace osgCompute
     public:
         /** Constructor. 
         */
-        Computation() { clearLocal(); }
+        Computation();
 
         META_Object( osgCompute, Computation )
-
-        /** This function should be used to create and initialize all resources necessary for the algorithm
-        If the computation is attached to a program node the function is called once before launch() and every
-        time the computation returns true on isClear().
-        */
-        virtual bool init();
 
         /** The launch method is the core function of each algorithm. A program node will call launch of its
         computations in each frame as long as the computation returns true on isEnabled().
@@ -141,19 +132,6 @@ namespace osgCompute
         @param[in] resource Reference to the resource.
         */
         virtual void acceptResource( Resource& resource );
-
-
-        /** Change a computation's launch behavior by reimplementing this method. 
-        The action applied to the hint is up to the respective computation. 
-        By default nothing happens.
-        @param[in] hint Hint to change the behavior of the algorithm.
-        */
-        virtual void setLaunchHint( unsigned int hint = 0 );
-
-        /** Returns the current hint of this computation.
-        @return Hint that defines the launch behavior of the algorithm.
-        */
-        virtual unsigned int getLaunchHint() const;
 
         /** Users should (not necessarily) overwrite this method and return true if a resource with this identifier 
         is referenced by this computation.
@@ -275,22 +253,15 @@ namespace osgCompute
         */
         static bool existsComputation( const std::string& libraryName );
 
-        /** Removes all resources of a computation. The method is used to clear the complete state of a computation.
-        After clear() the computation should be initialized again to work properly. The method calls clearLocal().
-        */
-        virtual void clear();
-
     protected:	
         /**Destructor.
         */
-        virtual ~Computation() { clearLocal(); }
+        virtual ~Computation() {}
 
     private:
         // copy constructor and operator should not be called
         Computation( const Computation&, const osg::CopyOp& ){}
         Computation& operator=( const Computation& copy ) { return (*this); }
-
-        void clearLocal();
 
         osg::ref_ptr<ComputationCallback>  _updateCallback;
         osg::ref_ptr<ComputationCallback>  _eventCallback;

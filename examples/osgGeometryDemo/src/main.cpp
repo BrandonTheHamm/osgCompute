@@ -48,9 +48,9 @@ extern "C" void warp(
 class Warp : public osgCompute::Computation 
 {
 public:
-    // Use the init function to initialize a module once.
-    // You can also setup internal resources here.
-    virtual bool init()
+    Warp() : _numBlocks(0), _numThreads(0), _simulationTime(0), _initialized(false) {}
+
+    virtual void init()
     {
         if( !_vertices.valid() )
         {
@@ -58,54 +58,30 @@ public:
                 << "Warp::init(): buffer is missing."
                 << std::endl;
 
-            return false;
+            return;
         }
-
 
         _timer = new osgCuda::Timer;
         _timer->setName( "Warp");
-        _timer->init();
 
         // We need to read the geometry information.
         osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::GLMemory*)_vertices.get())->getAdapter() );
         if( !geometry )
-            return false;
+            return;
 
         // Create the static reference buffers
-        osg::ref_ptr<osgCuda::Memory> normals= new osgCuda::Memory;
-        normals->setName( "NORMALS" );
-        normals->setElementSize( geometry->getNormalArray()->getDataSize() * sizeof(float) );
-        normals->setDimension( 0, geometry->getNormalArray()->getNumElements() );
-        if( !normals->init() )
-        {
-            osg::notify( osg::WARN )
-                << "Warp::init(): cannot create normal array."
-                << std::endl;
-
-            return false;
-        }
-        _initNormals = normals;
-
-        osg::ref_ptr<osgCuda::Memory> positions = new osgCuda::Memory;
-        positions->setName( "POSITIONS" );
-        positions->setElementSize( geometry->getVertexArray()->getDataSize() * sizeof(float) );
-        positions->setDimension( 0, geometry->getVertexArray()->getNumElements() );
-        if( !positions->init() )
-        {
-            osg::notify( osg::WARN )
-                << "Warp::init(): cannot create position array."
-                << std::endl;
-
-            return false;
-        }
-        _initPos = positions;
-
-        // Map the initial buffers to host memory and
-        // copy the vertex data.
+        _initNormals= new osgCuda::Memory;
+        _initNormals->setName( "NORMALS" );
+        _initNormals->setElementSize( geometry->getNormalArray()->getDataSize() * sizeof(float) );
+        _initNormals->setDimension( 0, geometry->getNormalArray()->getNumElements() );
         memcpy( _initNormals->map(osgCompute::MAP_HOST_TARGET),
             geometry->getNormalArray()->getDataPointer(),
             _initNormals->getByteSize( osgCompute::MAP_HOST ) );
 
+        _initPos = new osgCuda::Memory;
+        _initPos->setName( "POSITIONS" );
+        _initPos->setElementSize( geometry->getVertexArray()->getDataSize() * sizeof(float) );
+        _initPos->setDimension( 0, geometry->getVertexArray()->getNumElements() );
         memcpy( _initPos->map(osgCompute::MAP_HOST_TARGET),
             geometry->getVertexArray()->getDataPointer(),
             _initPos->getByteSize( osgCompute::MAP_HOST ) );
@@ -119,21 +95,17 @@ public:
 
         _numThreads = 128;
         _simulationTime = 0.0f;
-        return osgCompute::Computation::init();
+        _initialized = true;
     }
 
     virtual void launch()
     {
-        if( isClear() )
-            return;
+        if( !_initialized ) init();
 
         _timer->start();
 
         _simulationTime += 0.01f;
 
-        ///////////////////
-        // MOVE VERTICES //
-        ///////////////////
         warp(_numBlocks,
             _numThreads,
             _vertices->map(),			
@@ -163,6 +135,7 @@ private:
     osg::ref_ptr<osgCompute::Memory>				  _initNormals;
     osg::ref_ptr<osgCompute::Memory>				  _initPos;
     float                                             _simulationTime;
+    bool                                              _initialized;
 };
 
 //------------------------------------------------------------------------------

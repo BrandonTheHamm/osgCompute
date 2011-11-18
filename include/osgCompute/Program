@@ -728,10 +728,6 @@ namespace osgCompute
         @return Returns true if the program is enabled. */
         virtual bool isEnabled() const;
 
-        /** Restore object to default state. Calls clearLocal(). 
-        */
-        virtual void clear();
-
         /** Method is called by OSG to release all OpenGL resources
         for a specific OpenGL context/state. 
         All resources used within the state's context will be 
@@ -750,7 +746,7 @@ namespace osgCompute
 
         /** Destructor. 
         */
-        virtual ~Program() { clearLocal(); }
+        virtual ~Program() {}
 
         /** Method checks for valid compute device.
         */

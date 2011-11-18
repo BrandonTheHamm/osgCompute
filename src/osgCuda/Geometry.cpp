@@ -71,8 +71,6 @@ namespace osgCuda
 		virtual osgCompute::GLMemoryAdapter* getAdapter(); 
 		virtual const osgCompute::GLMemoryAdapter* getAdapter() const; 
 
-        virtual bool init();
-
         virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
         virtual void unmap( unsigned int hint = 0 );
         virtual bool reset( unsigned int hint = 0 );
@@ -81,11 +79,14 @@ namespace osgCuda
         virtual unsigned int getAllocatedByteSize( unsigned int mapping, unsigned int hint = 0 ) const;
         virtual unsigned int getByteSize( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int hint = 0 ) const;
 
-        virtual void clear();
+        virtual unsigned int getElementSize() const;
+        virtual unsigned int getDimension( unsigned int dimIdx ) const;
+        virtual unsigned int getNumDimensions() const;
+        virtual unsigned int getNumElements() const;
+
     protected:
         friend class Geometry;
         virtual ~GeometryMemory();
-        void clearLocal();
 
 
         bool setup( unsigned int mapping );
@@ -111,8 +112,6 @@ namespace osgCuda
 
         META_Object(osgCuda,IndexedGeometryMemory)
 
-        virtual bool init();
-
         virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int hint = 0 );
         virtual void unmap( unsigned int hint = 0 );
         virtual bool reset( unsigned int hint = 0 );
@@ -124,18 +123,16 @@ namespace osgCuda
 
         virtual unsigned int getIndicesByteSize() const;
 
-        virtual void clear();
     protected:
         friend class Geometry;
         virtual ~IndexedGeometryMemory();
-        void clearLocal();
 
 
         bool setupIndices( unsigned int mapping );
         bool allocIndices( unsigned int mapping );
         bool syncIndices( unsigned int mapping );
 
-        unsigned int                        _indicesByteSize;
+        mutable unsigned int                        _indicesByteSize;
 
         virtual osgCompute::MemoryObject* createObject() const;
     private:
@@ -242,16 +239,16 @@ namespace osgCuda
     GeometryMemory::GeometryMemory()
         :  osgCompute::GLMemory()
     {
-        clearLocal();
+        // Please note that virtual functions className() and libraryName() are called
+        // during observeResource() which will only develop until this class.
+        // However if contructor of a subclass calls this function again observeResource
+        // will change the className and libraryName of the observed pointer.
+        osgCompute::ResourceObserver::instance()->observeResource( *this );
     }
 
     //------------------------------------------------------------------------------
     GeometryMemory::~GeometryMemory()
     {
-        clearLocal();
-
-        //// decrease reference count of geometry reference
-        //_geomref = NULL;
     }
 
     //------------------------------------------------------------------------------
@@ -267,58 +264,103 @@ namespace osgCuda
 	}
 
     //------------------------------------------------------------------------------
-    void GeometryMemory::clear()
-    {
-        osgCompute::GLMemory::clear();
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
     void GeometryMemory::mapAsRenderTarget()
     {
         // Do nothing as geometry cannot be mapped as a render target.
     }
+    
+    //------------------------------------------------------------------------------
+    unsigned int GeometryMemory::getElementSize() const 
+    { 
+        if( osgCompute::Memory::getElementSize() == 0 )
+        {
+            if( !_geomref.valid() )
+                return 0;
+
+            osg::Geometry::ArrayList arrayList;
+            _geomref->getArrayList( arrayList );
+
+            unsigned int elementSize = 0;
+            for( unsigned int a=0; a<arrayList.size(); ++a )
+            {
+                // we assume that all arrays have the
+                // same number of elements
+                elementSize += (arrayList[a]->getTotalDataSize() / arrayList[a]->getNumElements());
+            }
+
+            const_cast<osgCuda::GeometryMemory*>(this)->setElementSize( elementSize );
+        }
+
+        return osgCompute::Memory::getElementSize(); 
+    }
 
     //------------------------------------------------------------------------------
-    bool GeometryMemory::init()
+    unsigned int GeometryMemory::getNumDimensions() const
     {
-		if( !_geomref.valid() )
-			return false;
-
-        if( !osgCompute::Resource::isClear() )
-            return true;
-
-        if( !_geomref.valid() )
-            return false;
-
-        if( _geomref->getVertexArray() == NULL || _geomref->getVertexArray()->getNumElements() == 0 )
+        if( osgCompute::Memory::getNumDimensions() == 0 )
         {
-            osg::notify(osg::WARN)
-                << _geomref->getName() << " [osgCuda::GeometryMemory::init()]: no dimensions defined for geometry! setup vertex array first."
-                << std::endl;
+            if( !_geomref.valid() )
+                return 0;
 
-            return false;
+            if( _geomref->getVertexArray() == NULL || _geomref->getVertexArray()->getNumElements() == 0 )
+            {
+                osg::notify(osg::WARN)
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::getDimension()]: no dimensions defined for geometry. Setup vertex array first."
+                    << std::endl;
+
+                return 0;
+            }
+
+            const_cast<osgCuda::GeometryMemory*>(this)->setDimension( 0, _geomref->getVertexArray()->getNumElements() );
         }
-        setDimension( 0, _geomref->getVertexArray()->getNumElements() );
 
+        return osgCompute::Memory::getNumDimensions();
+    }
 
-        osg::Geometry::ArrayList arrayList;
-        _geomref->getArrayList( arrayList );
-
-        /////////////////
-        // ELEMENTSIZE //
-        /////////////////
-        unsigned int elementSize = 0;
-        for( unsigned int a=0; a<arrayList.size(); ++a )
+    //------------------------------------------------------------------------------
+    unsigned int GeometryMemory::getDimension( unsigned int dimIdx ) const
+    { 
+        if( osgCompute::Memory::getNumDimensions() == 0 )
         {
-            // we assume that all arrays have the
-            // same number of elements
-            elementSize += (arrayList[a]->getTotalDataSize() / arrayList[a]->getNumElements());
-        }
-        setElementSize( elementSize );
+            if( !_geomref.valid() )
+                return 0;
 
-        setName( _geomref->getName() );
-        return osgCompute::GLMemory::init();
+            if( _geomref->getVertexArray() == NULL || _geomref->getVertexArray()->getNumElements() == 0 )
+            {
+                osg::notify(osg::WARN)
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::getDimension()]: no dimensions defined for geometry. Setup vertex array first."
+                    << std::endl;
+
+                return 0;
+            }
+
+            const_cast<osgCuda::GeometryMemory*>(this)->setDimension( 0, _geomref->getVertexArray()->getNumElements() );
+        }
+
+        return osgCompute::Memory::getDimension(dimIdx);
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int GeometryMemory::getNumElements() const
+    {
+        if( osgCompute::Memory::getNumElements() == 0 )
+        {
+            if( !_geomref.valid() )
+                return 0;
+
+            if( _geomref->getVertexArray() == NULL || _geomref->getVertexArray()->getNumElements() == 0 )
+            {
+                osg::notify(osg::WARN)
+                    << _geomref->getName() << " [osgCuda::GeometryMemory::getDimension()]: no dimensions defined for geometry. Setup vertex array first."
+                    << std::endl;
+
+                return 0;
+            }
+
+            const_cast<osgCuda::GeometryMemory*>(this)->setDimension( 0, _geomref->getVertexArray()->getNumElements() );
+        }
+
+        return osgCompute::Memory::getNumElements();
     }
 
     //------------------------------------------------------------------------------
@@ -326,10 +368,6 @@ namespace osgCuda
     {
         if( !_geomref.valid() )
 			return NULL;
-
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return NULL;
 
         if( mapping == osgCompute::UNMAP )
         {
@@ -340,7 +378,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object() );
+        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object(true) );
         if( !memoryPtr )
             return NULL;
         GeometryObject& memory = *memoryPtr;
@@ -515,14 +553,10 @@ namespace osgCuda
 		if( !_geomref.valid() )
 			return;
 
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object() );
+        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object(false) );
         if( !memoryPtr )
             return;
         GeometryObject& memory = *memoryPtr;
@@ -572,13 +606,10 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int GeometryMemory::getAllocatedByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const 
     {
-        if( osgCompute::Resource::isClear() )
-            return 0;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        const GeometryObject* memoryPtr = dynamic_cast<const GeometryObject*>( object() );
+        const GeometryObject* memoryPtr = dynamic_cast<const GeometryObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         const GeometryObject& memory = *memoryPtr;
@@ -606,9 +637,6 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int GeometryMemory::getByteSize( unsigned int mapping, unsigned int hint /*= 0 */ ) const
     {
-        if( osgCompute::Resource::isClear() )
-            return 0;
-
         unsigned int allocSize = 0;
         switch( mapping )
         {
@@ -637,16 +665,12 @@ namespace osgCuda
 		if( !_geomref.valid() )
 			return false;
 
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return false;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object() );
+        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object(false) );
         if( !memoryPtr )
-            return NULL;
+            return false;
         GeometryObject& memory = *memoryPtr;
 
         ////////////////////////
@@ -677,7 +701,7 @@ namespace osgCuda
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
-                    return NULL;
+                    return false;
                 }
 
                 size_t memSize = 0;
@@ -689,7 +713,7 @@ namespace osgCuda
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
-                    return NULL;
+                    return false;
                 }
             }
 
@@ -701,7 +725,7 @@ namespace osgCuda
                     << cudaGetErrorString( res )  <<"."
                     << std::endl;
 
-                return NULL;
+                return false;
             }
         }
 
@@ -796,12 +820,6 @@ namespace osgCuda
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void GeometryMemory::clearLocal()
-    {
-        // Do not call _geomref = NULL;
-    }
-
-    //------------------------------------------------------------------------------
     unsigned int GeometryMemory::computePitch() const
     {
         return getDimension(0)*getElementSize();
@@ -813,7 +831,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object() );
+        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         GeometryObject& memory = *memoryPtr;
@@ -922,7 +940,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object() );
+        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object(true) );
         if( !memoryPtr )
             return NULL;
         GeometryObject& memory = *memoryPtr;
@@ -1047,7 +1065,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object() );
+        GeometryObject* memoryPtr = dynamic_cast<GeometryObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         GeometryObject& memory = *memoryPtr;
@@ -1177,56 +1195,17 @@ namespace osgCuda
     IndexedGeometryMemory::IndexedGeometryMemory()
         :  GeometryMemory()
     {
-        clearLocal();
+        _indicesByteSize = 0;
+        // Please note that virtual functions className() and libraryName() are called
+        // during observeResource() which will only develop until this class.
+        // However if contructor of a subclass calls this function again observeResource
+        // will change the className and libraryName of the observed pointer.
         osgCompute::ResourceObserver::instance()->observeResource( *this );
     }
 
     //------------------------------------------------------------------------------
     IndexedGeometryMemory::~IndexedGeometryMemory()
     {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    void IndexedGeometryMemory::clear()
-    {
-        clearLocal();
-        GeometryMemory::clear();
-    }
-
-    //------------------------------------------------------------------------------
-    bool IndexedGeometryMemory::init()
-    {
-		if( !_geomref.valid() )
-			return false;
-
-        if( !osgCompute::Resource::isClear() )
-            return true;
-
-
-        if( !_geomref.valid() )
-            return false;
-
-        osg::Geometry::DrawElementsList drawElementsList;
-        _geomref->getDrawElementsList( drawElementsList );
-
-        if( drawElementsList.size() == 0 )
-        {
-            osg::notify(osg::FATAL)
-                << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::init()]: no indices defined! setup element array first."
-                << std::endl;
-
-            return false;
-        }
-
-        /////////////////
-        // ELEMENTSIZE //
-        /////////////////
-        _indicesByteSize = 0;
-        for( unsigned int a=0; a<drawElementsList.size(); ++a )
-            _indicesByteSize += drawElementsList[a]->getTotalDataSize();
-
-        return GeometryMemory::init();
     }
 
     //------------------------------------------------------------------------------
@@ -1244,10 +1223,6 @@ namespace osgCuda
 		if( !_geomref.valid() )
 			return NULL;
 
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return NULL;
-
         if( mapping == osgCompute::UNMAP )
         {
             unmapIndices( hint );
@@ -1257,7 +1232,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object() );
+        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object(true) );
         if( !memoryPtr )
             return NULL;
         IndexedGeometryObject& memory = *memoryPtr;
@@ -1419,14 +1394,10 @@ namespace osgCuda
 		if( !_geomref.valid() )
 			return;
 
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object() );
+        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object(false) );
         if( !memoryPtr )
             return;
         IndexedGeometryObject& memory = *memoryPtr;
@@ -1488,14 +1459,10 @@ namespace osgCuda
 		if( !_geomref.valid() )
 			return false;
 
-        if( osgCompute::Resource::isClear() )
-            if( !init() )
-                return false;
-
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object() );
+        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         IndexedGeometryObject& memory = *memoryPtr;
@@ -1651,6 +1618,29 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int IndexedGeometryMemory::getIndicesByteSize() const
     {
+        if( _indicesByteSize == 0 )
+        {
+            if( !_geomref.valid() )
+                return 0;
+
+            osg::Geometry::DrawElementsList drawElementsList;
+            _geomref->getDrawElementsList( drawElementsList );
+
+            if( drawElementsList.size() == 0 )
+            {
+                osg::notify(osg::FATAL)
+                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::getIndicesByteSize()]: no indices defined! setup element array first."
+                    << std::endl;
+
+                return 0;
+            }
+
+            _indicesByteSize = 0;
+            for( unsigned int a=0; a<drawElementsList.size(); ++a )
+                _indicesByteSize += drawElementsList[a]->getTotalDataSize();
+        }
+
+
         return _indicesByteSize;
     }
 
@@ -1658,18 +1648,12 @@ namespace osgCuda
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void IndexedGeometryMemory::clearLocal()
-    {
-        _indicesByteSize = 0;
-    }
-
-    //------------------------------------------------------------------------------
     bool IndexedGeometryMemory::setupIndices( unsigned int mapping )
     {
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object() );
+        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         IndexedGeometryObject& memory = *memoryPtr;
@@ -1771,7 +1755,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object() );
+        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object(true) );
         if( !memoryPtr )
             return NULL;
         IndexedGeometryObject& memory = *memoryPtr;
@@ -1873,7 +1857,7 @@ namespace osgCuda
         ////////////////////
         // RECEIVE HANDLE //
         ////////////////////
-        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object() );
+        IndexedGeometryObject* memoryPtr = dynamic_cast<IndexedGeometryObject*>( object(false) );
         if( !memoryPtr )
             return NULL;
         IndexedGeometryObject& memory = *memoryPtr;
@@ -2005,9 +1989,7 @@ namespace osgCuda
 		GeometryMemory* memory = new GeometryMemory;
 		memory->_geomref = this;
 		_memory = memory;
-		//_memory->addObserver( this );
 
-        clearLocal();
         // geometry must use vertex buffer objects
         setUseVertexBufferObjects( true );
 
@@ -2089,14 +2071,9 @@ namespace osgCuda
     Geometry::~Geometry()
     {
 		// _memory object is not deleted until this point
-		// as reference count is increased in constructor
-		_memory->clear();
-		_memory = NULL;
-    }
-
-    //------------------------------------------------------------------------------
-    void Geometry::clearLocal()
-    {
-        _memory->clear();
+		// as reference count is increased in constructor.
+        // Do also call releaseObjects()
+        _memory->releaseObjects();
+        _memory = NULL;
     }
 }

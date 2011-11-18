@@ -62,7 +62,6 @@ public:
         {
             _timer = new osgCuda::Timer;
             _timer->setName( "TexFilter");
-            _timer->init();
         }
 
         _timer->start();
@@ -85,6 +84,8 @@ public:
             _trgBuffer->getPitch(),
             _trgBuffer->getDimension(0),
             _trgBuffer->getDimension(1) );
+
+        _trgBuffer->getDimension(0);
 
         _timer->stop();
     }

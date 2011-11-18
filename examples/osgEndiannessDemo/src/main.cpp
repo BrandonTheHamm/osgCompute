@@ -36,7 +36,11 @@ public:
         swapEndianness( numBlocks, numThreads, _buffer->map( osgCompute::MAP_DEVICE_TARGET ) );
     }
 
-    inline void setBuffer( osgCompute::Memory* buffer ) { _buffer = buffer; }
+    virtual void acceptResource( osgCompute::Resource& resource )
+    {
+        if( resource.isIdentifiedBy( "BYTE BUFFER" ) )
+            _buffer = dynamic_cast<osgCompute::Memory*>( &resource );
+    }
 
 protected:
     osg::ref_ptr<osgCompute::Memory>                 _buffer;
@@ -65,18 +69,14 @@ int main(int argc, char *argv[])
     // create a buffer
     osg::ref_ptr<osgCuda::Memory> buffer = new osgCuda::Memory;
     buffer->setElementSize( sizeof(unsigned int) );
+    buffer->addIdentifier("BYTE BUFFER");
     buffer->setDimension(0, numEndians);
-    buffer->init();
 
     ///////////////////
     // LAUNCH MODULE //
     ///////////////////
     osg::ref_ptr<SwapComputation> module = new SwapComputation;
-    if( !module.valid() )
-        return -1;
-
-    module->setBuffer( buffer.get() );
-    module->init();
+    module->acceptResource( *buffer );
 
     // Instead of attaching an osg::Array you can map the buffer to the
     // CPU memory and fill it directly. The TARGET specifier in MAP_HOST_TARGET

@@ -165,7 +165,7 @@ namespace osgCuda
         virtual void drawImplementation(osg::RenderInfo& renderInfo) const;
 
         /** Notify adapter when it is bound as an render target by OpenGL. 
-            Currently, geometry objects cannot be bound as a render target.
+            Currently, does nothing as a geometry object cannot be bound as a render target.
         */
         virtual void applyAsRenderTarget() const;
         
@@ -186,8 +186,6 @@ namespace osgCuda
         // Copy constructor and operator should not be called
         Geometry( const Geometry& , const osg::CopyOp& ) {}
 		Geometry& operator=(const Geometry&) { return (*this); }
-
-		void clearLocal();
 
 		osg::ref_ptr<osgCompute::GLMemory> 	_memory;
     };

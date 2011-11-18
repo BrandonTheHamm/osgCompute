@@ -63,14 +63,11 @@ namespace osgCuda
 
         META_Program( osgCuda, Program, osgCompute, ProgramBin );
 
-		/** Releases all resources attached to the program including computations
-		*/
-		virtual void clear();
 
     protected:
 		/** Destructor will release all resources first.
 		*/
-        virtual ~Program() { clearLocal(); }
+        virtual ~Program() {}
 
 		/** Checks the CUDA device. If it is not ready yet then it will be setup by
 		calling setupDevice().
@@ -82,7 +79,6 @@ namespace osgCuda
         Program( const Program&, const osg::CopyOp& ) {}
 		Program &operator=(const Program &) { return *this; }
 
-		void clearLocal();
     };
 }
 

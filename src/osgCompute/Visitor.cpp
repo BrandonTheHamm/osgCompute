@@ -16,7 +16,8 @@ namespace osgCompute
     ResourceVisitor::ResourceVisitor()
         : osg::NodeVisitor(osg::NodeVisitor::NODE_VISITOR,osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
     {
-        clearLocal();
+        _currentMode = NONE;
+        _mode = COLLECT | DISTRIBUTE | RESET;
     }
 
     //------------------------------------------------------------------------------
@@ -239,16 +240,5 @@ namespace osgCompute
     void ResourceVisitor::reset() 
     {
         _collectedResources.clear();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    void ResourceVisitor::clearLocal()
-    {
-        _currentMode = NONE;
-        _mode = COLLECT | DISTRIBUTE | RESET;
-        reset();
     }
 } 

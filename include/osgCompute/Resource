@@ -123,12 +123,6 @@ namespace osgCompute
 
         META_Object( osgCompute, Resource );
 
-		/** Init will check for internal parameters applied to 
-		resources and will create device dependent objects.
-		@return Returns true if initialization was successful
-		*/
-        virtual bool init();
-
 		/** Adds a identifier to the resource
 		@param[in] identifier new string identifier of the resource.
 		*/
@@ -138,6 +132,10 @@ namespace osgCompute
 		@param[in] identifier string identifier to remove.
 		*/
 		virtual void removeIdentifier( const std::string& identifier );
+
+        /** Removes all identifiers from the resource
+		*/
+		virtual void removeAllIdentifiers();
         
 		/** Returns true if the resource is identified by identifier.
 		@return Returns true if identifier is found. Returns false if 
@@ -160,19 +158,7 @@ namespace osgCompute
 		*/ 	
         virtual const IdentifierSet& getIdentifiers() const;
 
-		/** Returns wether the resource is initialized or not.
-		@return Returns true if resource is not initilalized 
-		*/
-        virtual bool isClear() const;
-
-		/** Clear resource and release all device objects.
-		After calling this method isClear() will return true 
-		and init() should be called before using this resource.
-		*/
-        virtual void clear();
-
-        /** Release all device objects associated with this resource. 
-		Is called by clear().
+        /** Release all allocations associated with this resource. 
         */
         virtual void releaseObjects();
 
@@ -186,10 +172,7 @@ namespace osgCompute
 		Resource(const Resource& ,const osg::CopyOp& ) {}
 		Resource &operator=(const Resource&) { return *this; }
 
-		void clearLocal();
-
-		IdentifierSet                       _identifiers;
-		bool                                _clear;
+		IdentifierSet _identifiers;
 
     };
 }

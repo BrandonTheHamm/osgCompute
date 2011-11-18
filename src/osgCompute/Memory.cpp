@@ -44,48 +44,19 @@ namespace osgCompute
     Memory::Memory() 
         : Resource()
     { 
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    void Memory::clear()
-    {
-        Resource::clear();
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    bool Memory::init()
-    {
-        if( !isClear() )
-            return true;
-
-        if( _dimensions.empty() )
-        {
-            osg::notify(osg::FATAL)  
-                << getName() << " [Memory::init()]: no dimensions specified."                  
-                << std::endl;
-
-            return false;
-        }
-
-        if( _elementSize == 0 )
-        {
-            osg::notify(osg::FATAL)  
-                << getName() << " [Memory::init()]: no element size specified."                  
-                << std::endl;
-
-            return false;
-        }
-
-        return Resource::init();
+        _dimensions.clear();
+        _numElements = 0;
+        _elementSize = 0;
+        _allocHint = 0;
+        _subloadCallback = NULL;
+        _pitch = 0;
     }
 
     //------------------------------------------------------------------------------
     void Memory::setElementSize( unsigned int elementSize ) 
     { 
-        if( !isClear() )
-            return;
+        if( _object.valid() ) 
+            releaseObjects();
 
         _elementSize = elementSize; 
     }
@@ -112,8 +83,8 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Memory::setDimension( unsigned int dimIdx, unsigned int dimSize )
     {
-        if( !isClear() )
-            return;
+        if( _object.valid() ) 
+            releaseObjects();
 
         if (_dimensions.size()<=dimIdx)
             _dimensions.resize(dimIdx+1,0);
@@ -149,8 +120,8 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void osgCompute::Memory::setAllocHint( unsigned int allocHint )
     {
-        if( !isClear() )
-            return;
+        if( _object.valid() ) 
+            releaseObjects();
 
         _allocHint = (_allocHint | allocHint);
     }
@@ -182,9 +153,6 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     unsigned int Memory::getMapping( unsigned int ) const
     {
-        if( isClear() )
-            return osgCompute::UNMAP;
-
         if( _object.valid() )
             return _object->_mapping;
         else 
@@ -194,7 +162,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     unsigned int Memory::getPitch( unsigned int hint /*= 0 */ ) const
     {
-        if( isClear() )
+        if( !_object.valid() )
             return computePitch();
 
         if( _pitch == 0 )
@@ -249,31 +217,23 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     Memory::~Memory() 
     { 
-        clearLocal(); 
     }
 
     //------------------------------------------------------------------------------
-    void Memory::clearLocal()
+    MemoryObject* Memory::object( bool create /*= true*/ )
     {
-        _dimensions.clear();
-        _numElements = 0;
-        _elementSize = 0;
-        _allocHint = 0;
-        _subloadCallback = NULL;
-        _pitch = 0;
-
-        // releaseObjects() is called implicitly by Resource::clear()
-    }
-
-
-    //------------------------------------------------------------------------------
-    MemoryObject* Memory::object()
-    {
-        if( isClear() )
-            return NULL;
-
-        if( !_object.valid() )
+        if( !_object.valid() && create)
         {
+            if( getElementSize() == 0 || getNumDimensions() == 0 )
+            {
+                osg::notify( osg::FATAL )  
+                    << getName() << " [Memory::object()] \"" << getName() 
+                    << "\": allocation of memory failed as dimension and element size is unknown."
+                    << std::endl;
+
+                return NULL;
+            }
+
             MemoryObject* newObject = createObject();
             if( newObject == NULL )
             {
@@ -291,19 +251,27 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    const MemoryObject* Memory::object() const
+    const MemoryObject* Memory::object( bool create /*= true*/ ) const
     {
-        if( isClear() )
-            return NULL;
-
-        if( !_object.valid() )
+        if( !_object.valid() && create)
         {
+            if( getElementSize() == 0 || getNumDimensions() == 0 )
+            {
+                osg::notify( osg::FATAL )  
+                    << getName() << " [Memory::object()] \"" << getName() 
+                    << "\": allocation of memory failed as dimension and element size is unknown."
+                    << std::endl;
+
+                return NULL;
+            }
+
             MemoryObject* newObject = createObject();
             if( newObject == NULL )
             {
                 osg::notify( osg::FATAL )  
-                    << getName() << " [Memory::getObject()] \"" << getName() << "\": allocation of memory failed."
+                    << getName() << " [Memory::object()] \"" << getName() << "\": allocation of memory failed."
                     << std::endl;
+
                 return NULL;
             }
             newObject->_mapping = osgCompute::UNMAP;
@@ -338,7 +306,7 @@ namespace osgCompute
 	}
 
 	//------------------------------------------------------------------------------
-	void GLMemory::clearContext()
+	void GLMemory::releaseContext()
 	{
 		s_context = NULL;
 	}
@@ -347,30 +315,5 @@ namespace osgCompute
     osg::GraphicsContext* GLMemory::getContext()
 	{
 		return s_context.get();
-	}
-
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	//------------------------------------------------------------------------------
-	void GLMemory::clear()
-	{
-		clearLocal();
-		osgCompute::Memory::clear();
-	}
-
-	//------------------------------------------------------------------------------
-	void GLMemory::releaseObjects()
-	{
-		osgCompute::Memory::releaseObjects();
-	}
-
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	//------------------------------------------------------------------------------
-	void GLMemory::clearLocal()
-	{
-		//GLMemory::releaseObjects() is called by Resource::clear()
 	}
 } 

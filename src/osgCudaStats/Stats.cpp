@@ -351,62 +351,77 @@ namespace osgCuda
         // COLLECT MEMORY RESOURCES //
         //////////////////////////////
         // Collect all memory consuming resources 
-        osgCompute::ResourceClassList memoryList;
+        class MemoryPair
+        {
+        public:
+            std::string                             name;
+            osg::observer_ptr<osgCompute::Memory>   memory;
+        };
+
+        std::vector<MemoryPair> memoryList;
         osgCompute::ResourceClassList curResources;
         
         curResources = osgCompute::ResourceObserver::instance()->getResources( "osgCuda::Memory" );
         for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
         {
-            if( !(*itr).valid() || (NULL == dynamic_cast<const osgCompute::Memory*>((*itr).get())) ) 
+            osgCompute::Memory* memory = dynamic_cast<osgCompute::Memory*>((*itr).get());
+            if( NULL == memory || memory->getAllElementsSize() == 0 ) 
                  continue;
 
-            memoryList.push_back( (*itr) );
+            MemoryPair pair;
+            pair.name = (*itr)->getName();
+            pair.memory = memory;
+            memoryList.push_back( pair );
         }
 
         curResources = osgCompute::ResourceObserver::instance()->getResources( "osgCuda::TextureMemory" );
         for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
         {
-            if( !(*itr).valid() || (NULL == dynamic_cast<const osgCompute::Memory*>((*itr).get())) ) 
+            osgCompute::GLMemory* glMemory = dynamic_cast<osgCompute::GLMemory*>((*itr).get());
+            if( (NULL == glMemory) || glMemory->getAllElementsSize() == 0 ) 
                 continue;
 
-            memoryList.push_back( (*itr) );
+            MemoryPair pair;
+            pair.name = glMemory->getName().empty()? dynamic_cast<osg::Texture*>( glMemory->getAdapter() )->getName() : glMemory->getName();
+            pair.memory = glMemory;
+            memoryList.push_back( pair );
         }
 
         curResources = osgCompute::ResourceObserver::instance()->getResources( "osgCuda::GeometryMemory" );
         for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
         {
-            if( !(*itr).valid() || (NULL == dynamic_cast<const osgCompute::Memory*>((*itr).get())) ) 
+            osgCompute::GLMemory* glMemory = dynamic_cast<osgCompute::GLMemory*>((*itr).get());
+            if( (NULL == glMemory) || glMemory->getAllElementsSize() == 0 ) 
                 continue;
 
-            memoryList.push_back( (*itr) );
+            MemoryPair pair;
+            pair.name = glMemory->getName().empty()? dynamic_cast<osg::Geometry*>( glMemory->getAdapter() )->getName() : glMemory->getName();
+            pair.memory = glMemory;
+            memoryList.push_back( pair );
         }
 
         curResources = osgCompute::ResourceObserver::instance()->getResources( "osgCuda::IndexedGeometryMemory" );
         for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
         {
-            if( !(*itr).valid() || (NULL == dynamic_cast<const osgCompute::Memory*>((*itr).get())) ) 
+            osgCompute::GLMemory* glMemory = dynamic_cast<osgCompute::GLMemory*>((*itr).get());
+            if( (NULL == glMemory) || glMemory->getAllElementsSize() > 0 ) 
                 continue;
 
-            memoryList.push_back( (*itr) );
+            MemoryPair pair;
+            pair.name = glMemory->getName().empty()? dynamic_cast<osg::Geometry*>( glMemory->getAdapter() )->getName() : glMemory->getName();
+            pair.memory = glMemory;
+            memoryList.push_back( pair );
         }
 
-        curResources = osgCompute::ResourceObserver::instance()->getResources( "osgCuda::PingPongBuffer" );
-        for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
-        {
-            if( !(*itr).valid() || (NULL == dynamic_cast<const osgCompute::Memory*>((*itr).get())) ) 
-                continue;
-
-            memoryList.push_back( (*itr) );
-        }
+        // Exclude PingPongBuffers here!
 
         ///////////////////
         // Add Constants //
         ///////////////////
         float maxX = leftPos;
         // Compute max x pos
-        for( osgCompute::ResourceClassListItr itr = memoryList.begin(); itr != memoryList.end(); ++itr )
+        for( std::vector<MemoryPair>::iterator itr = memoryList.begin(); itr != memoryList.end(); ++itr )
         {
-            const osgCompute::Memory* memory = dynamic_cast<const osgCompute::Memory*>((*itr).get());
 
             pos.x() = leftPos;
             osg::ref_ptr<osgText::Text> curLabel = new osgText::Text;
@@ -414,10 +429,10 @@ namespace osgCuda
             curLabel->setFont(font);
             curLabel->setCharacterSize(characterSize);
             curLabel->setPosition(pos);
-            if( memory->getName().empty() )
+            if( (*itr).name.empty() )
                 curLabel->setText( "[NoName]" );
             else
-                curLabel->setText( memory->getName() );
+                curLabel->setText( (*itr).name );
 
             float curX = curLabel->getBound().xMax();
             maxX = osg::maximum( curX, maxX );
@@ -436,7 +451,7 @@ namespace osgCuda
             numPages++;
 
         // Add up all relevant constants
-        for( osgCompute::ResourceClassListItr itr = memoryList.begin(); itr != memoryList.end(); ++itr )
+        for( std::vector<MemoryPair>::iterator itr = memoryList.begin(); itr != memoryList.end(); ++itr )
         {
             
             // setup geode and page info if needed
@@ -466,8 +481,6 @@ namespace osgCuda
 
             pos.x() = leftPos;
 
-            const osgCompute::Memory* memory = dynamic_cast<const osgCompute::Memory*>((*itr).get());
-
             osg::ref_ptr<osgText::Text> curLabel = new osgText::Text;
             geode->addDrawable( curLabel.get() );
             osg::ref_ptr<osgText::Text> curValue = new osgText::Text;
@@ -477,10 +490,10 @@ namespace osgCuda
             curLabel->setFont(font);
             curLabel->setCharacterSize(characterSize);
             curLabel->setPosition(pos);
-            if( memory->getName().empty() )
+            if( (*itr).name.empty() )
                 curLabel->setText( "[NoName]" );
             else
-                curLabel->setText( memory->getName() );
+                curLabel->setText( (*itr).name );
 
             pos.x() = maxX;
 
@@ -492,17 +505,17 @@ namespace osgCuda
             std::stringstream consstream;
             consstream.precision(4);
             consstream << " Dim=( "; 
-            for( unsigned int d=0; d<memory->getNumDimensions(); ++d )
-                    consstream <<  memory->getDimension(d)<< " ";
+            for( unsigned int d=0; d<(*itr).memory->getNumDimensions(); ++d )
+                    consstream <<  (*itr).memory->getDimension(d)<< " ";
             consstream << ") "; 
             //consstream << "Host= "<< memory->getMappingByteSize(osgCompute::MAP_HOST)/(1048576.0f)<<" MB; "; 
             //consstream << "Device= "<<memory->getMappingByteSize(osgCompute::MAP_DEVICE)/(1048576.0f)<<" MB; "; 
             //consstream << "Array= "<<memory->getMappingByteSize(osgCompute::MAP_DEVICE_ARRAY)/(1048576.0f)<<" MB; "; 
             //consstream << "Sum= " << memory->getAllocatedByteSize()/(1048576.0f) << " MB";
 
-            unsigned int tmpHost   = memory->getAllocatedByteSize(osgCompute::MAP_HOST);
-            unsigned int tmpDevice = memory->getAllocatedByteSize(osgCompute::MAP_DEVICE);
-            unsigned int tmpArray  = memory->getAllocatedByteSize(osgCompute::MAP_DEVICE_ARRAY);
+            unsigned int tmpHost   = (*itr).memory->getAllocatedByteSize(osgCompute::MAP_HOST);
+            unsigned int tmpDevice = (*itr).memory->getAllocatedByteSize(osgCompute::MAP_DEVICE);
+            unsigned int tmpArray  = (*itr).memory->getAllocatedByteSize(osgCompute::MAP_DEVICE_ARRAY);
 
 
             consstream << "Host= "   << tmpHost  /(1048576.0f)<<" MB; "; 
@@ -529,10 +542,10 @@ namespace osgCuda
 
          std::stringstream consstream;
          consstream.precision(5);
-         consstream << "Total Host   (CPU)  memory: "  << hostByteSize/(1048576.0f)   << " MB" << "\n" 
-                    << "Total Device (CUDA) memory: "  << deviceByteSize/(1048576.0f) << " MB" << "\n" 
-                    << "Total Array  (CUDA) memory: "  << arrayByteSize/(1048576.0f)  << " MB" << "\n\n" 
-                    << "Total CUDA memory (Device+Array): " << overallGPUByteSize/(1048576.0f) << " MB";
+         consstream << "Total Host   (CPU) memory: "  << hostByteSize/(1048576.0f)   << " MB" << "\n" 
+                    << "Total Device (GPU) memory: "  << deviceByteSize/(1048576.0f) << " MB" << "\n" 
+                    << "Total Array  (GPU) memory: "  << arrayByteSize/(1048576.0f)  << " MB" << "\n\n" 
+                    << "Total GPU memory (Device+Array): " << overallGPUByteSize/(1048576.0f) << " MB";
 
          overallLabel->setColor(colorFR);
          overallLabel->setFont(font);

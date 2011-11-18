@@ -45,7 +45,9 @@ namespace PtclDemo
     class PtclEmitter : public osgCompute::Computation 
     {
     public:
-        virtual bool init();
+        PtclEmitter() : _numBlocks(0), _numThreads(0), _initialized(false) {}
+
+        virtual void init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
@@ -57,10 +59,11 @@ namespace PtclDemo
         osg::Vec3f                                        _seedBoxMax;
         osg::ref_ptr<osgCompute::Memory>                  _ptcls;
         osg::ref_ptr<osgCompute::Memory>                  _seeds;
+        bool                                              _initialized;
     };
 
     //------------------------------------------------------------------------------
-    bool PtclEmitter::init()
+    void PtclEmitter::init()
     {
         if( !_ptcls.valid() )
         {
@@ -68,7 +71,7 @@ namespace PtclDemo
                 << "ParticleDemo::ParticleMover::init(): buffers are missing."
                 << std::endl;
 
-            return false;
+            return;
         }
 
         _seedBoxMin = osg::Vec3f(-1.f,-1.f,-1.f);
@@ -98,21 +101,17 @@ namespace PtclDemo
         _numBlocks = (_ptcls->getDimension(0) / 128)+1;
         _numThreads = 128;
 
+        _timer = new osgCuda::Timer;
+        _timer->setName( "PtclEmitter");
 
-        if( !_timer.valid() )
-        {
-            _timer = new osgCuda::Timer;
-            _timer->setName( "PtclEmitter");
-            _timer->init();
-        }
-
-
-        return osgCompute::Computation::init();
+        _initialized = true;
     }
 
     //------------------------------------------------------------------------------
     void PtclEmitter::launch()
     {
+        if( !_initialized ) init();
+
         if( !_seeds.valid() || !_ptcls.valid() || !_timer.valid() )
             return;
 

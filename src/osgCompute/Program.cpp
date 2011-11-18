@@ -35,7 +35,7 @@ namespace osgCompute
 
         META_Object( osgCompute, ProgramBin );
 
-        virtual bool init( Program& program );
+        virtual bool setup( Program& program );
         virtual void reset();
 
         virtual void draw( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
@@ -44,12 +44,8 @@ namespace osgCompute
 
         virtual unsigned int computeNumberOfDynamicRenderLeaves() const;
 
-
-        virtual bool isClear() const;
         virtual Program* getProgram();
         virtual const Program* getProgram() const;
-
-        virtual void clear();
 
     protected:
         friend class Program;
@@ -60,7 +56,6 @@ namespace osgCompute
         virtual void drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
 
         Program* _program; 
-        bool     _clear;
 
     private:
         // copy constructor and operator should not be called
@@ -81,12 +76,6 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     ProgramBin::ProgramBin( osgUtil::RenderBin::SortMode mode )
         : osgUtil::RenderStage( mode )
-    {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    void ProgramBin::clear()
     {
         clearLocal();
     }
@@ -171,7 +160,7 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
-    bool ProgramBin::init( Program& program )
+    bool ProgramBin::setup( Program& program )
     {
         // COMPUTATION 
         _program = &program;
@@ -180,7 +169,6 @@ namespace osgCompute
         setName( _program->getName() );
         setDataVariance( _program->getDataVariance() );
 
-        _clear = false;
         return true;
     }
 
@@ -188,12 +176,6 @@ namespace osgCompute
     void ProgramBin::reset()
     {
         clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    bool ProgramBin::isClear() const
-    { 
-        return _clear; 
     }
 
     //------------------------------------------------------------------------------
@@ -217,14 +199,13 @@ namespace osgCompute
     {
         _stageDrawnThisFrame = false;
         _program = NULL;
-        _clear = true;
         osgUtil::RenderStage::reset();
     }
 
     //------------------------------------------------------------------------------
     void ProgramBin::launch()
     {
-        if( _clear || !_program  )
+        if( !_program  )
             return;
 
         // Launch computations
@@ -233,9 +214,6 @@ namespace osgCompute
         {
             if( (*itr)->isEnabled() )
             {
-                if( (*itr)->isClear() )
-                    (*itr)->init();
-
                 (*itr)->launch();
             }
         }
@@ -299,13 +277,13 @@ namespace osgCompute
     Program::Program() 
         :   osg::Group()
     { 
-        clearLocal(); 
-    }
+        _launchCallback = NULL;
+        _enabled = true;
 
-    //------------------------------------------------------------------------------   
-    void Program::clear()
-    {
-        clearLocal();
+        // setup program order
+        _computeOrder = UPDATE_BEFORECHILDREN;
+        if( (_computeOrder & OSGCOMPUTE_UPDATE) == OSGCOMPUTE_UPDATE )
+            setNumChildrenRequiringUpdateTraversal( 1 );
     }
 
     //------------------------------------------------------------------------------
@@ -597,8 +575,6 @@ namespace osgCompute
 		newHandle._resource = &resource;
 		newHandle._serialize = serialize;
 		_resources.push_back( newHandle );
-
-		if( resource.isClear() ) resource.init();
     }
 
     //------------------------------------------------------------------------------
@@ -634,8 +610,6 @@ namespace osgCompute
         newHandle._resource = &newResource;
         newHandle._serialize = serialize;
         _resources.push_back( newHandle );
-
-		if( newResource.isClear() ) newResource.init();
     }
 
 
@@ -815,26 +789,6 @@ namespace osgCompute
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------   
-    void Program::clearLocal()
-    {
-        removeResources();
-        removeComputations();
-        _launchCallback = NULL;
-        _enabled = true;
-
-        // clear node or group related members
-        removeChildren(0,osg::Group::getNumChildren());
-        setDataVariance( osg::Object::DYNAMIC );
-        setUpdateCallback( NULL );
-        setEventCallback( NULL );
-
-        // setup program order
-        _computeOrder = UPDATE_BEFORECHILDREN;
-        if( (_computeOrder & OSGCOMPUTE_UPDATE) == OSGCOMPUTE_UPDATE )
-            setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
-    }
-
     //------------------------------------------------------------------------------
     void Program::checkDevice()
     {
@@ -908,7 +862,7 @@ namespace osgCompute
 
             return;
         }
-        pb->init( *this );
+        pb->setup( *this );
 
         //////////////
         // TRAVERSE //
@@ -929,9 +883,6 @@ namespace osgCompute
                 rs->addPreRenderStage(pb,_computeOrderNum);
             }
         }
-
-
-
     }
 
     //------------------------------------------------------------------------------
@@ -952,16 +903,12 @@ namespace osgCompute
                 {
                     if( (*itr)->isEnabled() )
                     {
-                        if( (*itr)->isClear() )
-                            (*itr)->init();
-
                         (*itr)->launch();
                     }
                 }
             }
         }
     }
-
 
     //------------------------------------------------------------------------------
     void Program::applyVisitorToComputations( osg::NodeVisitor& nv )

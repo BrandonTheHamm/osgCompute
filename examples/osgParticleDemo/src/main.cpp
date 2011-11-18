@@ -113,7 +113,6 @@ public:
         {
             _timer = new osgCuda::Timer;
             _timer->setName( "PtclMover");
-            _timer->init();
         }
 
         _timer->start();
@@ -189,7 +188,6 @@ public:
         {
             _timer = new osgCuda::Timer;
             _timer->setName( "PtclEmitter");
-            _timer->init();
         }
 
         _timer->start();
