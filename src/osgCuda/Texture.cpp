@@ -174,12 +174,13 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int TextureMemory::getElementSize() const 
     { 
+        unsigned int elementSize = osgCompute::Memory::getElementSize();
         if( osgCompute::Memory::getElementSize() == 0 )
         {
             if( !_texref.valid() )
                 return 0;
 
-            unsigned int elementSize = 0;
+            elementSize = 0;
             unsigned int elementBitSize;
             if( _texref->getImage(0) )
             {
@@ -200,7 +201,7 @@ namespace osgCuda
             const_cast<osgCuda::TextureMemory*>(this)->setElementSize( elementSize );
         }
 
-        return osgCompute::Memory::getElementSize(); 
+        return elementSize; 
     }
 
     //------------------------------------------------------------------------------
@@ -242,7 +243,8 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int TextureMemory::getNumDimensions() const
     {
-        if( osgCompute::Memory::getNumDimensions() == 0 )
+        unsigned int numDims = osgCompute::Memory::getNumDimensions();
+        if( numDims == 0 )
         {
             if( !_texref.valid() )
                 return 0;
@@ -270,15 +272,18 @@ namespace osgCuda
                 const_cast<osgCuda::TextureMemory*>(this)->setDimension( d, dim[d] );
                 ++d;
             }
+
+            numDims = osgCompute::Memory::getNumDimensions();
         }
 
-        return osgCompute::Memory::getNumDimensions();
+        return numDims;
     }
 
     //------------------------------------------------------------------------------
     unsigned int TextureMemory::getNumElements() const
     {
-        if( osgCompute::Memory::getNumElements() == 0 )
+        unsigned int numElements = osgCompute::Memory::getNumElements();
+        if( numElements == 0 )
         {
             if( !_texref.valid() )
                 return 0;
@@ -306,9 +311,11 @@ namespace osgCuda
                 const_cast<osgCuda::TextureMemory*>(this)->setDimension( d, dim[d] );
                 ++d;
             }
+
+            numElements = osgCompute::Memory::getNumElements();
         }
 
-        return osgCompute::Memory::getNumElements();
+        return numElements;
     }
 
     //------------------------------------------------------------------------------

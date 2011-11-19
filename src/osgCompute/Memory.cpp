@@ -245,6 +245,7 @@ namespace osgCompute
             newObject->_mapping = osgCompute::UNMAP;
             newObject->_allocHint = getAllocHint();
             _object = newObject;
+            objectsCreated();
         }
 
         return _object.get();
@@ -277,6 +278,7 @@ namespace osgCompute
             newObject->_mapping = osgCompute::UNMAP;
             newObject->_allocHint = getAllocHint();
             _object = newObject;
+            objectsCreated();
         }
 
         return _object.get();

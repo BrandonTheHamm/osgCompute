@@ -121,6 +121,7 @@ osg::Geode* getGeode( unsigned int numParticles )
     // GEOMETRY //
     //////////////
     osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
+    ptclGeom->setName("PARTICLES");
     ptclGeom->addIdentifier( "PTCL_BUFFER" );
 
     // Initialize the Particles

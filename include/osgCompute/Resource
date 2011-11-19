@@ -162,10 +162,20 @@ namespace osgCompute
         */
         virtual void releaseObjects();
 
+        /** Returns true if all allocations by a resource are released. 
+        @return Returns true if all allocations of a resource are released.
+        */
+        virtual bool objectsReleased();
+
     protected:
 		/** Destructor. Will call clearLocal() first.
 		*/
         virtual ~Resource();
+
+        /** Call objectsCreated() from a specialized class in case some memory has been 
+        allocated for internal use.
+		*/
+        virtual void objectsCreated() const;
 
 	private:
 		// Copy constructor and operator should not be called
@@ -173,6 +183,7 @@ namespace osgCompute
 		Resource &operator=(const Resource&) { return *this; }
 
 		IdentifierSet _identifiers;
+        mutable bool  _objectsReleased;
 
     };
 }

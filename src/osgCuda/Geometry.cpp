@@ -272,7 +272,8 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int GeometryMemory::getElementSize() const 
     { 
-        if( osgCompute::Memory::getElementSize() == 0 )
+        unsigned int elementSize = osgCompute::Memory::getElementSize();
+        if( elementSize == 0 )
         {
             if( !_geomref.valid() )
                 return 0;
@@ -280,41 +281,40 @@ namespace osgCuda
             osg::Geometry::ArrayList arrayList;
             _geomref->getArrayList( arrayList );
 
-            unsigned int elementSize = 0;
+            elementSize = 0;
             for( unsigned int a=0; a<arrayList.size(); ++a )
             {
-                // we assume that all arrays have the
-                // same number of elements
-                elementSize += (arrayList[a]->getTotalDataSize() / arrayList[a]->getNumElements());
+                if( arrayList[a] != NULL )
+                {
+                    // we assume that all arrays have the
+                    // same number of elements
+                    elementSize += (arrayList[a]->getTotalDataSize() / arrayList[a]->getNumElements());
+                }
             }
 
             const_cast<osgCuda::GeometryMemory*>(this)->setElementSize( elementSize );
         }
 
-        return osgCompute::Memory::getElementSize(); 
+        return elementSize; 
     }
 
     //------------------------------------------------------------------------------
     unsigned int GeometryMemory::getNumDimensions() const
-    {
-        if( osgCompute::Memory::getNumDimensions() == 0 )
+    {        
+        unsigned int numDims = osgCompute::Memory::getNumDimensions();
+        if( numDims == 0 )
         {
             if( !_geomref.valid() )
                 return 0;
 
             if( _geomref->getVertexArray() == NULL || _geomref->getVertexArray()->getNumElements() == 0 )
-            {
-                osg::notify(osg::WARN)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::getDimension()]: no dimensions defined for geometry. Setup vertex array first."
-                    << std::endl;
-
                 return 0;
-            }
 
             const_cast<osgCuda::GeometryMemory*>(this)->setDimension( 0, _geomref->getVertexArray()->getNumElements() );
+            numDims = osgCompute::Memory::getNumDimensions();
         }
 
-        return osgCompute::Memory::getNumDimensions();
+        return numDims;
     }
 
     //------------------------------------------------------------------------------
@@ -326,13 +326,7 @@ namespace osgCuda
                 return 0;
 
             if( _geomref->getVertexArray() == NULL || _geomref->getVertexArray()->getNumElements() == 0 )
-            {
-                osg::notify(osg::WARN)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::getDimension()]: no dimensions defined for geometry. Setup vertex array first."
-                    << std::endl;
-
                 return 0;
-            }
 
             const_cast<osgCuda::GeometryMemory*>(this)->setDimension( 0, _geomref->getVertexArray()->getNumElements() );
         }
@@ -343,24 +337,20 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int GeometryMemory::getNumElements() const
     {
-        if( osgCompute::Memory::getNumElements() == 0 )
+        unsigned int numElements = osgCompute::Memory::getNumElements();
+        if( numElements == 0 )
         {
             if( !_geomref.valid() )
                 return 0;
 
             if( _geomref->getVertexArray() == NULL || _geomref->getVertexArray()->getNumElements() == 0 )
-            {
-                osg::notify(osg::WARN)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::getDimension()]: no dimensions defined for geometry. Setup vertex array first."
-                    << std::endl;
-
                 return 0;
-            }
 
             const_cast<osgCuda::GeometryMemory*>(this)->setDimension( 0, _geomref->getVertexArray()->getNumElements() );
+            numElements = osgCompute::Memory::getNumElements();
         }
 
-        return osgCompute::Memory::getNumElements();
+        return numElements;
     }
 
     //------------------------------------------------------------------------------

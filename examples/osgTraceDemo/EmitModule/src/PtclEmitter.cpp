@@ -88,6 +88,7 @@ namespace PtclDemo
 			seeds[s] = ( float(rand()) / RAND_MAX );
 
         osg::ref_ptr<osgCuda::Memory> seedBuffer = new osgCuda::Memory;
+        seedBuffer->setName("SEEDS");
         seedBuffer->setElementSize( sizeof(float) );
         seedBuffer->setDimension(0,_ptcls->getNumElements());
         seedBuffer->setImage( seedValues );

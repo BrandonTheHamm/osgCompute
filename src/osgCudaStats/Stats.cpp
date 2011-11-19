@@ -365,7 +365,7 @@ namespace osgCuda
         for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
         {
             osgCompute::Memory* memory = dynamic_cast<osgCompute::Memory*>((*itr).get());
-            if( NULL == memory || memory->getAllElementsSize() == 0 ) 
+            if( NULL == memory || memory->objectsReleased() ) 
                  continue;
 
             MemoryPair pair;
@@ -378,7 +378,7 @@ namespace osgCuda
         for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
         {
             osgCompute::GLMemory* glMemory = dynamic_cast<osgCompute::GLMemory*>((*itr).get());
-            if( (NULL == glMemory) || glMemory->getAllElementsSize() == 0 ) 
+            if( (NULL == glMemory) || glMemory->objectsReleased() ) 
                 continue;
 
             MemoryPair pair;
@@ -391,7 +391,7 @@ namespace osgCuda
         for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
         {
             osgCompute::GLMemory* glMemory = dynamic_cast<osgCompute::GLMemory*>((*itr).get());
-            if( (NULL == glMemory) || glMemory->getAllElementsSize() == 0 ) 
+            if( (NULL == glMemory) || glMemory->objectsReleased() ) 
                 continue;
 
             MemoryPair pair;
@@ -404,7 +404,7 @@ namespace osgCuda
         for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
         {
             osgCompute::GLMemory* glMemory = dynamic_cast<osgCompute::GLMemory*>((*itr).get());
-            if( (NULL == glMemory) || glMemory->getAllElementsSize() > 0 ) 
+            if( (NULL == glMemory) || glMemory->objectsReleased() ) 
                 continue;
 
             MemoryPair pair;
@@ -412,6 +412,9 @@ namespace osgCuda
             pair.memory = glMemory;
             memoryList.push_back( pair );
         }
+
+        if( memoryList.empty() )
+            return;
 
         // Exclude PingPongBuffers here!
 

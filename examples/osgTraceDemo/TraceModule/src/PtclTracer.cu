@@ -53,10 +53,10 @@ inline float4 vortexField( float4 pos )
 {
     float4 vel;
 
-    float sqrad = pos.x*pos.x + pos.y*pos.y;
-    vel.x = (-CUDART_PI_F * GAM * pos.y)/( sqrad );
-    vel.y = (CUDART_PI_F * GAM * pos.x)/( sqrad );
-    vel.z = 0.0f;
+    float sqrad = pos.x*pos.x + pos.z*pos.z;
+    vel.x = (-CUDART_PI_F * GAM * pos.z)/( sqrad );
+    vel.y = 0.0f;
+    vel.z = (CUDART_PI_F * GAM * pos.x)/( sqrad );
     vel.w = 0.0f;
 
     return VEL_STRENGTH * vel;

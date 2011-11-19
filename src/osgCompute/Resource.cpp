@@ -123,6 +123,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     Resource::Resource()
     {
+        _objectsReleased = true;
     }
 
     //------------------------------------------------------------------------------
@@ -177,6 +178,13 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Resource::releaseObjects()
     {
+        _objectsReleased = true;
+    }
+
+    //------------------------------------------------------------------------------
+    bool Resource::objectsReleased()
+    {
+        return _objectsReleased;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -188,4 +196,10 @@ namespace osgCompute
         // free a resource's allocations
         releaseObjects();
     }
+
+    //------------------------------------------------------------------------------
+    void Resource::objectsCreated() const
+    {
+        _objectsReleased = false;
+    } 
 } 
