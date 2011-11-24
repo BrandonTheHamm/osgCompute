@@ -176,9 +176,24 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
+    void Resource::clear()
+    {
+        releaseObjects();
+    }
+
+    //------------------------------------------------------------------------------
     void Resource::releaseObjects()
     {
         _objectsReleased = true;
+    }
+
+    //------------------------------------------------------------------------------
+    void Resource::releaseGLObjects( osg::State* state )
+    {
+        // Do release all resources no matter which state is applied.
+        // Currently only a single context is supported by osgCompute
+        // so there should exist only one state
+        if( !objectsReleased() ) releaseObjects();
     }
 
     //------------------------------------------------------------------------------
@@ -202,4 +217,5 @@ namespace osgCompute
     {
         _objectsReleased = false;
     } 
+
 } 

@@ -158,6 +158,11 @@ namespace osgCompute
 		*/ 	
         virtual const IdentifierSet& getIdentifiers() const;
 
+        /** clear() will set all parameters of a resource to default.
+        Calls releaseObjects() as well.
+        */
+        virtual void clear();
+
         /** Release all allocations associated with this resource. 
         */
         virtual void releaseObjects();
@@ -167,8 +172,13 @@ namespace osgCompute
         */
         virtual bool objectsReleased();
 
+        /** Releases all allocated objects associated with the applied state. 
+        @param[in] state the current OpenGL state.
+        */
+        virtual void releaseGLObjects(osg::State* state);
+
     protected:
-		/** Destructor. Will call clearLocal() first.
+		/** Destructor.
 		*/
         virtual ~Resource();
 

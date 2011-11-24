@@ -20,6 +20,7 @@ namespace osgCuda
 
         virtual unsigned int getElementSize() const;
         virtual unsigned int getDimension( unsigned int dimIdx ) const;
+        virtual unsigned int getNumDimensions() const;
 
 		virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int bufferIdx = 0 );
 		virtual void unmap( unsigned int bufferIdx = 0 );
@@ -38,14 +39,15 @@ namespace osgCuda
 		virtual unsigned int getSwapCount() const;
 
         virtual bool createSwapBuffers();
-		virtual osgCompute::Memory* getBufferAt( unsigned int idx );
-		virtual const osgCompute::Memory* getBufferAt( unsigned int idx ) const;
+		virtual osgCompute::Memory* getBufferAt( unsigned int stackIdx );
+		virtual const osgCompute::Memory* getBufferAt( unsigned int stackIdx ) const;
 		virtual void appendBuffer( osgCompute::Memory& buffer );
-		virtual void insertBuffer( unsigned int idx, osgCompute::Memory& buffer );
-		virtual void removeBuffer( unsigned int idx );
+		virtual void insertBuffer( unsigned int stackIdx, osgCompute::Memory& buffer );
+		virtual void removeBuffer( unsigned int stackIdx );
 		virtual BufferStack& getBuffers();
 		virtual const BufferStack& getBuffers() const;
 
+        virtual void clear();
         virtual void releaseObjects();
 
 	protected:

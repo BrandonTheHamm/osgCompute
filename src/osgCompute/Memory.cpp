@@ -205,6 +205,17 @@ namespace osgCompute
     }
 
     //------------------------------------------------------------------------------
+    void Memory::clear()
+    {
+        _dimensions.clear();
+        _allocHint = 0x0;
+        _elementSize = 0;
+        _pitch = 0;
+        _numElements = 0;
+        Resource::clear();
+    }
+
+    //------------------------------------------------------------------------------
     void Memory::releaseObjects()
     {
         _object = NULL;

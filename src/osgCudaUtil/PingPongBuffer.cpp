@@ -22,27 +22,28 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     unsigned int PingPongBuffer::getElementSize() const
     {
-        if( osgCompute::Memory::getElementSize() == 0 )
-        {
-            if( _bufferStack.empty() )
-                return 0;
+        if( (_stackIdx >= _bufferStack.size()) || !_bufferStack[_stackIdx].valid() ) 
+            return osgCompute::Memory::getElementSize();
 
-            const_cast< osgCuda::PingPongBuffer* >(this)->setElementSize( _bufferStack[0]->getElementSize() );
-        }
-
-        return osgCompute::Memory::getElementSize();
+        return _bufferStack[_stackIdx]->getElementSize();
     }
 
     //------------------------------------------------------------------------------
     unsigned int PingPongBuffer::getDimension( unsigned int dimIdx ) const
     {
-        if( osgCompute::Memory::getNumDimensions() == 0 )
-        {
-            for( unsigned int d=0; d<_bufferStack[0]->getNumDimensions(); ++d )
-                const_cast< osgCuda::PingPongBuffer* >(this)->setDimension( d, _bufferStack[0]->getDimension(d) );
-        }
+        if( (_stackIdx >= _bufferStack.size()) || !_bufferStack[_stackIdx].valid() ) 
+            return osgCompute::Memory::getDimension( dimIdx );
 
-        return osgCompute::Memory::getDimension( dimIdx );
+        return _bufferStack[_stackIdx]->getDimension(dimIdx);
+    }
+
+    //------------------------------------------------------------------------------
+    unsigned int PingPongBuffer::getNumDimensions() const
+    {
+        if( (_stackIdx >= _bufferStack.size()) || !_bufferStack[_stackIdx].valid() ) 
+            return osgCompute::Memory::getNumDimensions();
+
+        return _bufferStack[_stackIdx]->getNumDimensions();
     }
 
     //------------------------------------------------------------------------------
@@ -58,7 +59,7 @@ namespace osgCuda
             if( !_bufferStack.at(b).valid() )
             {
                 osg::ref_ptr<osgCuda::Memory> newBuffer = new osgCuda::Memory;
-                newBuffer->setElementSize( getElementSize() );
+                newBuffer->setElementSize( osgCompute::Memory::getElementSize() );
                 for( unsigned int d=0; d<getNumDimensions(); ++d )
                     newBuffer->setDimension(d,getDimension(d));
 
@@ -95,8 +96,8 @@ namespace osgCuda
     unsigned int PingPongBuffer::getAllocatedByteSize( unsigned int mapping, unsigned int bufferIdx /*= 0 */ ) const
     {
         unsigned int mapIdx = (_stackIdx + bufferIdx) % _bufferStack.size();
-        if( !_bufferStack[mapIdx].valid() )
-            return 0;
+        if( _bufferStack.empty() || !_bufferStack[mapIdx].valid() )
+            return osgCompute::Memory::getAllocatedByteSize( mapping );
 
          return _bufferStack[mapIdx]->getAllocatedByteSize( mapping );
     }
@@ -105,8 +106,8 @@ namespace osgCuda
     unsigned int PingPongBuffer::getByteSize( unsigned int mapping, unsigned int bufferIdx /*= 0 */  ) const
     {
          unsigned int mapIdx = (_stackIdx + bufferIdx) % _bufferStack.size();
-         if( !_bufferStack[mapIdx].valid() )
-             return 0;
+         if( _bufferStack.empty() || !_bufferStack[mapIdx].valid() )
+             return osgCompute::Memory::getByteSize( mapping );
 
          return _bufferStack[mapIdx]->getByteSize( mapping );
     }
@@ -115,8 +116,8 @@ namespace osgCuda
     unsigned int PingPongBuffer::getAllElementsSize( unsigned int bufferIdx /*= 0 */  ) const
     {
         unsigned int mapIdx = (_stackIdx + bufferIdx) % _bufferStack.size();
-        if( !_bufferStack[mapIdx].valid() )
-            return 0;
+        if( _bufferStack.empty() || !_bufferStack[mapIdx].valid() )
+            return osgCompute::Memory::getAllElementsSize();
 
         return _bufferStack[mapIdx]->getAllElementsSize();
     }
@@ -125,7 +126,7 @@ namespace osgCuda
 	bool PingPongBuffer::reset( unsigned int bufferIdx /*= 0 */ )
 	{
 		unsigned int mapIdx = (_stackIdx + bufferIdx) % _bufferStack.size();
-		if( !_bufferStack[mapIdx].valid() )
+		if( _bufferStack.empty() || !_bufferStack[mapIdx].valid() )
 			return false;
 
 		osgCompute::Memory* curBuffer = dynamic_cast<osgCompute::Memory*>(_bufferStack[mapIdx].get());
@@ -136,7 +137,7 @@ namespace osgCuda
     bool PingPongBuffer::supportsMapping( unsigned int mapping, unsigned int bufferIdx ) const
     {
         unsigned int mapIdx = (_stackIdx + bufferIdx) % _bufferStack.size();
-        if( !_bufferStack[mapIdx].valid() )
+        if( _bufferStack.empty() || !_bufferStack[mapIdx].valid() )
             return false;
 
         const osgCompute::Memory* curBuffer = dynamic_cast<const osgCompute::Memory*>(_bufferStack[mapIdx].get());
@@ -148,7 +149,7 @@ namespace osgCuda
 	unsigned int PingPongBuffer::getMapping( unsigned int bufferIdx /*= 0 */ ) const
 	{
 		unsigned int mapIdx = (_stackIdx + bufferIdx) % _bufferStack.size();
-		if( !_bufferStack[mapIdx].valid() )
+        if( _bufferStack.empty() || !_bufferStack[mapIdx].valid() )
 			return osgCompute::UNMAP;
 
 		const osgCompute::Memory* curBuffer = dynamic_cast<const osgCompute::Memory*>(_bufferStack[mapIdx].get());
@@ -159,7 +160,7 @@ namespace osgCuda
     unsigned int PingPongBuffer::getPitch( unsigned int bufferIdx /*= 0 */ ) const
     {
         unsigned int mapIdx = (_stackIdx + bufferIdx) % _bufferStack.size();
-        if( !_bufferStack[mapIdx].valid() )
+        if( _bufferStack.empty() || !_bufferStack[mapIdx].valid() )
             return 0;
 
         const osgCompute::Memory* curBuffer = dynamic_cast<const osgCompute::Memory*>(_bufferStack[mapIdx].get());
@@ -218,46 +219,48 @@ namespace osgCuda
 	}
 
 	//------------------------------------------------------------------------------
-	void PingPongBuffer::insertBuffer( unsigned int idx, osgCompute::Memory& buffer )
-	{
-		if( _bufferStack.size() < (idx+1) )
-			_bufferStack.resize( (idx+1) );
+	void PingPongBuffer::insertBuffer( unsigned int stackIdx, osgCompute::Memory& buffer )
+    {
+		if( _bufferStack.size() < (stackIdx+1) )
+			_bufferStack.resize( (stackIdx+1) );
 
-		_bufferStack[idx] = &buffer;
+		_bufferStack[stackIdx] = &buffer;
 	}
 
 	//------------------------------------------------------------------------------
-	void PingPongBuffer::removeBuffer( unsigned int idx )
-	{
+	void PingPongBuffer::removeBuffer( unsigned int stackIdx )
+    {
 		BufferStackItr itr = _bufferStack.begin();
-		for( unsigned int c=0; c<idx; ++c, ++itr );
+		for( unsigned int c=0; c<stackIdx; ++c, ++itr );
 			
 		_bufferStack.erase( itr );
 	}
 
-	//------------------------------------------------------------------------------
-	osgCompute::Memory* PingPongBuffer::getBufferAt( unsigned int idx )
-	{
-		if( idx >= _bufferStack.size() )
-			return NULL;
+    //------------------------------------------------------------------------------
+    osgCompute::Memory* PingPongBuffer::getBufferAt( unsigned int stackIdx )
+    {
+        if( stackIdx >= _bufferStack.size() )
+            return NULL;
 
-		return _bufferStack[idx].get();
-	}
+        return _bufferStack[stackIdx].get();
+    }
 
-	//------------------------------------------------------------------------------
-	const osgCompute::Memory* PingPongBuffer::getBufferAt( unsigned int idx ) const
-	{
-		if( idx >= _bufferStack.size() )
-			return NULL;
+    //------------------------------------------------------------------------------
+    const osgCompute::Memory* PingPongBuffer::getBufferAt( unsigned int stackIdx ) const
+    {
+        if( stackIdx >= _bufferStack.size() )
+            return NULL;
 
-		return _bufferStack[idx].get();
-	}
+        return _bufferStack[stackIdx].get();
+    }
 
     //------------------------------------------------------------------------------
     void PingPongBuffer::releaseObjects()
     {
         // Do not call 
-        // _bufferStack[s]->releaseObjects();  
+        // _bufferStack[s]->releaseObjects();
+        for( unsigned int s=0; s<_bufferStack.size(); ++s )
+            _bufferStack[s]->releaseObjects();
     }
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -284,4 +287,10 @@ namespace osgCuda
         return 0;
     }
 
+    //------------------------------------------------------------------------------
+    void PingPongBuffer::clear()
+    {
+        for( unsigned int s=0; s<_bufferStack.size(); ++s )
+            _bufferStack[s]->clear();
+    }
 }

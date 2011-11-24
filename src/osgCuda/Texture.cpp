@@ -1737,12 +1737,25 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && 
-            osgCompute::GLMemory::getContext() != NULL && 
-            state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
-            _memory->releaseObjects();
+        // Currently we support  a single OpenGL context only. So clear memory every
+        // time releaseGLObjects() is called.
+        //if( state != NULL && 
+        //    osgCompute::GLMemory::getContext() != NULL && 
+        //    state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
+        _memory->clear();
 
         osg::Texture2D::releaseGLObjects( state );
+    }
+
+    //------------------------------------------------------------------------------
+    void Texture2D::resizeGLObjectBuffers( unsigned int maxSize )
+    {
+        // Currently we support  a single OpenGL context only. So clear memory every
+        // time releaseGLObjects() is called.
+        //if( osgCompute::GLMemory::getContext() != NULL )
+        _memory->clear();
+
+        osg::Texture::resizeGLObjectBuffers( maxSize );
     }
 
     //------------------------------------------------------------------------------
@@ -1754,9 +1767,11 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture2D::apply(osg::State& state) const
     {
-        if( osgCompute::GLMemory::getContext() != NULL && 
-            state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
-            _memory->unmap();
+        // Currently we support  a single OpenGL context only. So unmap memory every
+        // time releaseGLObjects() is called.
+        //if( osgCompute::GLMemory::getContext() != NULL && 
+        //    state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
+        _memory->unmap();
 
         osg::Texture2D::apply( state );
     }
@@ -1844,12 +1859,25 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && 
-            osgCompute::GLMemory::getContext() != NULL && 
-            state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
-            _memory->releaseObjects();
+        // Currently we support  a single OpenGL context only. So clear memory every
+        // time releaseGLObjects() is called.
+        //if( state != NULL && 
+        //    osgCompute::GLMemory::getContext() != NULL && 
+        //    state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
+        _memory->clear();
 
         osg::Texture3D::releaseGLObjects( state );
+    }
+
+    //------------------------------------------------------------------------------
+    void Texture3D::resizeGLObjectBuffers( unsigned int maxSize )
+    {
+        // Currently we support  a single OpenGL context only. So clear memory every
+        // time releaseGLObjects() is called.
+        //if( osgCompute::GLMemory::getContext() != NULL )
+        _memory->clear();
+
+        osg::Texture::resizeGLObjectBuffers( maxSize );
     }
 
     //------------------------------------------------------------------------------
@@ -1861,9 +1889,11 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Texture3D::apply(osg::State& state) const
     {
-        if( osgCompute::GLMemory::getContext() != NULL && 
-            state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
-            _memory->unmap();
+        // Currently we support  a single OpenGL context only. So unmap memory every
+        // time releaseGLObjects() is called.
+        //if( osgCompute::GLMemory::getContext() != NULL && 
+        //    state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
+        _memory->unmap();
 
         osg::Texture3D::apply( state );
     }
@@ -1951,12 +1981,25 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && 
-            osgCompute::GLMemory::getContext() != NULL && 
-            state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
-            _memory->releaseObjects();
+        // Currently we support  a single OpenGL context only. So clear memory every
+        // time releaseGLObjects() is called.
+        //if( state != NULL && 
+        //    osgCompute::GLMemory::getContext() != NULL && 
+        //    state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
+        _memory->clear();
 
         osg::TextureRectangle::releaseGLObjects( state );
+    }
+
+    //------------------------------------------------------------------------------
+    void TextureRectangle::resizeGLObjectBuffers( unsigned int maxSize )
+    {
+        // Currently we support  a single OpenGL context only. So clear memory every
+        // time releaseGLObjects() is called.
+        //if( osgCompute::GLMemory::getContext() != NULL )
+        _memory->clear();
+
+        osg::Texture::resizeGLObjectBuffers( maxSize );
     }
 
     //------------------------------------------------------------------------------
@@ -1968,9 +2011,11 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void TextureRectangle::apply(osg::State& state) const
     {
-        if( osgCompute::GLMemory::getContext() != NULL && 
-            state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
-            _memory->unmap();
+        // Currently we support  a single OpenGL context only. So unmap memory every
+        // time releaseGLObjects() is called.
+        //if( osgCompute::GLMemory::getContext() != NULL && 
+        //    state.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
+        _memory->unmap();
 
         osg::TextureRectangle::apply( state );
     }

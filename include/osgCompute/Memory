@@ -338,6 +338,11 @@ namespace osgCompute
         */
         virtual unsigned int getSwapCount() const;
 
+        /** clear() will set all parameters of a memory back to default and releases the 
+        allocated memory.
+        */
+        virtual void clear();
+
         /** Will release all allocated host and device memory.
         */
         virtual void releaseObjects();

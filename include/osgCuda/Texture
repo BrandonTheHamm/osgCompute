@@ -133,6 +133,12 @@ namespace osgCuda
         */
         virtual void releaseGLObjects(osg::State* state=0) const;
 
+        /** Overloaded from osg::Texture. Resize any per context GLObjects 
+        to specified size. Memory object will be released.
+		@param[in] masSize the new size of the texture.
+		*/
+		virtual void resizeGLObjectBuffers(unsigned int maxSize);
+
     protected:
         /** Destructor. Will also release the GLMemory.
         */
@@ -259,6 +265,12 @@ namespace osgCuda
         */
         virtual void releaseGLObjects(osg::State* state=0) const;
 
+        /** Overloaded from osg::Texture. Resize any per context GLObjects 
+        to specified size. Memory object will be released.
+		@param[in] masSize the new size of the texture.
+		*/
+		virtual void resizeGLObjectBuffers(unsigned int maxSize);
+
     protected:
         /** Destructor. Will also release the GLMemory.
         */
@@ -384,6 +396,12 @@ namespace osgCuda
         @param[in] state pointer to the current state object.
         */
         virtual void releaseGLObjects(osg::State* state=0) const;
+
+        /** Overloaded from osg::Texture. Resize any per context GLObjects 
+        to specified size. Memory object will be released.
+		@param[in] masSize the new size of the texture.
+		*/
+		virtual void resizeGLObjectBuffers(unsigned int maxSize);
 
     protected:
         /** Destructor. Will also release the GLMemory.

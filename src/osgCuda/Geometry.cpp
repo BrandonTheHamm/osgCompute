@@ -122,6 +122,7 @@ namespace osgCuda
         virtual bool resetIndices( unsigned int hint = 0 );
 
         virtual unsigned int getIndicesByteSize() const;
+        virtual void clear();
 
     protected:
         friend class Geometry;
@@ -1962,6 +1963,13 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
+    void IndexedGeometryMemory::clear()
+    {
+        _indicesByteSize = 0;
+        osgCompute::GLMemory::clear();
+    }
+
+    //------------------------------------------------------------------------------
     osgCompute::MemoryObject* IndexedGeometryMemory::createObject() const
     {
         return new IndexedGeometryObject;
@@ -2036,20 +2044,33 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Geometry::releaseGLObjects( osg::State* state/*=0*/ ) const
     {
-        if( state != NULL && 
-            osgCompute::GLMemory::getContext() != NULL && 
-            state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
-            _memory->releaseObjects();
+        // Currently we support  a single OpenGL context only. So clear memory every
+        // time releaseGLObjects() is called.
+        //if( state != NULL && 
+        //    osgCompute::GLMemory::getContext() != NULL && 
+        //    state->getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
+        _memory->clear();
 
         osg::Geometry::releaseGLObjects( state );
     }
 
     //------------------------------------------------------------------------------
+    void Geometry::resizeGLObjectBuffers( unsigned int maxSize )
+    {
+        // Currently we support  a single OpenGL context only. So clear memory every
+        // time releaseGLObjects() is called.
+        //if( osgCompute::GLMemory::getContext() != NULL )
+        _memory->clear();
+
+        osg::Geometry::resizeGLObjectBuffers( maxSize );
+    }
+
+    //------------------------------------------------------------------------------
     void Geometry::drawImplementation( osg::RenderInfo& renderInfo ) const
     {
-        if( osgCompute::GLMemory::getContext() != NULL &&
-            renderInfo.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
-            _memory->unmap(); 
+        //if( osgCompute::GLMemory::getContext() != NULL &&
+        //    renderInfo.getContextID() == osgCompute::GLMemory::getContext()->getState()->getContextID() )
+        _memory->unmap(); 
 
         osg::Geometry::drawImplementation( renderInfo );
     }

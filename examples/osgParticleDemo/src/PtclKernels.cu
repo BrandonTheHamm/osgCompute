@@ -102,7 +102,7 @@ void moveKernel( float4* ptcls,
     if( ptclIdx < numPtcls )
     {
         // perform a euler step
-        ptcls[ptclIdx] = ptcls[ptclIdx] + make_float4(0,etime,0,0);
+        ptcls[ptclIdx] = ptcls[ptclIdx] + make_float4(0,0,etime,0);
     }
 }
 
