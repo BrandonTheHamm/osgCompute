@@ -84,9 +84,9 @@ INCLUDE(GroupInstall)
 #########################################################################
 
 IF(DYNAMIC_LINKING)
-    ADD_LIBRARY(${LIB_NAME} MODULE ${TARGET_SRC} ${TARGET_H})
+    ADD_LIBRARY(${LIB_NAME} MODULE ${TARGET_SRC} ${TARGET_H} ${CUDA_FILES})
 ELSE (DYNAMIC_LINKING)
-    ADD_LIBRARY(${LIB_NAME} STATIC ${TARGET_SRC} ${TARGET_H})
+    ADD_LIBRARY(${LIB_NAME} STATIC ${TARGET_SRC} ${TARGET_H} ${CUDA_FILES})
 ENDIF(DYNAMIC_LINKING)
 
 # install the module to the executable of the application 
@@ -123,7 +123,4 @@ LINK_WITH_VARIABLES(${LIB_NAME}
     CUDA_CUDART_LIBRARY
 )
 
-
-# we need to add the cuda object files here for proper linking (especially necessary for linux systems)
-TARGET_LINK_LIBRARIES(${LIB_NAME} ${CUDA_FILES})
 
