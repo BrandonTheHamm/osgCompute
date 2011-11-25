@@ -90,10 +90,10 @@ INCLUDE(GroupInstall)
 
 
 # now set up the ADDITIONAL_FILES variable to ensure that the files will be visible in the project
+# and/or that they are forwarded to the linking stage
 SET(ADDITIONAL_FILES
-#${CUDA_FILES}
-    #${CUDA_FILES} # not sure if this is necessary - check this
 	#${MY_SHADER_FILES}
+	${CUDA_FILES}
 )
 
 

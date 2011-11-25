@@ -16,7 +16,10 @@ INCLUDE(FindosgUtil)
 INCLUDE(FindOpenThreads)
 # check for cuda
 INCLUDE(FindCuda)
-#SET(CUDA_OPTIONS ${CUDA_OPTIONS} -arch sm_12)
+
+# if needed then specify computing model, e.g.:
+#SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch sm_11)
+
 
 #########################################################################
 # Set basic include directories
@@ -85,9 +88,11 @@ INCLUDE(GroupInstall)
 
 
 # now set up the ADDITIONAL_FILES variable to ensure that the files will be visible in the project
-#SET(ADDITIONAL_FILES
-#	${MY_SHADER_FILES}
-#)
+# and/or that they are forwarded to the linking stage
+SET(ADDITIONAL_FILES
+	#${MY_SHADER_FILES}
+	${CUDA_FILES}
+)
 
 
 

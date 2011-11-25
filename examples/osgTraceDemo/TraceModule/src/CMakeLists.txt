@@ -30,9 +30,6 @@ INCLUDE_DIRECTORIES(
 )
 
 
-
-
-
 #########################################################################
 # Collect header and source files
 #########################################################################
@@ -117,3 +114,6 @@ LINK_WITH_VARIABLES(${LIB_NAME}
 	OSGDB_LIBRARY
     CUDA_CUDART_LIBRARY
 )
+
+# we need to add the cuda object files here for proper linking (especially necessary for linux systems)
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${CUDA_FILES})
