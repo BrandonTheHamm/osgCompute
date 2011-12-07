@@ -21,6 +21,7 @@ namespace osgCuda
         virtual unsigned int getElementSize() const;
         virtual unsigned int getDimension( unsigned int dimIdx ) const;
         virtual unsigned int getNumDimensions() const;
+        virtual unsigned int getNumElements() const;
 
 		virtual void* map( unsigned int mapping = osgCompute::MAP_DEVICE, unsigned int offset = 0, unsigned int bufferIdx = 0 );
 		virtual void unmap( unsigned int bufferIdx = 0 );

@@ -47,6 +47,16 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
+    unsigned int PingPongBuffer::getNumElements() const
+    {
+        if( (_stackIdx >= _bufferStack.size()) || !_bufferStack[_stackIdx].valid() ) 
+            return osgCompute::Memory::getNumElements();
+
+        return _bufferStack[_stackIdx]->getNumElements();
+    }
+
+
+    //------------------------------------------------------------------------------
     bool PingPongBuffer::createSwapBuffers()
     {
         if( getSwapCount() == 0 )
