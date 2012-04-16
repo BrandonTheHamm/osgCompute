@@ -48,7 +48,7 @@ inline unsigned int swapBytes( unsigned int value )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------
 __global__ 
-void k_swapEndianness( unsigned int* bytes ) 
+void kernelSwapEndianness( unsigned int* bytes ) 
 {
     // compute thread dimension
     unsigned int trgIdx = thIdx();
@@ -62,13 +62,13 @@ void k_swapEndianness( unsigned int* bytes )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------
 extern "C"
-void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* bytes )
+void swapEndianness( unsigned int numElements, void* bytes )
 {
-    dim3 blocks( numBlocks, 1, 1 );
-    dim3 threads( numThreads, 1, 1 );
+    dim3 blocks( numElements, 1, 1 );
+    dim3 threads( 1, 1, 1 );
 
     // call kernel
-    k_swapEndianness<<< blocks, threads >>>( reinterpret_cast<unsigned int*>(bytes) );
+    kernelSwapEndianness<<< blocks, threads >>>( reinterpret_cast<unsigned int*>(bytes) );
 }
 
 

@@ -28,14 +28,20 @@
 */ 
 namespace osgCuda
 {
-
 	/** Sets the CUDA device. Use the OpenGL device ID here if synchronization
 	between GL and CUDA memory space should be fast. All resources can only use a single
 	device. The current implementation of osgCuda does not support handling of
 	multiple devices. The default device is the first to be found.
 	@param[in] device The ID of the CUDA device.
 	*/
-    bool LIBRARY_EXPORT setupOsgCudaDevice( int device );
+    bool LIBRARY_EXPORT setupOsgCudaDevice( int device = 0 );
+
+    /** Sets the OpenGL context which is used in combination with CUDA.
+    Afterwards calls setupOsgCudaDevice() in order to initialize the CUDA device.
+    @param[in] ctx The osg::GraphicsContext to connect with CUDA. Must be a realized context.
+    @param[in] device The ID of the CUDA device.
+    */
+    bool LIBRARY_EXPORT setupDeviceAndContext( osg::GraphicsContext& ctx, int device = 0 );
 
 	/** Setup and links the CUDA device to a Viewer's OpenGL context. Use the OpenGL device 
     ID here if synchronization between GL and CUDA memory space should be fast. All resources 
@@ -43,11 +49,11 @@ namespace osgCuda
 	multiple devices. The default device is the first to be found.
     @param[in] viewer The viewer for which CUDA should be initialized.
     @param[in] realize Realize contexts. Note that if it is set to false you have to wait for a GLObjectVisitor before you can launch CUDA functions
-    @param[in] device The ID of the CUDA device.
     @param[in] ctxID The OpenGL context ID to connect with the CUDA context.
+    @param[in] device The ID of the CUDA device.
     @return Returns true on success.
 	*/
-    bool LIBRARY_EXPORT setupOsgCudaAndViewer( osgViewer::ViewerBase& viewer, bool realize = true, int device = 0, int ctxID = -1 );
+    bool LIBRARY_EXPORT setupOsgCudaAndViewer( osgViewer::ViewerBase& viewer, int ctxID = -1, int device = 0 );
 
 	//! Class for CUDA computations and resources.
 	/** The osgCuda::Program class implements the CUDA device handling. The 
@@ -59,7 +65,7 @@ namespace osgCuda
     public:
 		/** Constructor. 
 		*/
-        Program();
+        Program() {}
 
         META_Program( osgCuda, Program, osgCompute, ProgramBin );
 
@@ -68,11 +74,6 @@ namespace osgCuda
 		/** Destructor will release all resources first.
 		*/
         virtual ~Program() {}
-
-		/** Checks the CUDA device. If it is not ready yet then it will be setup by
-		calling setupDevice().
-		*/
-        virtual void checkDevice();
 
     private:
         // copy constructor and operator should not be called

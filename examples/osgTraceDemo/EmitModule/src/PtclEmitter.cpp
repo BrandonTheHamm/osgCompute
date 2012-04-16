@@ -21,130 +21,73 @@
 #include <osg/ref_ptr>
 #include <osgCompute/Computation>
 #include <osgCompute/Memory>
-#include <osgCuda/Memory>
+#include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
 #include <osgCudaUtil/Timer>
 
 //------------------------------------------------------------------------------
 extern "C"
-void reseed( unsigned int numBlocks,
-            unsigned int numThreads,
-            void* ptcls,
-            void* seeds,
-            unsigned int seedCount,
-            unsigned int seedIdx,
-            float3 bbmin,
-            float3 bbmax,
-            unsigned int numPtcls );
+void emit( unsigned int numPtcls,
+          void* ptcls,
+          void* seeds,
+          unsigned int seedIdx,
+          osg::Vec3f bbmin,
+          osg::Vec3f bbmax );
 
 
 namespace PtclDemo
 {
-    /**
-    */
     class PtclEmitter : public osgCompute::Computation 
     {
     public:
-        PtclEmitter() : _numBlocks(0), _numThreads(0), _initialized(false) {}
-
-        virtual void init();
         virtual void launch();
         virtual void acceptResource( osgCompute::Resource& resource );
 
     protected:
         osg::ref_ptr<osgCuda::Timer>                      _timer;
-        unsigned int                                      _numBlocks;
-        unsigned int                                      _numThreads;
-        osg::Vec3f                                        _seedBoxMin;
-        osg::Vec3f                                        _seedBoxMax;
         osg::ref_ptr<osgCompute::Memory>                  _ptcls;
         osg::ref_ptr<osgCompute::Memory>                  _seeds;
-        bool                                              _initialized;
     };
-
-    //------------------------------------------------------------------------------
-    void PtclEmitter::init()
-    {
-        if( !_ptcls.valid() )
-        {
-            osg::notify( osg::WARN )
-                << "ParticleDemo::ParticleMover::init(): buffers are missing."
-                << std::endl;
-
-            return;
-        }
-
-        _seedBoxMin = osg::Vec3f(-1.f,-1.f,-1.f);
-        _seedBoxMax = osg::Vec3f(1.f,1.f,1.f);
-
-        ////////////////////////
-        // CREATE SEED BUFFER //
-        ////////////////////////
-		osg::Image* seedValues = new osg::Image();
-		seedValues->allocateImage(64000,1,1,GL_LUMINANCE,GL_FLOAT);
-
-		float* seeds = (float*)seedValues->data();
-		for( unsigned int s=0; s<64000; ++s )
-			seeds[s] = ( float(rand()) / RAND_MAX );
-
-        osg::ref_ptr<osgCuda::Memory> seedBuffer = new osgCuda::Memory;
-        seedBuffer->setName("SEEDS");
-        seedBuffer->setElementSize( sizeof(float) );
-        seedBuffer->setDimension(0,_ptcls->getNumElements());
-        seedBuffer->setImage( seedValues );
-        _seeds = seedBuffer;
-
-        /////////////////////////
-        // COMPUTE KERNEL SIZE //
-        /////////////////////////
-        // One Thread handles a single particle
-        // buffer size must be a multiple of 128 x sizeof(float4)
-        _numBlocks = (_ptcls->getDimension(0) / 128)+1;
-        _numThreads = 128;
-
-        _timer = new osgCuda::Timer;
-        _timer->setName( "PtclEmitter");
-
-        _initialized = true;
-    }
 
     //------------------------------------------------------------------------------
     void PtclEmitter::launch()
     {
-        if( !_initialized ) init();
-
-        if( !_seeds.valid() || !_ptcls.valid() || !_timer.valid() )
+        if( !_ptcls.valid() )
             return;
+
+        if( !_seeds.valid() || !_ptcls.valid() )
+        {
+            osg::Image* seedValues = new osg::Image();
+            seedValues->allocateImage(_ptcls->getNumElements(),1,1,GL_LUMINANCE,GL_FLOAT);
+
+            float* seeds = (float*)seedValues->data();
+            for( unsigned int s=0; s<_ptcls->getNumElements(); ++s )
+                seeds[s] = ( float(rand()) / RAND_MAX );
+
+            osg::ref_ptr<osgCuda::Buffer> seedBuffer = new osgCuda::Buffer;
+            seedBuffer->setName("SEED BUFFER");
+            seedBuffer->setElementSize( sizeof(float) );
+            seedBuffer->setDimension(0,_ptcls->getNumElements());
+            seedBuffer->setImage( seedValues );
+            _seeds = seedBuffer;
+        }
+
+        if( !_timer.valid() )
+        {
+            _timer = new osgCuda::Timer;
+            _timer->setName( "PtclEmitter");
+
+        }
 
         _timer->start();
 
-        ////////////
-        // PARAMS //
-        ////////////
-        unsigned int seedIdx = static_cast<unsigned int>(rand());
-        float3 bbmin;
-        bbmin.x = _seedBoxMin.x();
-        bbmin.y = _seedBoxMin.y();
-        bbmin.z = _seedBoxMin.z();
-
-        float3 bbmax;
-        bbmax.x = _seedBoxMax.x();
-        bbmax.y = _seedBoxMax.y();
-        bbmax.z = _seedBoxMax.z();
-
-        ////////////
-        // RESEED //
-        ////////////
-        reseed(
-            _numBlocks,
-            _numThreads,
+        emit(
+            _ptcls->getNumElements(),
             _ptcls->map( osgCompute::MAP_DEVICE_TARGET ),
             _seeds->map( osgCompute::MAP_DEVICE_SOURCE ),
-            _seeds->getDimension(0),
-            seedIdx,
-            bbmin,
-            bbmax,
-            _ptcls->getNumElements());
+            (unsigned int)(rand()),
+            osg::Vec3f(-1.f,-1.f,-1.f),
+            osg::Vec3f(1.f,1.f,1.f) );
 
         _timer->stop();
     }

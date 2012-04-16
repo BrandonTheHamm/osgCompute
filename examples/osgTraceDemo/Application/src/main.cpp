@@ -33,126 +33,43 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Program>
-#include <osgCuda/Memory>
+#include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
 #include <osgCudaStats/Stats>
 
 //------------------------------------------------------------------------------
-osg::Geode* getBoundingBox( const osg::Vec3& bbmin, const osg::Vec3& bbmax )
+osg::ref_ptr<osg::Node> setupScene( unsigned int numParticles, osg::Vec3f bbmin, osg::Vec3f bbmax )
 {
-    osg::Geometry* bbgeom = new osg::Geometry;
-
-    ////////////////////
-    // SETUP GEOMETRY //
-    ////////////////////
-    // vertices
-    osg::Vec3Array* vertices = new osg::Vec3Array();
-
-    osg::Vec3 center = (bbmin + bbmax) * 0.5f;
-    osg::Vec3 radiusX( bbmax.x() - center.x(), 0, 0 );
-    osg::Vec3 radiusY( 0, bbmax.y() - center.y(), 0 );
-    osg::Vec3 radiusZ( 0, 0, bbmax.z() - center.z() );
-
-    vertices->push_back( center - radiusX - radiusY - radiusZ ); // 0
-    vertices->push_back( center + radiusX - radiusY - radiusZ ); // 1
-    vertices->push_back( center + radiusX + radiusY - radiusZ ); // 2
-    vertices->push_back( center - radiusX + radiusY - radiusZ ); // 3
-    vertices->push_back( center - radiusX - radiusY + radiusZ ); // 4
-    vertices->push_back( center + radiusX - radiusY + radiusZ ); // 5
-    vertices->push_back( center + radiusX + radiusY + radiusZ ); // 6
-    vertices->push_back( center - radiusX + radiusY + radiusZ ); // 7
-    bbgeom->setVertexArray( vertices );
-
-    // indices
-    osg::DrawElementsUShort* indices = new osg::DrawElementsUShort(GL_LINES);
-
-    indices->push_back(0);
-    indices->push_back(1);
-    indices->push_back(1);
-    indices->push_back(2);
-    indices->push_back(2);
-    indices->push_back(3);
-    indices->push_back(3);
-    indices->push_back(0);
-
-    indices->push_back(4);
-    indices->push_back(5);
-    indices->push_back(5);
-    indices->push_back(6);
-    indices->push_back(6);
-    indices->push_back(7);
-    indices->push_back(7);
-    indices->push_back(4);
-
-    indices->push_back(1);
-    indices->push_back(5);
-    indices->push_back(2);
-    indices->push_back(6);
-    indices->push_back(3);
-    indices->push_back(7);
-    indices->push_back(0);
-    indices->push_back(4);
-    bbgeom->addPrimitiveSet( indices );
-
-    // color
-    osg::Vec4Array* color = new osg::Vec4Array;
-    color->push_back( osg::Vec4(0.5f, 0.5f, 0.5f, 1.f) );
-    bbgeom->setColorArray( color );
-    bbgeom->setColorBinding( osg::Geometry::BIND_OVERALL );
-
-    /////////////////
-    // SETUP NODES //
-    /////////////////
-    osg::Geode* bbox = new osg::Geode;
-    bbox->addDrawable( bbgeom );
-
-    // Disable lighting
-    bbox->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-
-    return bbox;
-}
-
-//------------------------------------------------------------------------------
-osg::Geode* getGeode( unsigned int numParticles )
-{
-    osg::Geode* geode = new osg::Geode;
+    osg::ref_ptr<osg::Group> scene = new osg::Group;
 
     //////////////
     // GEOMETRY //
     //////////////
+    osg::Geode* geode = new osg::Geode;
     osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
-    ptclGeom->setName("PARTICLES");
-    ptclGeom->addIdentifier( "PTCL_BUFFER" );
+    // Please note that computations will 
+    // use this name in order to identify 
+    // it as the particle buffer.
+    ptclGeom->setName("Particles");
+    ptclGeom->addIdentifier("PTCL_BUFFER");
 
-    // Initialize the Particles
     osg::Vec4Array* coords = new osg::Vec4Array(numParticles);
     for( unsigned int v=0; v<coords->size(); ++v )
         (*coords)[v].set(-1,-1,-1,1);
 
     ptclGeom->setVertexArray(coords);
     ptclGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS,0,coords->size()));
-
-    // Add particles
     geode->addDrawable( ptclGeom.get() );
+    scene->addChild( geode );
 
     ///////////
     // STATE //
     ///////////
-    // Increase point size within shader
     geode->getOrCreateStateSet()->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
-
-    osg::PointSprite* sprite = new osg::PointSprite();
-    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, sprite, osg::StateAttribute::ON);
-
+    geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite(), osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );
     geode->getOrCreateStateSet()->setMode( GL_ALPHA_TEST, GL_TRUE );
-
-    // Screen resolution for particle sprite
-    osg::Uniform* pixelsize = new osg::Uniform();
-    pixelsize->setName( "pixelsize" );
-    pixelsize->setType( osg::Uniform::FLOAT_VEC2 );
-    pixelsize->set( osg::Vec2(1.0f,50.0f) );
-    geode->getOrCreateStateSet()->addUniform( pixelsize );
+    geode->getOrCreateStateSet()->addUniform( new osg::Uniform( "pixelsize", osg::Vec2(1.0f,50.0f) ) );
     geode->setCullingActive( false );
 
     ////////////
@@ -206,43 +123,40 @@ osg::Geode* getGeode( unsigned int numParticles )
     program->addShader( new osg::Shader( osg::Shader::FRAGMENT, frgShader ) );
     geode->getOrCreateStateSet()->setAttribute(program);
 
-    return geode;
+    //////////
+    // BBOX //
+    //////////
+    osg::Geode* bbox = new osg::Geode;
+    bbox->addDrawable(new osg::ShapeDrawable(new osg::Box((bbmin + bbmax) * 0.5f,bbmax.x() - bbmin.x(),bbmax.y() - bbmin.y(),bbmax.z() - bbmin.z()),new osg::TessellationHints()));
+    bbox->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+    bbox->getOrCreateStateSet()->setAttribute( new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE));
+    scene->addChild( bbox );
+
+    return scene;
 }
 
 //------------------------------------------------------------------------------
 osg::ref_ptr<osgCompute::Program> setupProgram()
 {
+    // Execute the program during the update traversal (default) before the subgraph is handled. 
+    osgCompute::Program::ComputeOrder order = osgCompute::Program::UPDATE_BEFORECHILDREN;
+
     osg::ref_ptr<osgCompute::Program> programEmitter = new osgCuda::Program;
     programEmitter->setName( "emit particles program" );
+    programEmitter->setComputeOrder( order );
+    osgCompute::Computation* ptclEmitter = osgCompute::Computation::loadComputation("osgcuda_ptclemitter");
+    if( ptclEmitter )  programEmitter->addComputation( *ptclEmitter );
+
     osg::ref_ptr<osgCompute::Program> programTracer = new osgCuda::Program;
     programTracer->setName( "trace particles program" );
-
-    // Execute the program during the update traversal before the subgraph is handled. 
-    // This is the default behaviour.
-    osgCompute::Program::ComputeOrder order = osgCompute::Program::UPDATE_BEFORECHILDREN;
-    programEmitter->setComputeOrder( order );
     programTracer->setComputeOrder( order );
-
-    ////////////////////
-    // SETUP HIERACHY //
-    ////////////////////
     osgCompute::Computation* ptclTracer = osgCompute::Computation::loadComputation("osgcuda_ptcltracer");
-    if( ptclTracer )
-    {
-        ptclTracer->addIdentifier( "osgcuda_ptcltracer" );
-        programTracer->addComputation( *ptclTracer );
-    }
-
-    osgCompute::Computation* ptclEmitter = osgCompute::Computation::loadComputation("osgcuda_ptclemitter");
-    if( ptclEmitter )
-    {
-        ptclEmitter->addIdentifier( "osgcuda_ptclemitter" );
-        programEmitter->addComputation( *ptclEmitter );
-    }
+    if( ptclTracer )  programTracer->addComputation( *ptclTracer );
     programTracer->addChild( programEmitter );
 
     // Write this program to file
-    // osgDB::writeNodeFile( *programTracer, "tracedemo.osgt" );
+    // Please note that you have to copy the generated "tracedemo.osgt" manually to your data-path
+    //osgDB::writeNodeFile( *programTracer, "tracedemo.osgt" );
 
     return programTracer;
 }
@@ -254,7 +168,7 @@ osg::ref_ptr<osgCompute::Program> loadProgram()
 
     std::string dataFile = osgDB::findDataFile( "osgTraceDemo/scenes/tracedemo.osgt" );
     if( !dataFile.empty() )
-        program = dynamic_cast<osgCuda::Program*>( osgDB::readNodeFile( dataFile ) );
+        program = dynamic_cast<osgCompute::Program*>( osgDB::readNodeFile( dataFile ) );
 
     if( !program.valid() ) program = setupProgram();
     return program;
@@ -287,24 +201,22 @@ int main(int argc, char *argv[])
     /////////////////
     // SETUP SCENE //
     /////////////////
-    // Please note that loading need the modules to be
-    // INSTALLED first. Otherwise the serializer cannot
-    // find the respective modules.
-    osg::ref_ptr<osgCompute::Program> program = loadProgram();
-    
-    osg::Group* scene = new osg::Group;
-    scene->addChild( getBoundingBox( osg::Vec3(-1.f,-1.f,-1.f), osg::Vec3(1.f,1.f,1.f) ) );
-    scene->addChild( getGeode( 64000 ) );
-    scene->addChild( program );
-    viewer.setSceneData( scene );
+    // Please note for loading the computations 
+    // "osgcuda_ptclemitter" and "osgcuda_ptcltracer" 
+    // all packages must be INSTALLED first. 
+    osg::ref_ptr<osg::Group> root = new osg::Group;
+    root->addChild( loadProgram() );
+    root->addChild( setupScene(64000, osg::Vec3(-1.f,-1.f,-1.f), osg::Vec3(1.f,1.f,1.f)) );
+    viewer.setSceneData( root );
 
     //////////////////////
     // RESOURCE VISITOR //
     //////////////////////
     // The resource-visitor will collect and distribute all resources 
-    // of the scene.
+    // of the scene using the names of OpenGL resources as identifiers for modules.
+    // In this example "PTCL_BUFFER" is distributed to computations.
     osg::ref_ptr<osgCompute::ResourceVisitor> rv = new osgCompute::ResourceVisitor;
-    rv->apply( *scene );
+    rv->apply( *root );
 
     ///////////////
     // RUN SCENE //

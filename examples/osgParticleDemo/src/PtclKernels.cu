@@ -66,13 +66,12 @@ unsigned int thIdx()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void reseedKernel( float4* ptcls, 
+void emitKernel( unsigned int numPtcls,
+                   float4* ptcls, 
                    float* seeds, 
-                   unsigned int seedCount, 
                    unsigned int seedIdx, 
                    float3 bbmin, 
-                   float3 bbmax, 
-                   unsigned int numPtcls )
+                   float3 bbmax )
 {
     // Receive particle pos
     unsigned int ptclIdx = thIdx();
@@ -88,15 +87,15 @@ void reseedKernel( float4* ptcls,
             curPtcl.x > bbmax.x ||
             curPtcl.y > bbmax.y ||
             curPtcl.z > bbmax.z )
-            ptcls[ptclIdx] = seed( seeds, seedCount, seedIdx, ptclIdx, bbmin, bbmax );
+            ptcls[ptclIdx] = seed( seeds, numPtcls, seedIdx, ptclIdx, bbmin, bbmax );
     }
 }
 
 //------------------------------------------------------------------------------
 __global__
-void moveKernel( float4* ptcls, 
-                 float etime, 
-                 unsigned int numPtcls )
+void moveKernel( unsigned int numPtcls,
+                 float4* ptcls, 
+                 float etime )
 {
     unsigned int ptclIdx = thIdx();
     if( ptclIdx < numPtcls )
@@ -112,43 +111,36 @@ void moveKernel( float4* ptcls,
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 extern "C" __host__
-void reseed(unsigned int numBlocks, 
-            unsigned int numThreads, 
+void emit(unsigned int numPtcls, 
             void* ptcls, 
-            void* seeds, 
-            unsigned int seedCount, 
+            void* seeds,  
             unsigned int seedIdx, 
             float3 bbmin, 
-            float3 bbmax,
-            unsigned int numPtcls)
+            float3 bbmax )
 {
-    dim3 blocks( numBlocks, 1, 1 );
-    dim3 threads( numThreads, 1, 1 );
+    dim3 blocks( (numPtcls / 128)+1, 1, 1 );
+    dim3 threads( 128, 1, 1 );
 
-
-    reseedKernel<<< blocks, threads >>>(
+    emitKernel<<< blocks, threads >>>(
+        numPtcls,
         (float4*)ptcls,
         (float*)seeds,
-        seedCount,
         seedIdx,
         bbmin,
-        bbmax,
-        numPtcls );
+        bbmax );
 }
 
 //------------------------------------------------------------------------------
 extern "C" __host__
-void move( unsigned int numBlocks, 
-           unsigned int numThreads, 
+void move( unsigned int numPtcls, 
            void* ptcls, 
-           float etime,
-           unsigned int numPtcls )
+           float etime )
 {
-    dim3 blocks( numBlocks, 1, 1 );
-    dim3 threads( numThreads, 1, 1 );
+    dim3 blocks( (numPtcls / 128)+1, 1, 1 );
+    dim3 threads( 128, 1, 1 );
 
     moveKernel<<< blocks, threads >>>( 
+        numPtcls,
         (float4*)ptcls,
-        etime,
-        numPtcls );
+        etime );
 }

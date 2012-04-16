@@ -58,23 +58,20 @@ unsigned int thIdx()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void reseedKernel( float4* ptcls, float* seeds, unsigned int seedCount, unsigned int seedIdx, float3 bbmin, float3 bbmax, unsigned int numPtcls )
+void emitKernel(  unsigned int numPtcls, float4* ptcls, float* seeds, unsigned int seedIdx, float3 bbmin, float3 bbmax )
 {
-    // Receive particle pos
     unsigned int ptclIdx = thIdx();
     if( ptclIdx < numPtcls )
     {
         float4 curPtcl = ptcls[ptclIdx];
 
-        // Reseed Particles if they
-        // moved out of the bounding box
         if( curPtcl.x < bbmin.x ||
             curPtcl.y < bbmin.y ||
             curPtcl.z < bbmin.z ||
             curPtcl.x > bbmax.x ||
             curPtcl.y > bbmax.y ||
             curPtcl.z > bbmax.z )
-            ptcls[ptclIdx] = reseed( seeds, seedCount, seedIdx, ptclIdx, bbmin, bbmax );
+            ptcls[ptclIdx] = reseed( seeds, numPtcls, seedIdx, ptclIdx, bbmin, bbmax );
     }
 }
 
@@ -84,25 +81,21 @@ void reseedKernel( float4* ptcls, float* seeds, unsigned int seedCount, unsigned
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 extern "C" __host__
-void reseed(unsigned int numBlocks, 
-            unsigned int numThreads, 
+void emit(unsigned int numPtcls, 
             void* ptcls, 
             void* seeds, 
-            unsigned int seedCount, 
             unsigned int seedIdx, 
             float3 bbmin, 
-            float3 bbmax,
-            unsigned int numPtcls )
+            float3 bbmax )
 {
-    dim3 blocks( numBlocks, 1, 1 );
-    dim3 threads( numThreads, 1, 1 );
+    dim3 blocks( (numPtcls / 128)+1, 1, 1 );
+    dim3 threads( 128, 1, 1 );
 
-    reseedKernel<<< blocks, threads >>>(
+    emitKernel<<< blocks, threads >>>(
+        numPtcls,
         reinterpret_cast<float4*>(ptcls),
         reinterpret_cast<float*>(seeds),
-        seedCount,
         seedIdx,
         bbmin,
-        bbmax,
-        numPtcls);
+        bbmax);
 }

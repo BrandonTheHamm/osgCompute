@@ -122,8 +122,11 @@ void kSobelFilter( uchar4* trg )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------
 extern "C"
-void sobelFilter( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcBuffer, unsigned int srcBufferSize )
+void sobelFilter( unsigned int numPixelsX, unsigned int numPixelsY, void* trgBuffer, void* srcBuffer, unsigned int srcBufferSize )
 {
+    dim3 threads = dim3( 16, 16, 1 );
+    dim3 blocks = dim3( numPixelsX/16, numPixelsY/16, 1 );
+
     cudaBindTexture( 0, srcTex, srcBuffer, srcBufferSize ); 
     kSobelFilter<<< blocks, threads >>>( reinterpret_cast<uchar4*>(trgBuffer) );
 }

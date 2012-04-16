@@ -12,104 +12,77 @@
 *
 * The full license is in LICENSE file included with this distribution.
 */
-
 #include <iostream>
 #include <sstream>
 #include <osg/ArgumentParser>
-#include <osg/Texture2D>
-#include <osg/Vec4ub>
-#include <osg/BlendFunc>
 #include <osg/Geometry>
 #include <osg/MatrixTransform>
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
-#include <osgDB/FileUtils>
-#include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Program>
 #include <osgCuda/Geometry>
-#include <osgCuda/Memory>
+#include <osgCuda/Buffer>
 #include <osgCudaStats/Stats>
 
 
-//------------------------------------------------------------------------------
+/////////////////
+// COMPUTATION //
+/////////////////
 extern "C" void warp(
-          unsigned int numBlocks, 
-          unsigned int numThreads, 
-          void* vertices,
-          unsigned int numVertices,
-          void* initPos,
-          void* initNormals,
-          float simTime );
+                     unsigned int numVertices,
+                     void* vertices,
+                     void* initPos,
+                     void* initNormals,
+                     float simTime );
 
-/**
-*/
 class Warp : public osgCompute::Computation 
 {
 public:
-    Warp() : _numBlocks(0), _numThreads(0), _simulationTime(0), _initialized(false) {}
-
-    virtual void init()
-    {
-        if( !_vertices.valid() )
-        {
-            osg::notify( osg::WARN )
-                << "Warp::init(): buffer is missing."
-                << std::endl;
-
-            return;
-        }
-
-        _timer = new osgCuda::Timer;
-        _timer->setName( "Warp");
-
-        // We need to read the geometry information.
-        osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::GLMemory*)_vertices.get())->getAdapter() );
-        if( !geometry )
-            return;
-
-        // Create the static reference buffers
-        _initNormals= new osgCuda::Memory;
-        _initNormals->setName( "NORMALS" );
-        _initNormals->setElementSize( geometry->getNormalArray()->getDataSize() * sizeof(float) );
-        _initNormals->setDimension( 0, geometry->getNormalArray()->getNumElements() );
-        memcpy( _initNormals->map(osgCompute::MAP_HOST_TARGET),
-            geometry->getNormalArray()->getDataPointer(),
-            _initNormals->getByteSize( osgCompute::MAP_HOST ) );
-
-        _initPos = new osgCuda::Memory;
-        _initPos->setName( "POSITIONS" );
-        _initPos->setElementSize( geometry->getVertexArray()->getDataSize() * sizeof(float) );
-        _initPos->setDimension( 0, geometry->getVertexArray()->getNumElements() );
-        memcpy( _initPos->map(osgCompute::MAP_HOST_TARGET),
-            geometry->getVertexArray()->getDataPointer(),
-            _initPos->getByteSize( osgCompute::MAP_HOST ) );
-
-        /////////////////////////
-        // COMPUTE KERNEL SIZE //
-        /////////////////////////
-        _numBlocks = _vertices->getDimension(0) / 128;
-        if( _vertices->getDimension(0) % 128 != 0 )
-            _numBlocks+=1;
-
-        _numThreads = 128;
-        _simulationTime = 0.0f;
-        _initialized = true;
-    }
+    Warp() : _simulationTime(0) {}
 
     virtual void launch()
     {
-        if( !_initialized ) init();
+        if( !_vertices.valid() )
+            return;
+
+        if( !_initNormals.valid() || !_initPos.valid() )
+        {
+            // Create the original reference buffers
+            osgCuda::Geometry* geometry = dynamic_cast<osgCuda::Geometry*>( ((osgCompute::GLMemory*)_vertices.get())->getAdapter() );
+            if( !geometry )
+                return;
+
+            _initNormals= new osgCuda::Buffer;
+            _initNormals->setName( "NORMALS" );
+            _initNormals->setElementSize( geometry->getNormalArray()->getDataSize() * sizeof(float) );
+            _initNormals->setDimension( 0, geometry->getNormalArray()->getNumElements() );
+            memcpy( _initNormals->map(osgCompute::MAP_HOST_TARGET),
+                geometry->getNormalArray()->getDataPointer(),
+                _initNormals->getByteSize( osgCompute::MAP_HOST ) );
+
+            _initPos = new osgCuda::Buffer;
+            _initPos->setName( "POSITIONS" );
+            _initPos->setElementSize( geometry->getVertexArray()->getDataSize() * sizeof(float) );
+            _initPos->setDimension( 0, geometry->getVertexArray()->getNumElements() );
+            memcpy( _initPos->map(osgCompute::MAP_HOST_TARGET),
+                geometry->getVertexArray()->getDataPointer(),
+                _initPos->getByteSize( osgCompute::MAP_HOST ) );
+        }
+
+        if( !_timer.valid() )
+        {
+            _timer = new osgCuda::Timer;
+            _timer->setName( "Warp");
+        }
 
         _timer->start();
 
         _simulationTime += 0.01f;
 
-        warp(_numBlocks,
-            _numThreads,
-            _vertices->map(),			
-            _vertices->getNumElements(),
+        warp(_vertices->getNumElements(),
+            _vertices->map(),	
             _initPos->map(),
             _initNormals->map(),
             _simulationTime );
@@ -123,71 +96,74 @@ public:
 
     virtual void acceptResource( osgCompute::Resource& resource )
     {
-        if( resource.isIdentifiedBy( "WARP_GEOMETRY" ) )
-            _vertices = dynamic_cast<osgCompute::Memory*>( &resource );
+        // We expect only to receive one geometry object
+        _vertices = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
 private:
-    unsigned int                                      _numBlocks;
-    unsigned int                                      _numThreads;
     osg::ref_ptr<osgCuda::Timer>                      _timer;
     osg::ref_ptr<osgCompute::Memory>                  _vertices;
     osg::ref_ptr<osgCompute::Memory>				  _initNormals;
     osg::ref_ptr<osgCompute::Memory>				  _initPos;
     float                                             _simulationTime;
-    bool                                              _initialized;
 };
 
 //------------------------------------------------------------------------------
 osg::ref_ptr<osg::Node> setupScene()
 {
-	osg::ref_ptr<osgCompute::Program> program = new osgCuda::Program;
+    osg::ref_ptr<osgCompute::Program> program = new osgCuda::Program;
 
-	//////////////////
-	// COW OSG FILE //
-	//////////////////
-    osg::ref_ptr<osg::Group> cowModel = dynamic_cast<osg::Group*>( osgDB::readNodeFile("cow.osg") );
-    if( !cowModel.valid() ) return program;
+    //////////////////
+    // COW OSG FILE //
+    //////////////////
+    osg::ref_ptr<osg::Group> cowModel = dynamic_cast<osg::Group*>( osgDB::readNodeFile("osgGeometryDemo/scenes/cudacow.osgt") );
+    if( !cowModel.valid() )
+    {
+        // Build a osgCuda::Geometry
+        cowModel = dynamic_cast<osg::Group*>( osgDB::readNodeFile("cow.osg") );
+        if( !cowModel.valid() ) return program;
 
-	///////////////////////////////////
-	// TRANFORM TO OSGCUDA::GEOMETRY //
-	///////////////////////////////////
-	osg::ref_ptr<osg::Geode> cowGeode = dynamic_cast<osg::Geode*>( cowModel->getChild(0) );
-	osg::ref_ptr<osg::Geometry> cowGeometry = dynamic_cast<osg::Geometry*>( cowGeode->getDrawable(0) );
-	// Configure osgCuda::Geometry
-	osgCuda::Geometry* geometry = new osgCuda::Geometry;
-	geometry->setName("GEOMETRY");
-	geometry->setVertexArray( cowGeometry->getVertexArray() );
-	geometry->addPrimitiveSet( cowGeometry->getPrimitiveSet(0) );
-	geometry->setStateSet( cowGeometry->getOrCreateStateSet() );
-	geometry->setTexCoordArray( 0, cowGeometry->getTexCoordArray(0) );
-	geometry->setNormalArray( cowGeometry->getNormalArray() );
-	geometry->setNormalBinding( cowGeometry->getNormalBinding() );
-	geometry->addIdentifier( "WARP_GEOMETRY");
-	// Remove original osg::Geometry
-	cowGeode->replaceDrawable( cowGeometry, geometry );
-	cowGeometry = NULL;
+        osg::ref_ptr<osg::Geode> cowGeode = dynamic_cast<osg::Geode*>( cowModel->getChild(0) );
+        osg::ref_ptr<osg::Geometry> cowGeometry = dynamic_cast<osg::Geometry*>( cowGeode->getDrawable(0) );
+        // Make an identical copy in order to replace osg::Geometry by a osgCuda::Geometry
+        osgCuda::Geometry* geometry = new osgCuda::Geometry;
+        geometry->setName("GEOMETRY");
+        geometry->setVertexArray( cowGeometry->getVertexArray() );
+        geometry->addPrimitiveSet( cowGeometry->getPrimitiveSet(0) );
+        geometry->setStateSet( cowGeometry->getOrCreateStateSet() );
+        geometry->setTexCoordArray( 0, cowGeometry->getTexCoordArray(0) );
+        geometry->setNormalArray( cowGeometry->getNormalArray() );
+        geometry->setNormalBinding( cowGeometry->getNormalBinding() );
+        cowGeode->replaceDrawable( cowGeometry, geometry );
+        cowGeometry = NULL;
 
-	///////////////////////
-	// SETUP COMPUTATION //
-	///////////////////////
-	// Rotate the model automatically 
-	osg::ref_ptr<osg::MatrixTransform> animTransform = new osg::MatrixTransform;
-	osg::NodeCallback* nc = new osg::AnimationPathCallback(
-		animTransform->getBound().center(),osg::Vec3(0.0f,0.0f,1.0f),osg::inDegrees(45.0f));
-	animTransform->setUpdateCallback(nc);
-	animTransform->addChild( cowModel );
+        // Uncomment the following line to write a osgCuda::Geometry of the cow model!
+        // Please note that you have to copy the generated  "cudacow.osgt" manually to your data-path
+        // in order to load it afterwards.
+        //osgDB::writeNodeFile( *cowModel, "cudacow.osgt" );
+    }
 
-	program->setComputeOrder( osgCompute::Program::UPDATE_BEFORECHILDREN );
-	program->addChild( animTransform );
+    osg::ref_ptr<osg::Geode> geode = dynamic_cast<osg::Geode*>( cowModel->getChild(0) );
+    osg::ref_ptr<osgCuda::Geometry> geometry = dynamic_cast<osgCuda::Geometry*>( geode->getDrawable(0) );
 
-	//////////////////
-	// SETUP MODULE //
-	//////////////////
+    ///////////////////////
+    // SETUP COMPUTATION //
+    ///////////////////////
+    osg::ref_ptr<osg::MatrixTransform> animTransform = new osg::MatrixTransform;
+    osg::NodeCallback* nc = new osg::AnimationPathCallback(
+        animTransform->getBound().center(),osg::Vec3(0.0f,0.0f,1.0f),osg::inDegrees(45.0f));
+    animTransform->setUpdateCallback(nc);
+    animTransform->addChild( cowModel );
+
+    program->setComputeOrder( osgCompute::Program::UPDATE_BEFORECHILDREN );
+    program->addChild( animTransform );
+
+    //////////////////
+    // SETUP MODULE //
+    //////////////////
     osg::ref_ptr<osgCompute::Computation> warpComputation = new Warp;
     warpComputation->setLibraryName("osgcuda_warp");
-	warpComputation->addIdentifier("osgcuda_warp");
-	program->addComputation( *warpComputation );
+    program->addComputation( *warpComputation );
     program->addResource( *geometry->getMemory() );
     return program;
 }
@@ -215,9 +191,9 @@ int main(int argc, char *argv[])
     // it to the CUDA context of the thread.
     osgCuda::setupOsgCudaAndViewer( viewer );
 
-	/////////////////
-	// SETUP SCENE //
-	/////////////////
+    /////////////////
+    // SETUP SCENE //
+    /////////////////
     viewer.setSceneData( setupScene() );
     return viewer.run();
 }

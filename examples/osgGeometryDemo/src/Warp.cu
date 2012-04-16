@@ -43,7 +43,7 @@ float3 operator+(float3 a, float3 b)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void kWarp( float3* vertices, unsigned int numVertices, float3* initPos, float3* initNormals, float simTime )
+void kWarp( unsigned int numVertices, float3* vertices, float3* initPos, float3* initNormals, float simTime )
 {
     unsigned int vertIdx = thIdx();
     if( vertIdx >= numVertices )
@@ -64,20 +64,20 @@ void kWarp( float3* vertices, unsigned int numVertices, float3* initPos, float3*
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 extern "C" __host__
-void warp(unsigned int numBlocks, 
-          unsigned int numThreads, 
+void warp(unsigned int numVertices,
           void* vertices,
-          unsigned int numVertices,
           void* initPos,
           void* initNormals,
           float simTime )
 {
-    dim3 blocks( numBlocks, 1, 1 );
-    dim3 threads( numThreads, 1, 1 );
+    dim3 blocks( numVertices/128, 1, 1 );
+    dim3 threads( 128, 1, 1 );
+    if( numVertices % 128 != 0 )
+            threads.x += 1;
 
     kWarp<<< blocks, threads >>>(
-        reinterpret_cast<float3*>(vertices),
         numVertices,
+        reinterpret_cast<float3*>(vertices),
         reinterpret_cast<float3*>(initPos),
         reinterpret_cast<float3*>(initNormals),
         simTime );

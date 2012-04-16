@@ -19,9 +19,8 @@ texture<uchar4, 2, cudaReadModeNormalizedFloat> swapTex;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------
 __global__ 
-void swapKernel( float4* trg, unsigned int trgPitch, unsigned int imageWidth, unsigned int imageHeight ) 
+void swapKernel( unsigned int imageWidth, unsigned int imageHeight, float4* trg, unsigned int trgPitch ) 
 {
-
     // compute thread dimension
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -50,8 +49,17 @@ void swapKernel( float4* trg, unsigned int trgPitch, unsigned int imageWidth, un
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------
 extern "C"
-void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcArray, unsigned int trgPitch, unsigned int imageWidth, unsigned int imageHeight )
+void swap( unsigned int imageWidth, unsigned int imageHeight, void* srcArray, void* trgBuffer, unsigned int trgPitch )
 {
+    dim3 blocks = dim3(imageWidth / 16, imageHeight / 16, 1 ); 
+    dim3 threads = dim3( 16, 16, 1 );
+
+    if( imageWidth % 16 != 0 )
+        blocks.x++;
+    if( imageHeight % 16 != 0 )
+        blocks.y++;
+
+
     // set texture parameters
     swapTex.normalized = true;                      // normalized texture coordinates (element of [0:1])
     swapTex.filterMode = cudaFilterModeLinear;      // bilinear interpolation 
@@ -62,5 +70,5 @@ void swap( const dim3& blocks, const dim3& threads, void* trgBuffer, void* srcAr
     cudaBindTextureToArray( swapTex, reinterpret_cast<cudaArray*>(srcArray) );
 
     // call kernel
-    swapKernel<<< blocks, threads >>>( reinterpret_cast<float4*>(trgBuffer), trgPitch, imageWidth, imageHeight );
+    swapKernel<<< blocks, threads >>>( imageWidth, imageHeight, reinterpret_cast<float4*>(trgBuffer), trgPitch );
 }

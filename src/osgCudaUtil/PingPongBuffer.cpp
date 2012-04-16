@@ -1,5 +1,5 @@
 #include <osg/Notify>
-#include <osgCuda/Memory>
+#include <osgCuda/Buffer>
 #include <osgCudaUtil/PingPongBuffer>
 
 namespace osgCuda
@@ -68,7 +68,7 @@ namespace osgCuda
             // on this stack entry
             if( !_bufferStack.at(b).valid() )
             {
-                osg::ref_ptr<osgCuda::Memory> newBuffer = new osgCuda::Memory;
+                osg::ref_ptr<osgCuda::Buffer> newBuffer = new osgCuda::Buffer;
                 newBuffer->setElementSize( osgCompute::Memory::getElementSize() );
                 for( unsigned int d=0; d<getNumDimensions(); ++d )
                     newBuffer->setDimension(d,getDimension(d));

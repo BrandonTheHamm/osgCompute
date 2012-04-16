@@ -67,7 +67,7 @@ inline float4 vortexField( float4 pos )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 __global__
-void traceKernel( float4* ptcls, float etime, unsigned int numPtcls )
+void traceKernel( unsigned int numPtcls, float4* ptcls, float etime )
 {
     unsigned int ptclIdx = thIdx();
     if( ptclIdx < numPtcls )
@@ -98,10 +98,10 @@ void traceKernel( float4* ptcls, float etime, unsigned int numPtcls )
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 extern "C" __host__
-void trace( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime, unsigned int numPtcls )
+void trace( unsigned int numPtcls,  void* ptcls, float etime )
 {
-    dim3 blocks( numBlocks, 1, 1 );
-    dim3 threads( numThreads, 1, 1 );
+    dim3 blocks( (numPtcls/128)+1, 1, 1 );
+    dim3 threads( 128, 1, 1 );
 
-    traceKernel<<< blocks, threads >>>( (float4*) ptcls,etime, numPtcls);
+    traceKernel<<< blocks, threads >>>( numPtcls, (float4*) ptcls, etime );
 }

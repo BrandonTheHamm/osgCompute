@@ -250,26 +250,6 @@ namespace osgCompute
         }
     }
 
-
-
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    bool s_deviceReady = false;
-
-    //------------------------------------------------------------------------------
-    bool isDeviceReady()
-    {
-        return s_deviceReady;
-    }
-
-    //------------------------------------------------------------------------------
-    void setDeviceReady()
-    {
-        s_deviceReady = true;
-    }
-
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -289,55 +269,19 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Program::accept(osg::NodeVisitor& nv) 
     { 
-        if( !isDeviceReady() )
-            checkDevice();
-
         if( nv.validNodeMask(*this) ) 
         {  
             nv.pushOntoNodePath(this);
 
             osgUtil::CullVisitor* cv = dynamic_cast<osgUtil::CullVisitor*>( &nv );
-            osgUtil::GLObjectsVisitor* ov = dynamic_cast<osgUtil::GLObjectsVisitor*>( &nv );
             if( cv != NULL )
             {
-                if( GLMemory::getContext() == NULL )
-                {
-                    setupContext( *cv->getState() );                    
-                    // Setup state
-                    if( !isDeviceReady() ) 
-                    {               
-                        osg::notify(osg::FATAL) 
-                            << getName() << " [Program::accept(GLObjectsVisitor)]: No valid Program Device found."
-                            << std::endl;
-
-                        return;
-                    }
-                }
-
                 if( _enabled && (_computeOrder & OSGCOMPUTE_RENDER) == OSGCOMPUTE_RENDER )
                     addBin( *cv );
                 else if( (_computeOrder & OSGCOMPUTE_NORENDER) == OSGCOMPUTE_NORENDER )
 					return; // Do not process the childs during rendering
 				else
                     nv.apply(*this);
-            }
-            else if( ov != NULL )
-            {
-                if( GLMemory::getContext() == NULL )
-                {
-                    setupContext( *ov->getState() );                
-                    // Setup state
-                    if( !isDeviceReady() ) 
-                    {               
-                        osg::notify(osg::FATAL) 
-                            << getName() << " [Program::accept(GLObjectsVisitor)]: No valid Program Device found."
-                            << std::endl;
-
-                        return;
-                    }
-                }
-
-                nv.apply( *this );
             }
             else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
             {
@@ -790,39 +734,6 @@ namespace osgCompute
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    void Program::checkDevice()
-    {
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::setupContext( osg::State& state )
-    {
-        if( !state.getGraphicsContext() )
-        {
-            osg::notify(osg::WARN)  << "Program::setupContext() for \""
-                << getName()<<"\": GLObjectsVisitor must provide a valid graphics context."
-                << std::endl;
-
-            return;
-        }
-
-        if( NULL != GLMemory::getContext() && 
-            GLMemory::getContext()->getState()->getContextID() != state.getContextID() )
-        {
-            osg::notify(osg::WARN)  << "Program::setupContext() for \""
-                << getName()<<"\": GLObjectsVisitor can handle only a single context."
-                << " However multiple contexts are detected."
-                << " Please make shure to share a program context by several windows."
-                << std::endl;
-
-            return;
-        }
-
-        if( GLMemory::getContext() == NULL )
-            GLMemory::bindToContext( *state.getGraphicsContext() );
-    }
-
-    //------------------------------------------------------------------------------
     void Program::addBin( osgUtil::CullVisitor& cv )
     {
         if( !cv.getState() )
@@ -930,6 +841,4 @@ namespace osgCompute
             }
         }
     }  
-
-
 } 

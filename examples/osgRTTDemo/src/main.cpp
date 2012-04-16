@@ -30,26 +30,18 @@
 #include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Program>
 #include <osgCompute/Callback>
-#include <osgCuda/Memory>
+#include <osgCuda/Buffer>
 #include <osgCuda/Texture>
 #include <osgCudaStats/Stats>
 
-#include <cuda_runtime.h>
-
-//-------------------------------------------------------------------------
-// The filter is implemented in TexFilter.cu
 extern "C" void sobelFilter( 
-                   const dim3& blocks, 
-                   const dim3& threads, 
-                   void* trgBuffer, 
-                   void* srcBuffer, 
-                   unsigned int srcBufferSize );
+                            unsigned int numPixelsX, 
+                            unsigned int numPixelsY, 
+                            void* trgBuffer, 
+                            void* srcBuffer, 
+                            unsigned int srcBufferSize );
 
-/** This texture filter launches a sobel filter on the rendered texture of a camera.
-    It is executed directly after the camera during the rendering traversal. The 
-    result of this computation is written into a target texture which is rendered 
-    via a screen aligned quad.
-*/
+
 class TexFilter : public osgCompute::Computation 
 {
 public:
@@ -67,17 +59,15 @@ public:
 
         _timer->start();
 
-        dim3 threads = dim3( 16, 16, 1 );
-        dim3 blocks = dim3( 
-            _trgBuffer->getDimension(0)/16, 
-            _trgBuffer->getDimension(1)/16, 1 );
-
-
-        sobelFilter(  blocks, 
-                      threads,
-                      _trgBuffer->map( osgCompute::MAP_DEVICE_TARGET ),
-                      _srcBuffer->map( osgCompute::MAP_DEVICE_SOURCE ),
-                      _srcBuffer->getByteSize( osgCompute::MAP_DEVICE ) );
+        //This texture filter launches a sobel filter on the rendered texture of a camera.
+        //It is executed directly after the camera during the rendering traversal. The 
+        //result of this computation is written into a target texture which is rendered 
+        //via a screen aligned quad.
+        sobelFilter(  _trgBuffer->getDimension(0), 
+            _trgBuffer->getDimension(1),
+            _trgBuffer->map( osgCompute::MAP_DEVICE_TARGET ),
+            _srcBuffer->map( osgCompute::MAP_DEVICE_SOURCE ),
+            _srcBuffer->getByteSize( osgCompute::MAP_DEVICE ) );
 
 
         _timer->stop();
@@ -86,9 +76,9 @@ public:
     //------------------------------------------------------------------------------
     virtual void acceptResource( osgCompute::Resource& resource )
     {
-        if( resource.isIdentifiedBy( "TRG_BUFFER" ) )
+        if( resource.isIdentifiedBy("TRG_BUFFER")  )
             _trgBuffer = dynamic_cast<osgCompute::Memory*>( &resource );
-        if( resource.isIdentifiedBy( "SRC_BUFFER" ) )
+        if( resource.isIdentifiedBy("SRC_BUFFER")  )
             _srcBuffer = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
@@ -113,13 +103,11 @@ osg::ref_ptr<osg::Node> setupScene()
             // If not loaded try use default model instead.
             osg::TessellationHints* hints = new osg::TessellationHints;
             hints->setDetailRatio(0.5f);
-            
+
             osg::ref_ptr<osg::Geode> geode = new osg::Geode;
             geode->addDrawable( new osg::ShapeDrawable(new osg::Cone(osg::Vec3(4.0f,0.0f,0.0f),0.8f,1.0f),hints) );
             loadedModel = geode;
         }
-
-        // Create a transform to spin the model.
         loadedModelTransform->addChild(loadedModel);
 
         // Rotate the model automatically 
@@ -130,6 +118,8 @@ osg::ref_ptr<osg::Node> setupScene()
     //////////////////////////////
     // CREATE TEXTURE RESOURCES //
     //////////////////////////////
+    // Please note that the filter is
+    // implemented only for multiple 16 resolutions in x and y.
     osg::ref_ptr< osgCuda::Texture2D > rttTexture = new osgCuda::Texture2D;
     {
         rttTexture->setTextureSize(512, 512);
@@ -138,7 +128,7 @@ osg::ref_ptr<osg::Node> setupScene()
         rttTexture->setName( "srcBuffer" );
         rttTexture->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR);
         rttTexture->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
-        rttTexture->addIdentifier( "SRC_BUFFER" );
+        rttTexture->addIdentifier("SRC_BUFFER");
     }
 
     osg::ref_ptr< osgCuda::Texture2D > targetTexture = new osgCuda::Texture2D;
@@ -148,8 +138,8 @@ osg::ref_ptr<osg::Node> setupScene()
         targetTexture->setSourceType( GL_UNSIGNED_BYTE );
         targetTexture->setName( "trgBuffer" );
         targetTexture->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR);
-        targetTexture->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::NEAREST);  
-        targetTexture->addIdentifier( "TRG_BUFFER" );
+        targetTexture->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::NEAREST);
+        targetTexture->addIdentifier("TRG_BUFFER");
     }
 
     ///////////////////////////////////
@@ -176,38 +166,26 @@ osg::ref_ptr<osg::Node> setupScene()
         znear *= 0.9f;
         zfar *= 1.1f;
 
-        // set up projection.
         rttCamera->setProjectionMatrixAsFrustum(-proj_right,proj_right,-proj_top,proj_top,znear,zfar);
-
-        // set view
         rttCamera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
         rttCamera->setViewMatrixAsLookAt(bs.center()-osg::Vec3(0.0f,2.0f,0.0f)*bs.radius(),bs.center(),osg::Vec3(0.0f,0.0f,1.0f));
-
-        // set viewport
         rttCamera->setViewport(0,0,rttTexture->getTextureWidth(),rttTexture->getTextureHeight());
-
         // set the camera to render before the main camera.
         rttCamera->setRenderOrder(osg::Camera::PRE_RENDER);
-
-        // tell the camera to use OpenGL frame buffer object where supported.
         rttCamera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
-
-        // attach the texture and use it as the color buffer.
         rttCamera->attach(osg::Camera::COLOR_BUFFER, rttTexture, 0, 0, false, 0, 0 );
-
-        // add subgraph to render
         rttCamera->addChild(loadedModelTransform);
 
         // Add a GLMemoryTargetCallback to the camera in order to inform the render target 
-        // when the camera renders into it.
+        // when the camera writes into it.
         osg::ref_ptr<osgCompute::GLMemoryTargetCallback> rttCallback = new osgCompute::GLMemoryTargetCallback;
         rttCallback->observe( rttTexture->getMemory() );
         rttCamera->setPreDrawCallback( rttCallback );
     }  
 
-    //////////////////////////////
-    // SETUP OSGCOMPUTE PROGRAM //
-    //////////////////////////////
+    ////////////////////////
+    // OSGCOMPUTE PROGRAM //
+    ////////////////////////
     // Create a program. Please note that you do not need
     // to execute your CUDA kernels in programs only. However,
     // in order to get the OpenGL rendering correctly scheduled 
@@ -231,10 +209,9 @@ osg::ref_ptr<osg::Node> setupScene()
         program->addChild( rttCamera );
     }
 
-    ////////////////////////
-    // ILLUSTRATIVE SCENE //
-    ////////////////////////
-    // Translate the original model - just for illustration purpose
+    ////////////////////
+    // CAPTURED MODEL //
+    ////////////////////
     osg::ref_ptr<osg::MatrixTransform> sceneTransform = new osg::MatrixTransform;
     {
         osg::Matrix m;
@@ -254,9 +231,9 @@ osg::ref_ptr<osg::Node> setupScene()
         resultQuad->getOrCreateStateSet()->setTextureAttributeAndModes( 0, targetTexture.get(), osg::StateAttribute::ON );
     }
 
-    ////////////////
-    // TEST SCENE //
-    ////////////////
+    /////////////////
+    // SCENE GRAPH //
+    /////////////////
     osg::ref_ptr<osg::Group> scene = new osg::Group;
     {
         scene->addChild( sceneTransform );

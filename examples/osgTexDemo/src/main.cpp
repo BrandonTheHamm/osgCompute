@@ -28,35 +28,25 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osgCuda/Program>
-#include <osgCuda/Memory>
+#include <osgCuda/Buffer>
 #include <osgCuda/Texture>
 #include <osgCudaStats/Stats>
 
 //------------------------------------------------------------------------------
 extern "C" void swap( 
-                 const dim3& blocks, 
-                 const dim3& threads, 
-                 void* trgBuffer, 
-                 void* srcArray, 
-                 unsigned int trgPitch, 
-                 unsigned int imageWidth,
-                 unsigned int imageHeight );
+                     unsigned int imageWidth,
+                     unsigned int imageHeight,
+                     void* srcArray, 
+                     void* trgBuffer, 
+                     unsigned int trgPitch );
 
-/**
-*/
 class TexFilter : public osgCompute::Computation 
 {
 public:
     virtual void launch()
     {
         if( !_trgBuffer || !_srcArray )
-        {
-            osg::notify( osg::WARN ) 
-                << "TexFilter::launch(): buffers are missing."
-                << std::endl;
-
             return;
-        }
 
         if( !_timer.valid() )
         {
@@ -66,35 +56,21 @@ public:
 
         _timer->start();
 
-        unsigned int numReqBlocksWidth = 0, numReqBlocksHeight = 0;
-        if( _trgBuffer->getDimension(0) % 16 == 0) 
-            numReqBlocksWidth = _trgBuffer->getDimension(0) / 16;
-        else
-            numReqBlocksWidth = _trgBuffer->getDimension(1) / 16 + 1;
-        if( _trgBuffer->getDimension(1) % 16 == 0) 
-            numReqBlocksHeight = _trgBuffer->getDimension(1) / 16;
-        else
-            numReqBlocksHeight = _trgBuffer->getDimension(1) / 16 + 1;
-
         swap(  
-            dim3(numReqBlocksWidth, numReqBlocksHeight, 1 ), 
-            dim3( 16, 16, 1 ),
-            _trgBuffer->map(),
-            _srcArray->map( osgCompute::MAP_DEVICE_ARRAY ),
-            _trgBuffer->getPitch(),
             _trgBuffer->getDimension(0),
-            _trgBuffer->getDimension(1) );
-
-        _trgBuffer->getDimension(0);
+            _trgBuffer->getDimension(1),
+            _srcArray->map( osgCompute::MAP_DEVICE_ARRAY ),
+            _trgBuffer->map( osgCompute::MAP_DEVICE_TARGET ),
+            _trgBuffer->getPitch() );
 
         _timer->stop();
     }
 
     virtual void acceptResource( osgCompute::Resource& resource )
     {
-        if( resource.isIdentifiedBy( "TRG_BUFFER" ) )
+        if( resource.isIdentifiedBy("TRG_BUFFER") )
             _trgBuffer = dynamic_cast<osgCompute::Memory*>( &resource );
-        if( resource.isIdentifiedBy( "SRC_ARRAY" ) )
+        if( resource.isIdentifiedBy("SRC_ARRAY") )
             _srcArray = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
@@ -105,28 +81,10 @@ private:
 };
 
 //------------------------------------------------------------------------------
-osg::Geode* getTexturedQuad( osg::Texture2D& trgTexture )
+osg::ref_ptr<osg::Node> setupScene()
 {
-    osg::Geode* geode = new osg::Geode;
-    osg::Vec3 llCorner = osg::Vec3(-0.5,0,-0.5);
-    osg::Vec3 width = osg::Vec3(1,0,0);
-    osg::Vec3 height = osg::Vec3(0,0,1);
+    osg::ref_ptr<osg::Group> scene = new osg::Group;
 
-    //////////
-    // QUAD //
-    //////////
-    osg::ref_ptr<osg::Geometry> geom = osg::createTexturedQuadGeometry( llCorner, width, height );
-    geode->addDrawable( geom );
-    geode->getOrCreateStateSet()->setTextureAttributeAndModes( 0, &trgTexture, osg::StateAttribute::ON );
-    geode->getOrCreateStateSet()->addUniform( 
-        new osg::Uniform( "texImage", 0 ) );
-
-    return geode;
-}
-
-//------------------------------------------------------------------------------
-osg::Node* setupScene()
-{
     ///////////////
     // RESOURCES //
     ///////////////
@@ -146,22 +104,22 @@ osg::Node* setupScene()
     srcDesc.z = 8;
     srcDesc.w = 8;
 
-    osg::ref_ptr<osgCuda::Memory> srcArray = new osgCuda::Memory;
-    srcArray->setName( "SOURCE TEXTURE" );
+    osg::ref_ptr<osgCuda::Buffer> srcArray = new osgCuda::Buffer;
+    srcArray->setName( "Source Texture" );
+    srcArray->addIdentifier( "SRC_ARRAY" );
     srcArray->setElementSize( sizeof(osg::Vec4ub) );
     srcArray->setChannelFormatDesc( srcDesc );
     srcArray->setDimension( 0, srcImage->s() );
     srcArray->setDimension( 1, srcImage->t() );
     srcArray->setImage( srcImage );
-    // Mark this buffer as the source array of the module
-    srcArray->addIdentifier( "SRC_ARRAY" );
 
     osg::ref_ptr< osgCuda::Texture2D > trgTexture = new osgCuda::Texture2D;  
-    trgTexture->setName( "TARGET TEXTURE" );
+    trgTexture->setName( "Target Texture" );
+    trgTexture->addIdentifier( "TRG_BUFFER" );
     // Note: GL_RGBA8 Bit format is not yet supported by CUDA, use GL_RGBA8UI_EXT instead.
     // GL_RGBA8UI_EXT requires the additional work of scaling the fragment shader
     // output from 0-1 to 0-255. 	
-	trgTexture->setInternalFormat( GL_RGBA32F_ARB );
+    trgTexture->setInternalFormat( GL_RGBA32F_ARB );
     trgTexture->setSourceFormat( GL_RGBA );
     trgTexture->setSourceType( GL_FLOAT );
     // in case you choose a texture size which is not a multiple of the alignment restriction CUDA 
@@ -169,8 +127,6 @@ osg::Node* setupScene()
     // actual pitch (bytes of a single row) call osgCompute::Memory::getPitch()
     trgTexture->setTextureWidth( srcImage->s());
     trgTexture->setTextureHeight( srcImage->t() );
-    // Mark this buffer as the target buffer of the module
-    trgTexture->addIdentifier( "TRG_BUFFER" );
 
     ///////////////////////
     // COMPUTATION SETUP //
@@ -185,11 +141,17 @@ osg::Node* setupScene()
     program->addComputation( *texFilter );
     program->addResource( *srcArray );
     program->addResource( *trgTexture->getMemory() );
+    scene->addChild( program );
 
-    osg::Group* group = new osg::Group;
-    group->addChild( program );
-    group->addChild( getTexturedQuad( *trgTexture ) );
-    return group;
+    /////////////////
+    // RESULT QUAD //
+    /////////////////
+    osg::Geode* quad = new osg::Geode;
+    quad->addDrawable( osg::createTexturedQuadGeometry( osg::Vec3(-0.5,0,-0.5), osg::Vec3(1,0,0), osg::Vec3(0,0,1) ) );
+    quad->getOrCreateStateSet()->setTextureAttributeAndModes( 0, trgTexture, osg::StateAttribute::ON );
+    scene->addChild( quad );
+
+    return scene;
 }
 
 //------------------------------------------------------------------------------

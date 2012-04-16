@@ -36,7 +36,7 @@ static bool readComputeOrder( osgDB::InputStream& is, osgCuda::Program& program 
 //------------------------------------------------------------------------------
 static bool writeComputeOrder( osgDB::OutputStream& os, const osgCuda::Program& program )
 {
-    writeOrderValue( os, (int)program.getComputeOrderNum() );
+    writeOrderValue( os, (int)program.getComputeOrder() );
     os << program.getComputeOrderNum() << std::endl;
     return true;
 }
@@ -192,20 +192,6 @@ REGISTER_OBJECT_WRAPPER(osgCuda_Program,
 						osgCuda::Program,
 						"osg::Object osg::Node osg::Group osgCuda::Program" )
 {
-	//BEGIN_ENUM_SERIALIZER( ComputeOrder, UPDATE_BEFORECHILDREN ) ;
-	//	ADD_ENUM_VALUE( UPDATE_AFTERCHILDREN );
-	//	ADD_ENUM_VALUE( UPDATE_BEFORECHILDREN );
-	//	ADD_ENUM_VALUE( UPDATE_AFTERCHILDREN_NORENDER );
-	//	ADD_ENUM_VALUE( UPDATE_BEFORECHILDREN_NORENDER );
-	//	ADD_ENUM_VALUE( PRERENDER_BEFORECHILDREN );
-	//	ADD_ENUM_VALUE( PRERENDER_AFTERCHILDREN );
-	//	ADD_ENUM_VALUE( POSTRENDER_AFTERCHILDREN );
-	//	ADD_ENUM_VALUE( POSTRENDER_BEFORECHILDREN );
-	//	ADD_ENUM_VALUE( PRERENDER_NOCHILDREN );
-	//	ADD_ENUM_VALUE( POSTRENDER_NOCHILDREN );
-	//END_ENUM_SERIALIZER();
-
-
     ADD_USER_SERIALIZER( ComputeOrder );  // _computeOrder & _computeOrderNum
 	ADD_USER_SERIALIZER( Computations );
 	ADD_USER_SERIALIZER( Resources );

@@ -24,13 +24,10 @@
 
 //------------------------------------------------------------------------------
 extern "C"
-void trace( unsigned int numBlocks, unsigned int numThreads, void* ptcls, float etime, unsigned int numPtcls );
+void trace( unsigned int numPtcls, void* ptcls, float etime );
 
 namespace PtclDemo
 {
-    //////////////////////////////////////////////////////////////////////////////////////////////////
-    // DECLARATION ///////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////
     class PtclTracer : public osgCompute::Computation 
     {
     public:
@@ -42,9 +39,6 @@ namespace PtclDemo
         osg::ref_ptr<osgCompute::Memory>    _ptcls;
     };
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS //////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------  
     void PtclTracer::launch()
     {
@@ -59,18 +53,10 @@ namespace PtclDemo
 
         _timer->start();
 
-        ////////////////////
-        // MOVE PARTICLES //
-        ////////////////////
-        unsigned int numBlocks = (_ptcls->getNumElements() / 128)+1;
-        unsigned int numThreads = 128;
-
         trace( 
-            numBlocks, 
-            numThreads, 
+            _ptcls->getNumElements(), 
             _ptcls->map( osgCompute::MAP_DEVICE_TARGET ), 
-            0.009f,
-            _ptcls->getNumElements() );
+            0.009f );
 
         _timer->stop();
     }

@@ -369,15 +369,6 @@ namespace osgCompute
     typedef std::list< ResourceHandle >::iterator					ResourceHandleListItr;
     typedef std::list< ResourceHandle >::const_iterator				ResourceHandleListCnstItr;
 
-
-    /** Returns true if the compute device is setup.
-    */
-    bool LIBRARY_EXPORT isDeviceReady();
-
-    /** Set compute device ready
-    */
-    void LIBRARY_EXPORT setDeviceReady();
-
     //! Base class for computation and resource management.
     /**
 	A program is a container where you can add your 
@@ -748,15 +739,10 @@ namespace osgCompute
         */
         virtual ~Program() {}
 
-        /** Method checks for valid compute device.
-        */
-        virtual void checkDevice();
-
 
     private:
         void clearLocal();
 
-        void setupContext( osg::State& state );
         void launch();
         void addBin( osgUtil::CullVisitor& cv );
 
@@ -766,7 +752,6 @@ namespace osgCompute
         mutable ResourceHandleList              _resources;
         ComputeOrder                        	_computeOrder;
         int                                     _computeOrderNum;
-        static bool								s_deviceReady;
 
         /** Copy constructor. This constructor should not be called.*/
         Program( const Program& ) {}

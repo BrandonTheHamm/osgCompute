@@ -45,7 +45,7 @@ SET(HEADER_PATH ${PROJECT_SOURCE_DIR}/include/${LIB_NAME})
 
 # collect all headers
 SET(TARGET_H
-	${HEADER_PATH}/Memory
+	${HEADER_PATH}/Buffer
 	${HEADER_PATH}/Export
 	${HEADER_PATH}/Geometry
 	${HEADER_PATH}/Program
@@ -55,7 +55,7 @@ SET(TARGET_H
 
 # collect the sources
 SET(TARGET_SRC
-	Memory.cpp
+	Buffer.cpp
 	Geometry.cpp
 	Texture.cpp
 	Program.cpp

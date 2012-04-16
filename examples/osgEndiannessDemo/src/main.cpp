@@ -12,17 +12,13 @@
 *
 * The full license is in LICENSE file included with this distribution.
 */
-#include <memory.h>
 #include <osg/Notify>
-#include <osgCuda/Memory>
+#include <osgCuda/Buffer>
 #include <osgCompute/Computation>
 #include <cuda_runtime.h>
 
-//------------------------------------------------------------------------------
-extern "C" void swapEndianness( unsigned int numBlocks, unsigned int numThreads, void* bytes );
+extern "C" void swapEndianness( unsigned int numBytes, void* bytes );
 
-/**
-*/
 class SwapComputation : public osgCompute::Computation
 {
 public:
@@ -31,19 +27,16 @@ public:
         if( !_buffer.valid() )
             return;
 
-        unsigned int numThreads = 1;
-        unsigned int numBlocks = _buffer->getDimension(0) / numThreads;
-        swapEndianness( numBlocks, numThreads, _buffer->map( osgCompute::MAP_DEVICE_TARGET ) );
+        swapEndianness( _buffer->getNumElements(), _buffer->map( osgCompute::MAP_DEVICE_TARGET ) );
     }
 
     virtual void acceptResource( osgCompute::Resource& resource )
     {
-        if( resource.isIdentifiedBy( "BYTE BUFFER" ) )
-            _buffer = dynamic_cast<osgCompute::Memory*>( &resource );
+        _buffer = dynamic_cast<osgCompute::Memory*>( &resource );
     }
 
 protected:
-    osg::ref_ptr<osgCompute::Memory>                 _buffer;
+    osg::ref_ptr<osgCompute::Memory> _buffer;
 };
 
 //------------------------------------------------------------------------------
@@ -52,9 +45,8 @@ int main(int argc, char *argv[])
     osg::setNotifyLevel( osg::INFO );
 
     // You can use modules and buffers in the update cycle or everywhere
-    // you want. But please make sure that the context is still active at
-    // program time if you use osgCuda::Geometry or osgCuda::Texture objects!!!
-	cudaSetDevice(0);
+    // you want even with no OpenGL interoperability
+    cudaSetDevice(0);
 
     ///////////////////
     // BEFORE LAUNCH //
@@ -67,9 +59,8 @@ int main(int argc, char *argv[])
         osg::notify(osg::INFO)<<std::hex<< bigEndians[v] <<std::endl;
 
     // create a buffer
-    osg::ref_ptr<osgCuda::Memory> buffer = new osgCuda::Memory;
+    osg::ref_ptr<osgCuda::Buffer> buffer = new osgCuda::Buffer;
     buffer->setElementSize( sizeof(unsigned int) );
-    buffer->addIdentifier("BYTE BUFFER");
     buffer->setDimension(0, numEndians);
 
     ///////////////////

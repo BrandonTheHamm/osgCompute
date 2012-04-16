@@ -364,7 +364,7 @@ namespace osgCuda
         std::vector<MemoryPair> memoryList;
         osgCompute::ResourceClassList curResources;
         
-        curResources = osgCompute::ResourceObserver::instance()->getResources( "osgCuda::Memory" );
+        curResources = osgCompute::ResourceObserver::instance()->getResources( "osgCuda::Buffer" );
         for( osgCompute::ResourceClassListItr itr = curResources.begin(); itr != curResources.end(); ++itr )
         {
             osgCompute::Memory* memory = dynamic_cast<osgCompute::Memory*>((*itr).get());
