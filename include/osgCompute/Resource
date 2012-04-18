@@ -69,6 +69,10 @@ namespace osgCompute
             @return Returns a list of const pointers of all resources with class name.
         */
         ResourceClassList getResources( std::string classIdentifier ) const;
+
+        /** Calls releaseObject() for all resources. Might be called before OpenGL context is removed.
+        */
+        void releaseAllResourceObjects();
         
         /** Add new resource to observer. Will be called in resource constructor.
             @param[in] resource a reference to the resource.

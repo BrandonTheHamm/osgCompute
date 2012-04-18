@@ -117,6 +117,15 @@ namespace osgCompute
         return resourceList;
     }
 
+    //------------------------------------------------------------------------------
+    void ResourceObserver::releaseAllResourceObjects()
+    {
+        for( ObserverMapItr itr = _observedObjects.begin(); itr != _observedObjects.end(); ++itr )
+        {
+            if( (*itr).second.valid() )
+                (*itr).second->releaseObjects();
+        }
+    }
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
