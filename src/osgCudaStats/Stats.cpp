@@ -1,10 +1,10 @@
 #include <sstream>
 #include <osg/PolygonMode>
 #include <osg/Uniform>
+#include <osg/Geode>
 #include <osg/ApplicationUsage>
 #include <osg/Geometry>
 #include <osgText/Text>
-#include <osgViewer/Renderer>
 #include <osgCompute/Resource>
 #include <osgCompute/Memory>
 #include <osgCudaStats/Stats>
@@ -216,10 +216,10 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     bool StatsHandler::handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa)
     {
-        osgViewer::View* myview = dynamic_cast<osgViewer::View*>(&aa);
-        if (!myview) return false;
+        osg::View* view = aa.asView();//dynamic_cast<osgViewer::View*>(&aa);
+        if (!view) return false;
 
-        osgViewer::ViewerBase* viewer = myview->getViewerBase();
+        //osgViewer::ViewerBase* viewer = myview->getViewerBase();
         if (ea.getHandled()) return false;
 
         switch(ea.getEventType())
@@ -229,38 +229,47 @@ namespace osgCuda
                 if( ea.getKey() == 'c' &&
                     ea.getEventType() == osgGA::GUIEventAdapter::KEYDOWN )
                 {
-                    if( !_hudCamera.valid() )
-                    {
-                        if( !createHUDCamera(viewer) )
-                        {
-                            osg::notify(osg::WARN)<<"osgCudaStats::StatsHandler::handle(): cannot create hud camera"<<std::endl;
-                            return false;
-                        }
-                    }
+
 
                     _statsType = (_statsType + 1) % STATISTICS_NUM_AVAILABLE;
 
                     // SWITCH CURRENT DISPLAYED STATUS
-                    clearScene(viewer);
+                    clearScene();
                     switch( _statsType )
                     {
                     case STATISTICS_NONE:
                         {
                             // disable all 
-                            _hudCamera->setNodeMask(0x0);
+                            removeHUDCamera(view);
                         }
                         break;
                     case STATISTICS_MEMORY:
                         {
-                            setUpMemoryScene(viewer);
+                            if( !_hudCamera.valid() )
+                            {
+                                if( !createHUDCamera(view) )
+                                {
+                                    osg::notify(osg::WARN)<<"osgCudaStats::StatsHandler::handle(): cannot create hud camera"<<std::endl;
+                                    return false;
+                                }
+                            }
+
+                            setUpMemoryScene();
                             _memorySwitch->setSingleChildOn(0);
-                            _hudCamera->setNodeMask(0xffffffff);
                         }
                         break;
                     case STATISTICS_TIMER:
                         {
-                            setUpTimerScene(viewer);
-                            _hudCamera->setNodeMask(0xffffffff);
+                            if( !_hudCamera.valid() )
+                            {
+                                if( !createHUDCamera(view) )
+                                {
+                                    osg::notify(osg::WARN)<<"osgCudaStats::StatsHandler::handle(): cannot create hud camera"<<std::endl;
+                                    return false;
+                                }
+                            }
+
+                            setUpTimerScene();
                         }
                         break;
 
@@ -290,27 +299,22 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    bool StatsHandler::createHUDCamera(osgViewer::ViewerBase* viewer)
+    bool StatsHandler::createHUDCamera(osg::View* view)
     {
-        osgViewer::ViewerBase::Contexts contexts;
-        viewer->getContexts( contexts );
-        osgViewer::GraphicsWindow* window = dynamic_cast<osgViewer::GraphicsWindow*>( contexts.front() );
-        if (!window)
-        {
-            osg::notify(osg::WARN)<<"osgCudaStats::StatsHandler::createHUDCamera(): cannot find valid graphics context."<<std::endl;
+        if( view->getCamera() == NULL || view->getCamera()->getGraphicsContext() == NULL )
             return false;
-        }
+
+        osg::Camera* cam = view->getCamera();
+        const osg::GraphicsContext::Traits* traits = cam->getGraphicsContext()->getTraits();
 
         if( !_hudCamera.valid() ) _hudCamera = new osg::Camera;
-        _hudCamera->setProjectionResizePolicy(osg::Camera::FIXED);
-        _hudCamera->setGraphicsContext(window);
-        _hudCamera->setViewport(0, 0, window->getTraits()->width, window->getTraits()->height);
-        _hudCamera->setRenderOrder(osg::Camera::POST_RENDER, 10);
+        _hudCamera->setViewport(0, 0, traits->width, traits->height);
+        _hudCamera->setRenderOrder(osg::Camera::POST_RENDER, 1000);
         _hudCamera->setProjectionMatrix(osg::Matrix::ortho2D(0.0,_statsWidth,0.0,_statsHeight));
         _hudCamera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
         _hudCamera->setViewMatrix(osg::Matrix::identity());
         _hudCamera->setClearMask(0);
-        _hudCamera->setRenderer(new osgViewer::Renderer(_hudCamera.get()));
+        cam->addChild(_hudCamera);
 
         if( !_memorySwitch.valid() ) _memorySwitch = new osg::Switch;
 
@@ -334,7 +338,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    void StatsHandler::setUpMemoryScene(osgViewer::ViewerBase* viewer)
+    void StatsHandler::setUpMemoryScene()
     {
         if( !_hudCamera.valid() )
             return;
@@ -562,7 +566,7 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    void StatsHandler::setUpTimerScene(osgViewer::ViewerBase* viewer)
+    void StatsHandler::setUpTimerScene()
     {
         if( !_hudCamera.valid()  )
             return;
@@ -900,11 +904,36 @@ namespace osgCuda
     }
 
     //------------------------------------------------------------------------------
-    void StatsHandler::clearScene(osgViewer::ViewerBase* viewer)
+    void StatsHandler::clearScene()
     {
-        _hudCamera->removeChildren(0, _hudCamera->getNumChildren() );
-        _memorySwitch->removeChildren(0, _memorySwitch->getNumChildren() );
+        if( _hudCamera.valid() )
+        {
+            _hudCamera->removeChildren(0, _hudCamera->getNumChildren() );
+            _memorySwitch->removeChildren(0, _memorySwitch->getNumChildren() );
+        }
     }
 
+    //------------------------------------------------------------------------------
+    void StatsHandler::removeHUDCamera(osg::View* view)
+    {
+        if( _hudCamera.valid() )
+        {
+            // Remove HUD camera from scene
+            osg::Camera* cam = view->getCamera();
+            for( unsigned int c=0; c<cam->getNumChildren(); ++c  )
+            {
+                osg::Node* curNode = cam->getChild(c);
+                if( curNode == _hudCamera )
+                {
+                    cam->removeChild(c,1);
+                    break;
+                }
+            }
+
+            _hudCamera->removeChildren(0, _hudCamera->getNumChildren() );
+            _memorySwitch->removeChildren(0, _memorySwitch->getNumChildren() );
+            _hudCamera = NULL;
+        }
+    }
 }
 

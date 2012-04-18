@@ -36,6 +36,7 @@
 #include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
 #include <osgCudaStats/Stats>
+#include <osgCudaInit/Init>
 
 //------------------------------------------------------------------------------
 osg::ref_ptr<osg::Node> setupScene( unsigned int numParticles, osg::Vec3f bbmin, osg::Vec3f bbmax )

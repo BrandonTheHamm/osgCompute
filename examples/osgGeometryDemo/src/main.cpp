@@ -25,6 +25,7 @@
 #include <osgCuda/Geometry>
 #include <osgCuda/Buffer>
 #include <osgCudaStats/Stats>
+#include <osgCudaInit/Init>
 
 
 /////////////////

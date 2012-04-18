@@ -2054,16 +2054,16 @@ namespace osgCuda
         osg::Geometry::releaseGLObjects( state );
     }
 
-    //------------------------------------------------------------------------------
-    void Geometry::resizeGLObjectBuffers( unsigned int maxSize )
-    {
-        // Currently we support  a single OpenGL context only. So clear memory every
-        // time releaseGLObjects() is called.
-        //if( osgCompute::GLMemory::getContext() != NULL )
-        _memory->clear();
+    ////------------------------------------------------------------------------------
+    //void Geometry::resizeGLObjectBuffers( unsigned int maxSize )
+    //{
+    //    // Currently we support  a single OpenGL context only. So clear memory every
+    //    // time releaseGLObjects() is called.
+    //    //if( osgCompute::GLMemory::getContext() != NULL )
+    //    _memory->clear();
 
-        osg::Geometry::resizeGLObjectBuffers( maxSize );
-    }
+    //    osg::Geometry::resizeGLObjectBuffers( maxSize );
+    //}
 
     //------------------------------------------------------------------------------
     void Geometry::drawImplementation( osg::RenderInfo& renderInfo ) const

@@ -1747,16 +1747,16 @@ namespace osgCuda
         osg::Texture2D::releaseGLObjects( state );
     }
 
-    //------------------------------------------------------------------------------
-    void Texture2D::resizeGLObjectBuffers( unsigned int maxSize )
-    {
-        // Currently we support  a single OpenGL context only. So clear memory every
-        // time releaseGLObjects() is called.
-        //if( osgCompute::GLMemory::getContext() != NULL )
-        _memory->clear();
+    ////------------------------------------------------------------------------------
+    //void Texture2D::resizeGLObjectBuffers( unsigned int maxSize )
+    //{
+    //    // Currently we support  a single OpenGL context only. So clear memory every
+    //    // time releaseGLObjects() is called.
+    //    //if( osgCompute::GLMemory::getContext() != NULL )
+    //    _memory->clear();
 
-        osg::Texture::resizeGLObjectBuffers( maxSize );
-    }
+    //    osg::Texture::resizeGLObjectBuffers( maxSize );
+    //}
 
     //------------------------------------------------------------------------------
     void Texture2D::compileGLObjects(osg::State& state) const
@@ -1869,16 +1869,16 @@ namespace osgCuda
         osg::Texture3D::releaseGLObjects( state );
     }
 
-    //------------------------------------------------------------------------------
-    void Texture3D::resizeGLObjectBuffers( unsigned int maxSize )
-    {
-        // Currently we support  a single OpenGL context only. So clear memory every
-        // time releaseGLObjects() is called.
-        //if( osgCompute::GLMemory::getContext() != NULL )
-        _memory->clear();
+    ////------------------------------------------------------------------------------
+    //void Texture3D::resizeGLObjectBuffers( unsigned int maxSize )
+    //{
+    //    // Currently we support  a single OpenGL context only. So clear memory every
+    //    // time releaseGLObjects() is called.
+    //    //if( osgCompute::GLMemory::getContext() != NULL )
+    //    _memory->clear();
 
-        osg::Texture::resizeGLObjectBuffers( maxSize );
-    }
+    //    osg::Texture::resizeGLObjectBuffers( maxSize );
+    //}
 
     //------------------------------------------------------------------------------
     void Texture3D::compileGLObjects(osg::State& state) const
@@ -1991,16 +1991,16 @@ namespace osgCuda
         osg::TextureRectangle::releaseGLObjects( state );
     }
 
-    //------------------------------------------------------------------------------
-    void TextureRectangle::resizeGLObjectBuffers( unsigned int maxSize )
-    {
-        // Currently we support  a single OpenGL context only. So clear memory every
-        // time releaseGLObjects() is called.
-        //if( osgCompute::GLMemory::getContext() != NULL )
-        _memory->clear();
+    ////------------------------------------------------------------------------------
+    //void TextureRectangle::resizeGLObjectBuffers( unsigned int maxSize )
+    //{
+    //    // Currently we support  a single OpenGL context only. So clear memory every
+    //    // time releaseGLObjects() is called.
+    //    //if( osgCompute::GLMemory::getContext() != NULL )
+    //    _memory->clear();
 
-        osg::Texture::resizeGLObjectBuffers( maxSize );
-    }
+    //    osg::Texture::resizeGLObjectBuffers( maxSize );
+    //}
 
     //------------------------------------------------------------------------------
     void TextureRectangle::compileGLObjects(osg::State& state) const

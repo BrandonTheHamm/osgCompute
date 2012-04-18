@@ -31,6 +31,7 @@
 #include <osgCuda/Buffer>
 #include <osgCuda/Texture>
 #include <osgCudaStats/Stats>
+#include <osgCudaInit/Init>
 
 //------------------------------------------------------------------------------
 extern "C" void swap( 

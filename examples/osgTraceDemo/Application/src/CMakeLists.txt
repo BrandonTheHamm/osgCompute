@@ -106,6 +106,7 @@ SET(TARGET_ADDITIONAL_LIBRARIES
 	osgCompute
 	osgCuda
 	osgCudaStats
+	osgCudaInit
 )
 
 

@@ -28,11 +28,13 @@
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCuda/Program>
+#include <osgCompute/Program>
 #include <osgCompute/Callback>
 #include <osgCuda/Buffer>
 #include <osgCuda/Texture>
+#include <osgCuda/Program>
 #include <osgCudaStats/Stats>
+#include <osgCudaInit/Init>
 
 extern "C" void sobelFilter( 
                             unsigned int numPixelsX, 

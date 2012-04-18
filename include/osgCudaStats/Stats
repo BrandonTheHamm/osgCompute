@@ -3,8 +3,8 @@
 
 #include <map>
 #include <osg/Switch>
+#include <osg/View>
 #include <osgGA/GUIEventHandler>
-#include <osgViewer/Viewer>
 #include <osgCuda/Export>
 #include <osgCudaUtil/Timer>
 
@@ -33,10 +33,16 @@ namespace osgCuda
     protected:
         virtual ~StatsHandler() {}
 
-        bool createHUDCamera(osgViewer::ViewerBase* viewer);
-        void setUpMemoryScene(osgViewer::ViewerBase* viewer);
-        void setUpTimerScene(osgViewer::ViewerBase* viewer);
-        void clearScene(osgViewer::ViewerBase* viewer);
+        //bool createHUDCamera(osgViewer::ViewerBase* viewer);
+        //void setUpMemoryScene(osgViewer::ViewerBase* viewer);
+        //void setUpTimerScene(osgViewer::ViewerBase* viewer);
+        //void clearScene(osgViewer::ViewerBase* viewer);
+
+        bool createHUDCamera(osg::View* view);
+        void removeHUDCamera(osg::View* view);
+        void setUpMemoryScene();
+        void setUpTimerScene();
+        void clearScene();
 
         unsigned int                    _statsType;
         osg::ref_ptr<osg::Camera>       _hudCamera;

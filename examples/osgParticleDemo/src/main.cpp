@@ -29,6 +29,7 @@
 #include <osgCuda/Geometry>
 #include <osgCuda/Program>
 #include <osgCudaStats/Stats>
+#include <osgCudaInit/Init>
 
 //////////////////
 // COMPUTATIONS //

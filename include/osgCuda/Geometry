@@ -175,11 +175,11 @@ namespace osgCuda
 		*/
 		virtual void releaseGLObjects(osg::State* state=0) const;
 
-        /** Overloaded from osg::Geometry. Resize any per context GLObject buffers 
-        to specified size. Memory object will be released.
-		@param[in] masSize the new size of the geometry.
-		*/
-		virtual void resizeGLObjectBuffers(unsigned int maxSize);
+  //      /** Overloaded from osg::Geometry. Resize any per context GLObject buffers 
+  //      to specified size. Memory object will be released.
+		//@param[in] masSize the new size of the geometry.
+		//*/
+		//virtual void resizeGLObjectBuffers(unsigned int maxSize);
 
     protected:
 		/** Destructor. Will also release the GLMemory object.

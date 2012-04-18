@@ -2,7 +2,7 @@
 # Set library name and set path to data folder of the library
 #########################################################################
 
-SET(LIB_NAME osgCuda)
+SET(LIB_NAME osgCudaInit)
 
 IF(DYNAMIC_LINKING)
     ADD_DEFINITIONS(-DUSE_LIBRARY_DYN)
@@ -18,6 +18,9 @@ ENDIF(DYNAMIC_LINKING)
 INCLUDE(FindOpenThreads)
 INCLUDE(Findosg)
 INCLUDE(FindosgDB)
+INCLUDE(FindosgGA)
+INCLUDE(FindosgText)
+INCLUDE(FindosgViewer)
 INCLUDE(FindCuda)
 
 
@@ -27,7 +30,6 @@ INCLUDE(FindCuda)
 
 INCLUDE_DIRECTORIES(
 	${OSG_INCLUDE_DIR}
-	#${CUDA_TOOLKIT_INCLUDE}
 	${CUDA_TOOLKIT_INCLUDE}
 )
 
@@ -45,20 +47,13 @@ SET(HEADER_PATH ${PROJECT_SOURCE_DIR}/include/${LIB_NAME})
 
 # collect all headers
 SET(TARGET_H
-	${HEADER_PATH}/Buffer
-	${HEADER_PATH}/Export
-	${HEADER_PATH}/Geometry
-	${HEADER_PATH}/Program
-    ${HEADER_PATH}/Texture
+    ${HEADER_PATH}/Init
 )
 
 
 # collect the sources
 SET(TARGET_SRC
-	Buffer.cpp
-	Geometry.cpp
-	Texture.cpp
-	Program.cpp
+	Init.cpp
 )
 
 
@@ -100,6 +95,8 @@ ADD_LIBRARY(${LIB_NAME}
 # link here the project libraries    
 TARGET_LINK_LIBRARIES(${LIB_NAME}
 	osgCompute
+    osgCuda
+    osgCudaUtil
 	#${OPENGL_LIBRARIES}
 )
 
@@ -108,7 +105,10 @@ TARGET_LINK_LIBRARIES(${LIB_NAME}
 LINK_WITH_VARIABLES(${LIB_NAME}
 	OPENTHREADS_LIBRARY
 	OSG_LIBRARY
+	OSGTEXT_LIBRARY
+	OSGGA_LIBRARY
 	OSGDB_LIBRARY
+	OSGVIEWER_LIBRARY
     CUDA_CUDART_LIBRARY
 )
 
