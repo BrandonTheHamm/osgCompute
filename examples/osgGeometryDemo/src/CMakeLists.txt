@@ -20,7 +20,8 @@ INCLUDE(FindosgDB)
 # check for cuda
 INCLUDE(FindCuda) 
 
-
+#Uncomment to enable CUDA Debugging via Parallel NSight
+#SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -G)
 
 
 #########################################################################

@@ -20,6 +20,9 @@ INCLUDE(FindCuda)
 # if needed then specify computing model, e.g.:
 #SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch sm_11)
 
+#Uncomment to enable CUDA Debugging via Parallel NSight
+#SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -G)
+
 
 #########################################################################
 # Set basic include directories

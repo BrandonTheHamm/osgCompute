@@ -21,7 +21,8 @@ INCLUDE(FindosgDB)
 INCLUDE(FindCuda)
 
 
-
+#Uncomment to enable CUDA Debugging via Parallel NSight
+#SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -G)
 
 #########################################################################
 # Set basic include directories
