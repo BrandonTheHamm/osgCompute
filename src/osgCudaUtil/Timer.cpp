@@ -36,7 +36,6 @@ namespace osgCuda
         _peakTime(0.0f),
         _overallTime(0.0f)
     {
-        clearLocal();
         // Please note that virtual functions className() and libraryName() are called
         // during observeResource() which will only develop until this class.
         // However if contructor of a subclass calls this function again observeResource
@@ -44,11 +43,7 @@ namespace osgCuda
         osgCompute::ResourceObserver::instance()->observeResource( *this );
     }
 
-    //------------------------------------------------------------------------------
-    Timer::~Timer()
-    {
-        clearLocal();
-    }
+
 
     //------------------------------------------------------------------------------
     void Timer::start()
@@ -113,6 +108,29 @@ namespace osgCuda
     //------------------------------------------------------------------------------
     void Timer::releaseObjects()
     {
+        releaseObjectsLocal();
+        Resource::releaseObjects();
+    }
+
+    //------------------------------------------------------------------------------
+    void Timer::releaseGLObjects( osg::State* state )
+    {
+        releaseObjectsLocal();
+        Resource::releaseGLObjects(state);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------
+    Timer::~Timer()
+    {
+        releaseObjectsLocal();
+    }
+
+    //------------------------------------------------------------------------------
+    void Timer::releaseObjectsLocal()
+    {
         if( _start != NULL )
             cudaEventDestroy(_start); 
         _start = NULL;
@@ -120,17 +138,5 @@ namespace osgCuda
         if( _stop != NULL )
             cudaEventDestroy(_stop);
         _stop = NULL;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    void Timer::clearLocal()
-    {
-        _lastTime = 0.0f;
-        _peakTime = 0.0f;
-        _overallTime = 0.0f;
-        _calls = 0;
     }
 }

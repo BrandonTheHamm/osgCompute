@@ -191,6 +191,11 @@ namespace osgCompute
 		*/
         virtual void objectsCreated() const;
 
+        /** Non-virtual function which is called by releaseObjects(),releaseGLObjects(),Destructor().
+            Function frees all allocations of a resource.
+        */
+        void releaseObjectsLocal();
+
 	private:
 		// Copy constructor and operator should not be called
 		Resource(const Resource& ,const osg::CopyOp& ) {}

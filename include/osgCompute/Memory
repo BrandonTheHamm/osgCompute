@@ -347,6 +347,11 @@ namespace osgCompute
         */
         virtual void releaseObjects();
 
+        /** Releases all allocated objects associated with the applied state. 
+        @param[in] state the current OpenGL state.
+        */
+        virtual void releaseGLObjects(osg::State* state);
+
     protected:
         /** Destructor
         */
@@ -365,6 +370,11 @@ namespace osgCompute
         @return Returns a pointer to the resource on success and NULL otherwise.
         */
         virtual MemoryObject* createObject() const;
+
+        /** Non-virtual function which is called by releaseObjects(),releaseGLObjects(),Destructor().
+            Function frees all allocations of a resource.
+        */
+        void releaseObjectsLocal();
 
         /** Computes the pitch of the memory resource.
         @return Returns the memory pitch in bytes.
@@ -552,10 +562,24 @@ namespace osgCompute
         */
         static osg::GraphicsContext* getContext();
 
+        /** Will release all allocated host and device memory.
+        */
+        virtual void releaseObjects();
+
+        /** Releases all allocated objects associated with the applied state. 
+        @param[in] state the current OpenGL state.
+        */
+        virtual void releaseGLObjects(osg::State* state);
+
     protected:
         /** Destructor. Unregisters all GL handles.
         */
-        virtual ~GLMemory() {}
+        virtual ~GLMemory();
+
+        /** Non-virtual function which is called by releaseObjects(),releaseGLObjects(),Destructor().
+            Function frees all allocations of a resource.
+        */
+        void releaseObjectsLocal();
 
     private:
         // Copy constructor and operator should not be called

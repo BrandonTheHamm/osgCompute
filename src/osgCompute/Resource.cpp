@@ -193,7 +193,7 @@ namespace osgCompute
     //------------------------------------------------------------------------------
     void Resource::releaseObjects()
     {
-        _objectsReleased = true;
+        releaseObjectsLocal();
     }
 
     //------------------------------------------------------------------------------
@@ -202,7 +202,7 @@ namespace osgCompute
         // Do release all resources no matter which state is applied.
         // Currently only a single context is supported by osgCompute
         // so there should exist only one state
-        if( !objectsReleased() ) releaseObjects();
+        releaseObjectsLocal();
     }
 
     //------------------------------------------------------------------------------
@@ -218,7 +218,7 @@ namespace osgCompute
     Resource::~Resource()
     {
         // free a resource's allocations
-        releaseObjects();
+        releaseObjectsLocal();
     }
 
     //------------------------------------------------------------------------------
@@ -227,4 +227,9 @@ namespace osgCompute
         _objectsReleased = false;
     } 
 
+    //------------------------------------------------------------------------------
+    void Resource::releaseObjectsLocal()
+    {
+        _objectsReleased = true;
+    }
 } 

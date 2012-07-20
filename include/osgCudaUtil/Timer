@@ -30,11 +30,22 @@ namespace osgCuda
         static void enableAllTimer();
         static bool timerEnabled();
 
+        /** Will release all allocated host and device memory.
+        */
         virtual void releaseObjects();
+
+        /** Releases all allocated objects associated with the applied state. 
+        @param[in] state the current OpenGL state.
+        */
+        virtual void releaseGLObjects(osg::State* state);
 
 	protected:
 		virtual ~Timer();
-		void clearLocal();
+
+        /** Non-virtual function which is called by releaseObjects(),releaseGLObjects(),Destructor().
+            Function frees all allocations of a resource.
+        */
+        void releaseObjectsLocal();
 
         cudaEvent_t     _start;
         cudaEvent_t     _stop;
@@ -44,6 +55,7 @@ namespace osgCuda
         float           _overallTime;
 
         static bool     _timerEnabled;
+
 
 	private:																			
 		Timer(const Timer&, const osg::CopyOp& ) {}							
