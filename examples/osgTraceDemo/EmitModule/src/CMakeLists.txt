@@ -22,6 +22,11 @@ INCLUDE(FindCuda)
 #Uncomment to enable CUDA Debugging via Parallel NSight
 #SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -G)
 
+#Build object files suitable for shared libraries
+if (UNIX)
+    SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC)
+endif()
+
 #########################################################################
 # Set path to header files
 #########################################################################
