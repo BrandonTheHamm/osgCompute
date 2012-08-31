@@ -12,6 +12,7 @@
 *
 * The full license is in LICENSE file included with this distribution.
 */
+#include <cstring>
 #include <osg/Notify>
 #include <osgCuda/Buffer>
 #include <osgCompute/Computation>
