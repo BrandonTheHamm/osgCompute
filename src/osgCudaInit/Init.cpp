@@ -1,4 +1,4 @@
-#include <osg/gl>
+#include <osg/GL>
 #include <cuda_runtime.h>
 #include <builtin_types.h>
 #include <cuda_gl_interop.h>
