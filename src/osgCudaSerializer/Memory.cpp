@@ -12,14 +12,14 @@ static bool checkDimensions( const osgCompute::Memory& memory )
 //------------------------------------------------------------------------------
 static bool writeDimensions( osgDB::OutputStream& os, const osgCompute::Memory& memory )
 {	
-	os << memory.getNumDimensions() << osgDB::BEGIN_BRACKET << std::endl;
+	os << memory.getNumDimensions() << os.BEGIN_BRACKET << std::endl;
 
 	for( unsigned int d=0; d<memory.getNumDimensions(); ++d )
 	{
 		os << memory.getDimension(d) << std::endl;
 	}
 
-	os << osgDB::END_BRACKET << std::endl;
+	os << os.END_BRACKET << std::endl;
 
 	return true;
 }
@@ -28,7 +28,7 @@ static bool writeDimensions( osgDB::OutputStream& os, const osgCompute::Memory& 
 static bool readDimensions( osgDB::InputStream& is, osgCompute::Memory& memory )
 {
 	unsigned int numDim = 0;  
-	is >> numDim >> osgDB::BEGIN_BRACKET;
+	is >> numDim >> is.BEGIN_BRACKET;
 
 	for( unsigned int d=0; d<numDim; ++d )
 	{
@@ -37,7 +37,7 @@ static bool readDimensions( osgDB::InputStream& is, osgCompute::Memory& memory )
 		memory.setDimension(d,curDimSize);
 	}
 
-	is >> osgDB::END_BRACKET;
+	is >> is.END_BRACKET;
 
 	return true;
 }

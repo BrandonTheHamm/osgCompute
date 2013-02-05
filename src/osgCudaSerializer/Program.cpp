@@ -63,7 +63,7 @@ static bool writeResources( osgDB::OutputStream& os, const osgCuda::Program& pro
 			numRes++;
 
 	// Write attached resources
-	os << numRes << osgDB::BEGIN_BRACKET << std::endl;
+	os << numRes << os.BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::ResourceHandleListCnstItr resItr = resList.begin();
 		resItr != resList.end();
@@ -84,7 +84,7 @@ static bool writeResources( osgDB::OutputStream& os, const osgCuda::Program& pro
         }
     }
 
-	os << osgDB::END_BRACKET << std::endl;
+	os << os.END_BRACKET << std::endl;
 	return true;
 }
 
@@ -92,7 +92,7 @@ static bool writeResources( osgDB::OutputStream& os, const osgCuda::Program& pro
 static bool readResources( osgDB::InputStream& is, osgCuda::Program& program )
 {
 	unsigned int numRes = 0;  
-	is >> numRes >> osgDB::BEGIN_BRACKET;
+	is >> numRes >> is.BEGIN_BRACKET;
 
 	for( unsigned int i=0; i<numRes; ++i )
 	{
@@ -113,7 +113,7 @@ static bool readResources( osgDB::InputStream& is, osgCuda::Program& program )
         }
 	}
 
-	is >> osgDB::END_BRACKET;
+	is >> is.END_BRACKET;
 	return true;
 }
 
@@ -138,7 +138,7 @@ static bool writeComputations( osgDB::OutputStream& os, const osgCuda::Program& 
 			numMods++;
 
 	// Write attached resources
-	os << numMods << osgDB::BEGIN_BRACKET << std::endl;
+	os << numMods << os.BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::ComputationListCnstItr modItr = modList.begin(); modItr != modList.end(); ++modItr )
 	{
@@ -149,7 +149,7 @@ static bool writeComputations( osgDB::OutputStream& os, const osgCuda::Program& 
 		}
 	}
 
-	os << osgDB::END_BRACKET << std::endl;
+	os << os.END_BRACKET << std::endl;
 	return true;
 }
 
@@ -157,7 +157,7 @@ static bool writeComputations( osgDB::OutputStream& os, const osgCuda::Program& 
 static bool readComputations( osgDB::InputStream& is, osgCuda::Program& program )
 {
 	unsigned int numMods = 0;  
-	is >> numMods >> osgDB::BEGIN_BRACKET;
+	is >> numMods >> is.BEGIN_BRACKET;
 
 	for( unsigned int i=0; i<numMods; ++i )
 	{
@@ -181,7 +181,7 @@ static bool readComputations( osgDB::InputStream& is, osgCuda::Program& program 
 		}
 	}
 
-	is >> osgDB::END_BRACKET;
+	is >> is.END_BRACKET;
 	return true;
 }
 

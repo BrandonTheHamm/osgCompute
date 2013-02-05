@@ -26,6 +26,7 @@
 #include <osgCuda/Geometry>
 #include <osgCuda/Buffer>
 #include <osgCudaStats/Stats>
+#include <osg/Notify>
 #include <osgCudaInit/Init>
 
 
@@ -118,9 +119,8 @@ osg::ref_ptr<osg::Node> setupScene()
     //////////////////
     // COW OSG FILE //
     //////////////////
-    osg::ref_ptr<osg::Group> cowModel = dynamic_cast<osg::Group*>( osgDB::readNodeFile("osgGeometryDemo/scenes/cudacow.osgt") );
-    if( !cowModel.valid() )
-    {
+     osg::ref_ptr<osg::Group> cowModel;
+     {
         // Build a osgCuda::Geometry
         cowModel = dynamic_cast<osg::Group*>( osgDB::readNodeFile("cow.osg") );
         if( !cowModel.valid() ) return program;
@@ -141,9 +141,15 @@ osg::ref_ptr<osg::Node> setupScene()
 
         // Uncomment the following line to write a osgCuda::Geometry of the cow model!
         // Please note that you have to copy the generated  "cudacow.osgt" manually to your data-path
-        // in order to load it afterwards.
-        //osgDB::writeNodeFile( *cowModel, "cudacow.osgt" );
-    }
+        // in order to be able to load it afterwards.
+//         osgDB::writeNodeFile( *cowModel, "cudacow.osgt" );
+     }
+     
+    // Once you have created cudacow.osgt you can use the following line as an alternative:
+    // osg::ref_ptr<osg::Group> cowModel = dynamic_cast<osg::Group*>( osgDB::readNodeFile("osgGeometryDemo/scenes/cudacow.osgt") );
+     
+    if( !cowModel.valid() ) 
+	osg::notify(osg::WARN) << "Could not find  \"cow.osg\". Please check your OSG_FILE_PATH."<<std::endl;
 
     osg::ref_ptr<osg::Geode> geode = dynamic_cast<osg::Geode*>( cowModel->getChild(0) );
     osg::ref_ptr<osgCuda::Geometry> geometry = dynamic_cast<osgCuda::Geometry*>( geode->getDrawable(0) );

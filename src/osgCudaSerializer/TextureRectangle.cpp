@@ -15,7 +15,7 @@ static bool checkIdentifiers( const osgCuda::TextureRectangle& interopObject )
 static bool writeIdentifiers( osgDB::OutputStream& os, const osgCuda::TextureRectangle& interopObject )
 {	
 	const osgCompute::IdentifierSet ids = interopObject.getIdentifiers();
-	os << (unsigned int)ids.size() << osgDB::BEGIN_BRACKET << std::endl;
+	os << (unsigned int)ids.size() << os.BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::IdentifierSetCnstItr idItr = ids.begin();
 		idItr != ids.end();
@@ -25,7 +25,7 @@ static bool writeIdentifiers( osgDB::OutputStream& os, const osgCuda::TextureRec
 		os << " ";
 	}
 
-	os << osgDB::END_BRACKET << std::endl;
+	os << os.END_BRACKET << std::endl;
 	return true;
 }
 
@@ -34,7 +34,7 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCuda::TextureRectangle& 
 {
 
 	unsigned int numIds = 0;  
-	is >> numIds >> osgDB::BEGIN_BRACKET;
+	is >> numIds >> is.BEGIN_BRACKET;
 
 	for( unsigned int i=0; i<numIds; ++i )
 	{
@@ -45,7 +45,7 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCuda::TextureRectangle& 
 		interopObject.addIdentifier( curId );
 	}
 
-	is >> osgDB::END_BRACKET;
+	is >> is.END_BRACKET;
 	return true;
 }
 

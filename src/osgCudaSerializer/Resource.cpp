@@ -15,7 +15,7 @@ static bool checkIdentifiers( const osgCompute::Resource& resource )
 static bool writeIdentifiers( osgDB::OutputStream& os, const osgCompute::Resource& resource )
 {	
 	const osgCompute::IdentifierSet ids = resource.getIdentifiers();
-	os << (unsigned int)ids.size() << osgDB::BEGIN_BRACKET << std::endl;
+	os << (unsigned int)ids.size() << os.BEGIN_BRACKET << std::endl;
 	
 	for( osgCompute::IdentifierSetCnstItr idItr = ids.begin();
 		idItr != ids.end();
@@ -25,7 +25,7 @@ static bool writeIdentifiers( osgDB::OutputStream& os, const osgCompute::Resourc
 		os << std::endl;
 	}
 
-	os << osgDB::END_BRACKET << std::endl;
+	os << os.END_BRACKET << std::endl;
 	return true;
 }
 
@@ -34,7 +34,7 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCompute::Resource& resou
 {
 
 	unsigned int numIds = 0;  
-	is >> numIds >> osgDB::BEGIN_BRACKET;
+	is >> numIds >> is.BEGIN_BRACKET;
 	
 	for( unsigned int i=0; i<numIds; ++i )
 	{
@@ -44,7 +44,7 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCompute::Resource& resou
 		resource.addIdentifier( curId );
 	}
 
-	is >> osgDB::END_BRACKET;
+	is >> is.END_BRACKET;
 	return true;
 }
 

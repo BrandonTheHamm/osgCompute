@@ -15,7 +15,7 @@ static bool checkIdentifiers( const osgCuda::Geometry& geometry )
 static bool writeIdentifiers( osgDB::OutputStream& os, const osgCuda::Geometry& geometry )
 {	
 	const osgCompute::IdentifierSet ids = geometry.getIdentifiers();
-	os << (unsigned int)ids.size() << osgDB::BEGIN_BRACKET << std::endl;
+	os << (unsigned int)ids.size() << os.BEGIN_BRACKET << std::endl;
 
 	for( osgCompute::IdentifierSetCnstItr idItr = ids.begin();
 		idItr != ids.end();
@@ -25,7 +25,7 @@ static bool writeIdentifiers( osgDB::OutputStream& os, const osgCuda::Geometry& 
 		os << std::endl;
 	}
 
-	os << osgDB::END_BRACKET << std::endl;
+	os << os.END_BRACKET << std::endl;
 	return true;
 }
 
@@ -35,7 +35,7 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCuda::Geometry& geometry
 
 	unsigned int numIds = 0;  
 	//is >> osgDB::PROPERTY("Identifiers") >> numIds >> osgDB::BEGIN_BRACKET;
-	is >> numIds >> osgDB::BEGIN_BRACKET;
+	is >> numIds >> is.BEGIN_BRACKET;
 
 	for( unsigned int i=0; i<numIds; ++i )
 	{
@@ -46,7 +46,7 @@ static bool readIdentifiers( osgDB::InputStream& is, osgCuda::Geometry& geometry
 		geometry.addIdentifier( curId );
 	}
 
-	is >> osgDB::END_BRACKET;
+	is >> is.END_BRACKET;
 	return true;
 }
 
