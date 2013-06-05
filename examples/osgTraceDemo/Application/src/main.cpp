@@ -32,7 +32,7 @@
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCuda/Program>
+#include <osgCuda/Computation>
 #include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
 #include <osgCudaStats/Stats>
@@ -48,7 +48,7 @@ osg::ref_ptr<osg::Node> setupScene( unsigned int numParticles, osg::Vec3f bbmin,
     //////////////
     osg::Geode* geode = new osg::Geode;
     osg::ref_ptr<osgCuda::Geometry> ptclGeom = new osgCuda::Geometry;
-    // Please note that computations will 
+    // Please note that programs will 
     // use this name in order to identify 
     // it as the particle buffer.
     ptclGeom->setName("Particles");
@@ -76,7 +76,7 @@ osg::ref_ptr<osg::Node> setupScene( unsigned int numParticles, osg::Vec3f bbmin,
     ////////////
     // SHADER //
     ////////////
-    osg::Program* program = new osg::Program;
+    osg::Program* computation = new osg::Program;
 
     const std::string vtxShader=
         "uniform vec2 pixelsize;                                                                \n"
@@ -92,7 +92,7 @@ osg::ref_ptr<osg::Node> setupScene( unsigned int numParticles, osg::Vec3f bbmin,
         "                                                                                       \n"
         "   gl_Position = projPos;                                                              \n"
         "}                                                                                      \n";
-    program->addShader( new osg::Shader(osg::Shader::VERTEX, vtxShader ) );
+    computation->addShader( new osg::Shader(osg::Shader::VERTEX, vtxShader ) );
 
     const std::string frgShader=
         "void main (void)                                                                       \n"
@@ -121,8 +121,8 @@ osg::ref_ptr<osg::Node> setupScene( unsigned int numParticles, osg::Vec3f bbmin,
         "   gl_FragColor = result;                                                              \n"
         "}                                                                                      \n";
 
-    program->addShader( new osg::Shader( osg::Shader::FRAGMENT, frgShader ) );
-    geode->getOrCreateStateSet()->setAttribute(program);
+    computation->addShader( new osg::Shader( osg::Shader::FRAGMENT, frgShader ) );
+    geode->getOrCreateStateSet()->setAttribute(computation);
 
     //////////
     // BBOX //
@@ -137,42 +137,42 @@ osg::ref_ptr<osg::Node> setupScene( unsigned int numParticles, osg::Vec3f bbmin,
 }
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Program> setupProgram()
+osg::ref_ptr<osgCompute::Computation> setupComputation()
 {
-    // Execute the program during the update traversal (default) before the subgraph is handled. 
-    osgCompute::Program::ComputeOrder order = osgCompute::Program::UPDATE_BEFORECHILDREN;
+    // Execute the computation during the update traversal (default) before the subgraph is handled. 
+    osgCompute::Computation::ComputeOrder order = osgCompute::Computation::UPDATE_BEFORECHILDREN;
 
-    osg::ref_ptr<osgCompute::Program> programEmitter = new osgCuda::Program;
-    programEmitter->setName( "emit particles program" );
-    programEmitter->setComputeOrder( order );
-    osgCompute::Computation* ptclEmitter = osgCompute::Computation::loadComputation("osgcuda_ptclemitter");
-    if( ptclEmitter )  programEmitter->addComputation( *ptclEmitter );
+    osg::ref_ptr<osgCompute::Computation> computationEmitter = new osgCuda::Computation;
+    computationEmitter->setName( "emit particles computation" );
+    computationEmitter->setComputeOrder( order );
+    osgCompute::Program* ptclEmitter = osgCompute::Program::loadProgram("osgcuda_ptclemitter");
+    if( ptclEmitter )  computationEmitter->addProgram( *ptclEmitter );
 
-    osg::ref_ptr<osgCompute::Program> programTracer = new osgCuda::Program;
-    programTracer->setName( "trace particles program" );
-    programTracer->setComputeOrder( order );
-    osgCompute::Computation* ptclTracer = osgCompute::Computation::loadComputation("osgcuda_ptcltracer");
-    if( ptclTracer )  programTracer->addComputation( *ptclTracer );
-    programTracer->addChild( programEmitter );
+    osg::ref_ptr<osgCompute::Computation> computationTracer = new osgCuda::Computation;
+    computationTracer->setName( "trace particles computation" );
+    computationTracer->setComputeOrder( order );
+    osgCompute::Program* ptclTracer = osgCompute::Program::loadProgram("osgcuda_ptcltracer");
+    if( ptclTracer )  computationTracer->addProgram( *ptclTracer );
+    computationTracer->addChild( computationEmitter );
 
-    // Write this program to file
+    // Write this computation to file
     // Please note that you have to copy the generated "tracedemo.osgt" manually to your data-path
-    //osgDB::writeNodeFile( *programTracer, "tracedemo.osgt" );
+    //osgDB::writeNodeFile( *computationTracer, "tracedemo.osgt" );
 
-    return programTracer;
+    return computationTracer;
 }
 
 //------------------------------------------------------------------------------
-osg::ref_ptr<osgCompute::Program> loadProgram()
+osg::ref_ptr<osgCompute::Computation> loadComputation()
 {
-    osg::ref_ptr<osgCompute::Program> program;
+    osg::ref_ptr<osgCompute::Computation> computation;
 
     std::string dataFile = osgDB::findDataFile( "osgTraceDemo/scenes/tracedemo.osgt" );
     if( !dataFile.empty() )
-        program = dynamic_cast<osgCompute::Program*>( osgDB::readNodeFile( dataFile ) );
+        computation = dynamic_cast<osgCompute::Computation*>( osgDB::readNodeFile( dataFile ) );
 
-    if( !program.valid() ) program = setupProgram();
-    return program;
+    if( !computation.valid() ) computation = setupComputation();
+    return computation;
 }
 
 //------------------------------------------------------------------------------
@@ -202,11 +202,11 @@ int main(int argc, char *argv[])
     /////////////////
     // SETUP SCENE //
     /////////////////
-    // Please note for loading the computations 
+    // Please note for loading programs 
     // "osgcuda_ptclemitter" and "osgcuda_ptcltracer" 
     // all packages must be INSTALLED first. 
     osg::ref_ptr<osg::Group> root = new osg::Group;
-    root->addChild( loadProgram() );
+    root->addChild( loadComputation() );
     root->addChild( setupScene(64000, osg::Vec3(-1.f,-1.f,-1.f), osg::Vec3(1.f,1.f,1.f)) );
     viewer.setSceneData( root );
 
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
     //////////////////////
     // The resource-visitor will collect and distribute all resources 
     // of the scene using the names of OpenGL resources as identifiers for modules.
-    // In this example "PTCL_BUFFER" is distributed to computations.
+    // In this example "PTCL_BUFFER" is distributed to programs.
     osg::ref_ptr<osgCompute::ResourceVisitor> rv = new osgCompute::ResourceVisitor;
     rv->apply( *root );
 

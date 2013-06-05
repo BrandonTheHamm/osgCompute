@@ -26,43 +26,43 @@
 namespace osgCompute
 {
     class Resource;
-    class Computation;
     class Program;
+    class Computation;
     class GLMemory;
 
     //! Interface for customized event or update code    
-    /** A ComputationCallback is utilized for adding event or update 
-    functionality to computations. A ComputationCallback allows users to 
-    change the default update or event handling for computations.
+    /** A ProgramCallback is utilized for adding event or update 
+    functionality to programs. A ProgramCallback allows users to 
+    change the default update or event handling for programs.
     */
-    class LIBRARY_EXPORT ComputationCallback : public virtual osg::Object
+    class LIBRARY_EXPORT ProgramCallback : public virtual osg::Object
     {
     public:
         /** Constructor. The object will be initialized with 
         default values. */
-        inline ComputationCallback() {}
+        inline ProgramCallback() {}
 
 
-        META_Object( osgCompute, ComputationCallback );
+        META_Object( osgCompute, ProgramCallback );
 
         /** Do customized event or update callback code.
-        @param[in] computation Reference to the computation the callback is attached to.
+        @param[in] program Reference to the program the callback is attached to.
         @param[in] nv Reference to the node visitor.
         */
-        virtual void operator()( Computation& computation, osg::NodeVisitor& nv ) {};
+        virtual void operator()( Program& program, osg::NodeVisitor& nv ) {};
 
     protected:
         /** Destructor. 
         */
-        virtual ~ComputationCallback() {}
+        virtual ~ProgramCallback() {}
 
 
     private:
         /** Copy constructor. This constructor should not be called. */
-        ComputationCallback( const ComputationCallback&, const osg::CopyOp& ) {}
+        ProgramCallback( const ProgramCallback&, const osg::CopyOp& ) {}
 
         /** Copy operator. This operator should not be called. */
-        ComputationCallback &operator=(const ComputationCallback &) { return *this; }
+        ProgramCallback &operator=(const ProgramCallback &) { return *this; }
     };
 
     //! Interface for customized subload operations.
@@ -114,21 +114,21 @@ namespace osgCompute
         SubloadCallback &operator=(const SubloadCallback&) { return *this; }
     };
 
-    //! Interface for customized launch order of computations.
+    //! Interface for customized launch order of programs.
     /** Callback class which is used for adding launch 
-    callbacks to program nodes. This allows users to 
-    customize the order in which computations are launched: 
+    callbacks to computation nodes. This allows users to 
+    customize the order in which programs are launched: 
     \code
-    myProgram->setLaunchCallback( new MyCallback );
+    myComputation->setLaunchCallback( new MyCallback );
     ...
     class MyCallback : public osgCompute::LaunchCallback
     {
-        virtual void operator()( osgCompute::Program& program )
+        virtual void operator()( osgCompute::Computation& computation )
         {
-            osgCompute::ComputationList& computations = program.getComputations();
-            computations[1]->launch();
-            computations[2]->launch();
-            computations[0]->launch();
+            osgCompute::ProgramList& programs = computation.getPrograms();
+            programs[1]->launch();
+            programs[2]->launch();
+            programs[0]->launch();
             ...
         }
     };
@@ -143,11 +143,11 @@ namespace osgCompute
 
         META_Object( osgCompute, LaunchCallback );
 
-        /** Overwrite the default launch behavior for a program node.
-        Is called whenever the program is executed. 
-        @param[in] program Reference to the program
+        /** Overwrite the default launch behavior for a computation node.
+        Is called whenever the computation is executed. 
+        @param[in] computation Reference to the computation
         */
-        virtual void operator()( Program& program ) {};
+        virtual void operator()( Computation& computation ) {};
 
     protected:
         /** Destructor. Release the memory by calling clearLocal(). */

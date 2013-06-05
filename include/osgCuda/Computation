@@ -16,7 +16,7 @@
 #ifndef OSGCUDA_PROGRAM
 #define OSGCUDA_PROGRAM 1
 
-#include <osgCompute/Program>
+#include <osgCompute/Computation>
 #include <osgCompute/Visitor>
 #include <osgCuda/Export>
 #include <osgViewer/ViewerBase>
@@ -28,30 +28,30 @@
 */ 
 namespace osgCuda
 {
-	//! Class for CUDA computations and resources.
-	/** The osgCuda::Program class implements the CUDA device handling. The 
-	resource handling is unchanged from osgCompute::Program. Please see 
-	osgCompute::Program for the resource handling.
+	//! Class for CUDA programs and resources.
+	/** The osgCuda::Computation class implements the CUDA device handling. The 
+	resource handling is unchanged from osgCompute::Computation. Please see 
+	osgCompute::Computation for the resource handling.
     */
-    class LIBRARY_EXPORT Program : public osgCompute::Program
+    class LIBRARY_EXPORT Computation : public osgCompute::Computation
     {
     public:
 		/** Constructor. 
 		*/
-        Program();
+        Computation();
 
-        META_Program( osgCuda, Program, osgCompute, ProgramBin );
+        META_Computation( osgCuda, Computation, osgCompute, ComputationBin );
 
 
     protected:
 		/** Destructor will release all resources first.
 		*/
-        virtual ~Program();
+        virtual ~Computation();
 
     private:
         // copy constructor and operator should not be called
-        Program( const Program&, const osg::CopyOp& ) {}
-		Program &operator=(const Program &) { return *this; }
+        Computation( const Computation&, const osg::CopyOp& ) {}
+		Computation &operator=(const Computation &) { return *this; }
 
     };
 }

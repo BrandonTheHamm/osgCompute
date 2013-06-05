@@ -40,7 +40,7 @@ SET(TARGET_H
 # collect the sources
 SET(TARGET_SRC
 	Util.cpp
-	Program.cpp
+	Computation.cpp
 	Buffer.cpp
 	Memory.cpp
 	Resource.cpp

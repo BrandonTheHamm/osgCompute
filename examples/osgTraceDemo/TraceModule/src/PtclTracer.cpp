@@ -18,7 +18,7 @@
 #include <cstdlib>
 #include <osg/Notify>
 #include <osg/FrameStamp>
-#include <osgCompute/Computation>
+#include <osgCompute/Program>
 #include <osgCompute/Memory>
 #include <osgCudaUtil/Timer>
 
@@ -28,7 +28,7 @@ void trace( unsigned int numPtcls, void* ptcls, float etime );
 
 namespace PtclDemo
 {
-    class PtclTracer : public osgCompute::Computation 
+    class PtclTracer : public osgCompute::Program 
     {
     public:
         virtual void launch();
@@ -72,7 +72,7 @@ namespace PtclDemo
 
 //-----------------------------------------------------------------------------
 // Use this function to return a new warp module to the application
-extern "C" OSGCOMPUTE_COMPUTATION_EXPORT osgCompute::Computation* OSGCOMPUTE_CREATE_COMPUTATION_FUNCTION() 
+extern "C" OSGCOMPUTE_PROGRAM_EXPORT osgCompute::Program* OSGCOMPUTE_CREATE_PROGRAM_FUNCTION() 
 {
     return new PtclDemo::PtclTracer;
 }

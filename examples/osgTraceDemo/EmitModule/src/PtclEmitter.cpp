@@ -19,7 +19,7 @@
 #include <osg/Notify>
 #include <osg/Array>
 #include <osg/ref_ptr>
-#include <osgCompute/Computation>
+#include <osgCompute/Program>
 #include <osgCompute/Memory>
 #include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
@@ -37,7 +37,7 @@ void emit( unsigned int numPtcls,
 
 namespace PtclDemo
 {
-    class PtclEmitter : public osgCompute::Computation 
+    class PtclEmitter : public osgCompute::Program 
     {
     public:
         virtual void launch();
@@ -102,7 +102,7 @@ namespace PtclDemo
 
 //-----------------------------------------------------------------------------
 // Use this function to return a new warp module to the application
-extern "C" OSGCOMPUTE_COMPUTATION_EXPORT osgCompute::Computation* OSGCOMPUTE_CREATE_COMPUTATION_FUNCTION( void ) 
+extern "C" OSGCOMPUTE_PROGRAM_EXPORT osgCompute::Program* OSGCOMPUTE_CREATE_PROGRAM_FUNCTION( void ) 
 {
     return new PtclDemo::PtclEmitter;
 }

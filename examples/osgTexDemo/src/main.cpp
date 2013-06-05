@@ -27,7 +27,7 @@
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCuda/Program>
+#include <osgCuda/Computation>
 #include <osgCuda/Buffer>
 #include <osgCuda/Texture>
 #include <osgCudaStats/Stats>
@@ -41,7 +41,7 @@ extern "C" void swap(
                      void* trgBuffer, 
                      unsigned int trgPitch );
 
-class TexFilter : public osgCompute::Computation 
+class TexFilter : public osgCompute::Program 
 {
 public:
     virtual void launch()
@@ -134,15 +134,15 @@ osg::ref_ptr<osg::Node> setupScene()
     ///////////////////////
     osg::ref_ptr<TexFilter> texFilter = new TexFilter;
 
-    // Execute the program during the rendering, but before
+    // Execute the computation during the rendering, but before
     // the subgraph is rendered. Default is the execution during
     // the update traversal.
-    osg::ref_ptr<osgCompute::Program> program = new osgCuda::Program;
-    program->setComputeOrder(  osgCompute::Program::PRE_RENDER );
-    program->addComputation( *texFilter );
-    program->addResource( *srcArray );
-    program->addResource( *trgTexture->getMemory() );
-    scene->addChild( program );
+    osg::ref_ptr<osgCompute::Computation> computation = new osgCuda::Computation;
+    computation->setComputeOrder(  osgCompute::Computation::PRE_RENDER );
+    computation->addProgram( *texFilter );
+    computation->addResource( *srcArray );
+    computation->addResource( *trgTexture->getMemory() );
+    scene->addChild( computation );
 
     /////////////////
     // RESULT QUAD //

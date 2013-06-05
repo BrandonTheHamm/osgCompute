@@ -343,7 +343,7 @@ namespace osgCompute
         */
         virtual void clear();
 
-        /** Will release all allocated host and device memory.
+        /** Will release host and device memory.
         */
         virtual void releaseObjects();
 
@@ -351,6 +351,11 @@ namespace osgCompute
         @param[in] state the current OpenGL state.
         */
         virtual void releaseGLObjects(osg::State* state);
+
+        /** Will return true if objects are not allocated.
+        @return Returns true if objects are not allocated.
+        */
+        virtual bool objectsReleased() const;
 
     protected:
         /** Destructor
@@ -385,7 +390,6 @@ namespace osgCompute
         // Copy constructor and operator should not be called
         Memory( const Memory&, const osg::CopyOp& ) {}
         Memory& operator=( const Memory& copy ) { return (*this); }
-
         unsigned int                                        _allocHint;
         std::vector<unsigned int>                           _dimensions;
         unsigned int                                        _numElements;

@@ -48,7 +48,7 @@ SET(TARGET_H
 	${HEADER_PATH}/Buffer
 	${HEADER_PATH}/Export
 	${HEADER_PATH}/Geometry
-	${HEADER_PATH}/Program
+	${HEADER_PATH}/Computation
     ${HEADER_PATH}/Texture
 )
 
@@ -58,7 +58,7 @@ SET(TARGET_SRC
 	Buffer.cpp
 	Geometry.cpp
 	Texture.cpp
-	Program.cpp
+	Computation.cpp
 )
 
 

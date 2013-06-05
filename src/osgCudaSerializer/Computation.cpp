@@ -1,12 +1,12 @@
 #include <osgDB/Registry>
 #include <osgDB/Input>
 #include <osgDB/Output>
-#include <osgCompute/Computation>
+#include <osgCompute/Program>
 #include <osgCompute/Memory>
-#include <osgCuda/Program>
+#include <osgCuda/Computation>
 #include "Util.h"
 
-BEGIN_USER_TABLE( ComputeOrder, osgCuda::Program );
+BEGIN_USER_TABLE( ComputeOrder, osgCuda::Computation );
 ADD_USER_VALUE( UPDATE_AFTERCHILDREN );
 ADD_USER_VALUE( UPDATE_BEFORECHILDREN );
 ADD_USER_VALUE( UPDATE_AFTERCHILDREN_NORENDER );
@@ -19,40 +19,40 @@ USER_READ_FUNC( ComputeOrder, readOrderValue )
 USER_WRITE_FUNC( ComputeOrder, writeOrderValue )
 
 //------------------------------------------------------------------------------
-static bool checkComputeOrder( const osgCuda::Program& program )
+static bool checkComputeOrder( const osgCuda::Computation& computation )
 {
     return true;
 }
 
 //------------------------------------------------------------------------------
-static bool readComputeOrder( osgDB::InputStream& is, osgCuda::Program& program )
+static bool readComputeOrder( osgDB::InputStream& is, osgCuda::Computation& computation )
 {
     int order = readOrderValue(is);
     int orderNumber = 0; is >> orderNumber;
-    program.setComputeOrder( static_cast<osgCuda::Program::ComputeOrder>(order), orderNumber );
+    computation.setComputeOrder( static_cast<osgCuda::Computation::ComputeOrder>(order), orderNumber );
     return true;
 }
 
 //------------------------------------------------------------------------------
-static bool writeComputeOrder( osgDB::OutputStream& os, const osgCuda::Program& program )
+static bool writeComputeOrder( osgDB::OutputStream& os, const osgCuda::Computation& computation )
 {
-    writeOrderValue( os, (int)program.getComputeOrder() );
-    os << program.getComputeOrderNum() << std::endl;
+    writeOrderValue( os, (int)computation.getComputeOrder() );
+    os << computation.getComputeOrderNum() << std::endl;
     return true;
 }
 
 
 //------------------------------------------------------------------------------
-static bool checkResources( const osgCuda::Program& program )
+static bool checkResources( const osgCuda::Computation& computation )
 {
-    if( !program.getResources().empty() ) return true;
+    if( !computation.getResources().empty() ) return true;
     else return false;
 }
 
 //------------------------------------------------------------------------------
-static bool writeResources( osgDB::OutputStream& os, const osgCuda::Program& program )
+static bool writeResources( osgDB::OutputStream& os, const osgCuda::Computation& computation )
 {	
-	const osgCompute::ResourceHandleList resList = program.getResources();
+	const osgCompute::ResourceHandleList resList = computation.getResources();
 
 	// Count attached resources
 	unsigned int numRes = 0;
@@ -89,7 +89,7 @@ static bool writeResources( osgDB::OutputStream& os, const osgCuda::Program& pro
 }
 
 //------------------------------------------------------------------------------
-static bool readResources( osgDB::InputStream& is, osgCuda::Program& program )
+static bool readResources( osgDB::InputStream& is, osgCuda::Computation& computation )
 {
 	unsigned int numRes = 0;  
 	is >> numRes >> is.BEGIN_BRACKET;
@@ -102,12 +102,12 @@ static bool readResources( osgDB::InputStream& is, osgCuda::Program& program )
             osgCompute::GLMemoryAdapter* ioo = dynamic_cast<osgCompute::GLMemoryAdapter*>( newRes );
             if( ioo != NULL )
             {
-                program.addResource( *ioo->getMemory() );
+                computation.addResource( *ioo->getMemory() );
             }
             else
             {
 		        osgCompute::Resource* curRes = dynamic_cast<osgCompute::Resource*>( newRes );
-		        if( curRes != NULL ) program.addResource( *curRes );
+		        if( curRes != NULL ) computation.addResource( *curRes );
             }
 
         }
@@ -119,28 +119,28 @@ static bool readResources( osgDB::InputStream& is, osgCuda::Program& program )
 
 
 //------------------------------------------------------------------------------
-static bool checkComputations( const osgCuda::Program& program )
+static bool checkPrograms( const osgCuda::Computation& computation )
 {
-	if( !program.getComputations().empty() ) return true;
+	if( !computation.getPrograms().empty() ) return true;
 	else return false;
 }
 
 //------------------------------------------------------------------------------
-static bool writeComputations( osgDB::OutputStream& os, const osgCuda::Program& program )
+static bool writePrograms( osgDB::OutputStream& os, const osgCuda::Computation& computation )
 {	
-	const osgCompute::ComputationList modList = program.getComputations();
+	const osgCompute::ProgramList modList = computation.getPrograms();
 
 
 	// Count attached resources
 	unsigned int numMods = 0;
-	for( osgCompute::ComputationListCnstItr modItr = modList.begin(); modItr != modList.end(); ++modItr )
+	for( osgCompute::ProgramListCnstItr modItr = modList.begin(); modItr != modList.end(); ++modItr )
 		if( !(*modItr)->getLibraryName().empty() )
 			numMods++;
 
 	// Write attached resources
 	os << numMods << os.BEGIN_BRACKET << std::endl;
 
-	for( osgCompute::ComputationListCnstItr modItr = modList.begin(); modItr != modList.end(); ++modItr )
+	for( osgCompute::ProgramListCnstItr modItr = modList.begin(); modItr != modList.end(); ++modItr )
 	{
 		if( !(*modItr)->getLibraryName().empty() )
 		{
@@ -154,7 +154,7 @@ static bool writeComputations( osgDB::OutputStream& os, const osgCuda::Program& 
 }
 
 //------------------------------------------------------------------------------
-static bool readComputations( osgDB::InputStream& is, osgCuda::Program& program )
+static bool readPrograms( osgDB::InputStream& is, osgCuda::Computation& computation )
 {
 	unsigned int numMods = 0;  
 	is >> numMods >> is.BEGIN_BRACKET;
@@ -165,19 +165,19 @@ static bool readComputations( osgDB::InputStream& is, osgCuda::Program& program 
 		is.readWrappedString( moduleLibraryName );
         moduleLibraryName = osgCuda::trim( moduleLibraryName );
 
-		if( !osgCompute::Computation::existsComputation(moduleLibraryName) )
+		if( !osgCompute::Program::existsProgram(moduleLibraryName) )
 		{
 			osg::notify(osg::WARN) 
-				<<" osgCuda_Program::readComputations(): cannot find module library "
+				<<" osgCuda_Computation::readPrograms(): cannot find module library "
 				<< moduleLibraryName << "." << std::endl;
 
 			continue;
 		}
 
-		osgCompute::Computation* module = osgCompute::Computation::loadComputation( moduleLibraryName );
+		osgCompute::Program* module = osgCompute::Program::loadProgram( moduleLibraryName );
 		if( module != NULL )
 		{
-			program.addComputation( *module );
+			computation.addProgram( *module );
 		}
 	}
 
@@ -187,13 +187,13 @@ static bool readComputations( osgDB::InputStream& is, osgCuda::Program& program 
 
 
 //------------------------------------------------------------------------------
-REGISTER_OBJECT_WRAPPER(osgCuda_Program,
-						new osgCuda::Program,
-						osgCuda::Program,
-						"osg::Object osg::Node osg::Group osgCuda::Program" )
+REGISTER_OBJECT_WRAPPER(osgCuda_Computation,
+						new osgCuda::Computation,
+						osgCuda::Computation,
+						"osg::Object osg::Node osg::Group osgCuda::Computation" )
 {
     ADD_USER_SERIALIZER( ComputeOrder );  // _computeOrder & _computeOrderNum
-	ADD_USER_SERIALIZER( Computations );
+	ADD_USER_SERIALIZER( Programs );
 	ADD_USER_SERIALIZER( Resources );
 }
 

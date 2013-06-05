@@ -22,7 +22,7 @@
 #include <osgDB/WriteFile>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCuda/Program>
+#include <osgCuda/Computation>
 #include <osgCuda/Geometry>
 #include <osgCuda/Buffer>
 #include <osgCudaStats/Stats>
@@ -40,7 +40,7 @@ extern "C" void warp(
                      void* initNormals,
                      float simTime );
 
-class Warp : public osgCompute::Computation 
+class Warp : public osgCompute::Program 
 {
 public:
     Warp() : _simulationTime(0) {}
@@ -114,7 +114,7 @@ private:
 //------------------------------------------------------------------------------
 osg::ref_ptr<osg::Node> setupScene()
 {
-    osg::ref_ptr<osgCompute::Program> program = new osgCuda::Program;
+    osg::ref_ptr<osgCompute::Computation> computation = new osgCuda::Computation;
 
     //////////////////
     // COW OSG FILE //
@@ -123,7 +123,7 @@ osg::ref_ptr<osg::Node> setupScene()
      {
         // Build a osgCuda::Geometry
         cowModel = dynamic_cast<osg::Group*>( osgDB::readNodeFile("cow.osg") );
-        if( !cowModel.valid() ) return program;
+        if( !cowModel.valid() ) return computation;
 
         osg::ref_ptr<osg::Geode> cowGeode = dynamic_cast<osg::Geode*>( cowModel->getChild(0) );
         osg::ref_ptr<osg::Geometry> cowGeometry = dynamic_cast<osg::Geometry*>( cowGeode->getDrawable(0) );
@@ -163,17 +163,17 @@ osg::ref_ptr<osg::Node> setupScene()
     animTransform->setUpdateCallback(nc);
     animTransform->addChild( cowModel );
 
-    program->setComputeOrder( osgCompute::Program::UPDATE_BEFORECHILDREN );
-    program->addChild( animTransform );
+    computation->setComputeOrder( osgCompute::Computation::UPDATE_BEFORECHILDREN );
+    computation->addChild( animTransform );
 
     //////////////////
     // SETUP MODULE //
     //////////////////
-    osg::ref_ptr<osgCompute::Computation> warpComputation = new Warp;
-    warpComputation->setLibraryName("osgcuda_warp");
-    program->addComputation( *warpComputation );
-    program->addResource( *geometry->getMemory() );
-    return program;
+    osg::ref_ptr<osgCompute::Program> warpProgram = new Warp;
+    warpProgram->setLibraryName("osgcuda_warp");
+    computation->addProgram( *warpProgram );
+    computation->addResource( *geometry->getMemory() );
+    return computation;
 }
 
 //------------------------------------------------------------------------------

@@ -15,12 +15,12 @@
 #include <cstring>
 #include <osg/Notify>
 #include <osgCuda/Buffer>
-#include <osgCompute/Computation>
+#include <osgCompute/Program>
 #include <cuda_runtime.h>
 
 extern "C" void swapEndianness( unsigned int numBytes, void* bytes );
 
-class SwapComputation : public osgCompute::Computation
+class SwapProgram : public osgCompute::Program
 {
 public:
     virtual void launch()
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     ///////////////////
     // LAUNCH MODULE //
     ///////////////////
-    osg::ref_ptr<SwapComputation> module = new SwapComputation;
+    osg::ref_ptr<SwapProgram> module = new SwapProgram;
     module->acceptResource( *buffer );
 
     // Instead of attaching an osg::Array you can map the buffer to the

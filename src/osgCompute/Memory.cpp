@@ -229,6 +229,13 @@ namespace osgCompute
         Resource::releaseGLObjects(state);
     }
 
+
+    //------------------------------------------------------------------------------
+    bool Memory::objectsReleased() const
+    {
+        return !_object.valid();
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -246,7 +253,7 @@ namespace osgCompute
             if( getElementSize() == 0 || getNumDimensions() == 0 )
             {
                 osg::notify( osg::FATAL )  
-                    << getName() << " [Memory::object()] \"" << getName() 
+                    << getName() << __FUNCTION__ << ": \"" << getName() 
                     << "\": allocation of memory failed as dimension and element size is unknown."
                     << std::endl;
 
@@ -257,14 +264,13 @@ namespace osgCompute
             if( newObject == NULL )
             {
                 osg::notify( osg::FATAL )  
-                    << getName() << " [Memory::getObject()] \"" << getName() << "\": allocation of memory failed."
+                    << getName() <<__FUNCTION__ << ": \"" << getName() << "\": allocation of memory failed."
                     << std::endl;
                 return NULL;
             }
             newObject->_mapping = osgCompute::UNMAP;
             newObject->_allocHint = getAllocHint();
             _object = newObject;
-            objectsCreated();
         }
 
         return _object.get();
@@ -278,7 +284,7 @@ namespace osgCompute
             if( getElementSize() == 0 || getNumDimensions() == 0 )
             {
                 osg::notify( osg::FATAL )  
-                    << getName() << " [Memory::object()] \"" << getName() 
+                    << getName() << __FUNCTION__ << ": \"" << getName() 
                     << "\": allocation of memory failed as dimension and element size is unknown."
                     << std::endl;
 
@@ -289,7 +295,7 @@ namespace osgCompute
             if( newObject == NULL )
             {
                 osg::notify( osg::FATAL )  
-                    << getName() << " [Memory::object()] \"" << getName() << "\": allocation of memory failed."
+                    << getName() << __FUNCTION__ << ": \"" << getName() << "\": allocation of memory failed."
                     << std::endl;
 
                 return NULL;
@@ -297,7 +303,6 @@ namespace osgCompute
             newObject->_mapping = osgCompute::UNMAP;
             newObject->_allocHint = getAllocHint();
             _object = newObject;
-            objectsCreated();
         }
 
         return _object.get();
@@ -320,7 +325,6 @@ namespace osgCompute
     {
         _object = NULL;
     }
-
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
 	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////

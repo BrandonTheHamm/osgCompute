@@ -13,683 +13,167 @@
 * The full license is in LICENSE file included with this distribution.
 */
 
-#include <sstream>
-#include <osg/NodeVisitor>
-#include <osg/OperationThread>
 #include <osgDB/Registry>
-#include <osgUtil/CullVisitor>
-//#include <osgUtil/RenderBin>
-#include <osgUtil/RenderStage>
-#include <osgUtil/GLObjectsVisitor>
-#include <osgCompute/Visitor>
-#include <osgCompute/Memory>
+#include <osgDB/FileUtils>
 #include <osgCompute/Program>
 
 namespace osgCompute
-{
-    class LIBRARY_EXPORT ProgramBin : public osgUtil::RenderStage 
-    {
-    public:
-        ProgramBin(); 
-        ProgramBin(osgUtil::RenderBin::SortMode mode);
+{   
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// STATIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//------------------------------------------------------------------------------
+	bool Program::existsProgram( const std::string& libraryName )
+	{
+		std::string curLibraryName = osgDB::Registry::instance()->createLibraryNameForNodeKit( libraryName );
+		std::string fullPath = osgDB::findLibraryFile( curLibraryName );
+		if( fullPath.empty() )
+			return false;
 
-        META_Object( osgCompute, ProgramBin );
+		return true;
+	}
 
-        virtual bool setup( Program& program );
-        virtual void reset();
+	//------------------------------------------------------------------------------
+	Program* Program::loadProgram( const std::string& libraryName )
+	{
+		std::string curLibraryName = osgDB::Registry::instance()->createLibraryNameForNodeKit( libraryName );
+		
+		if( osgDB::Registry::instance()->loadLibrary( curLibraryName ) ==  osgDB::Registry::NOT_LOADED )
+		{
+			osg::notify(osg::WARN)
+				<<" Program::loadProgram(): cannot find dynamic library "
+				<< libraryName <<"."<<std::endl;
 
-        virtual void draw( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
-        virtual void drawImplementation(osg::RenderInfo& renderInfo,osgUtil::RenderLeaf*& previous);
-        virtual void drawInner(osg::RenderInfo& renderInfo,osgUtil::RenderLeaf*& previous, bool& doCopyTexture);
+			return NULL;
+		}
 
-        virtual unsigned int computeNumberOfDynamicRenderLeaves() const;
+		osg::ref_ptr<osgDB::DynamicLibrary> programLibrary = osgDB::Registry::instance()->getLibrary( curLibraryName );
+		if( !programLibrary.valid() )
+		{
+			osg::notify(osg::WARN)
+				<<__FUNCTION__ << ": cannot find dynamic library "
+				<< libraryName << " after load." << std::endl;
 
-        virtual Program* getProgram();
-        virtual const Program* getProgram() const;
+			return NULL;
+		}
 
-    protected:
-        friend class Program;
-        virtual ~ProgramBin() { clearLocal(); }
-        void clearLocal();
+		OSGCOMPUTE_CREATE_PROGRAM_FUNCTION_PTR createProgramFunc = 
+            (OSGCOMPUTE_CREATE_PROGRAM_FUNCTION_PTR) programLibrary->getProcAddress( OSGCOMPUTE_CREATE_PROGRAM_FUNCTION_STR );
+		if( createProgramFunc == NULL )
+		{
+			osg::notify(osg::WARN)
+				<<__FUNCTION__ << ": cannot get pointer to function \""<< OSGCOMPUTE_CREATE_PROGRAM_FUNCTION_STR<<"\" within program library "
+				<< libraryName << "." << std::endl;
 
-        virtual void launch();
-        virtual void drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous );
+			return NULL;
+		}
 
-        Program* _program; 
+		Program* loadedProgram = (*createProgramFunc)();
+		if( loadedProgram && loadedProgram->getLibraryName().empty() )
+        {
+			loadedProgram->setLibraryName( libraryName );
+            loadedProgram->addIdentifier( libraryName );
+        }
 
-    private:
-        // copy constructor and operator should not be called
-        ProgramBin(const ProgramBin&, const osg::CopyOp& ) {}
-        ProgramBin &operator=(const ProgramBin &) { return *this; }
-    };
+		return loadedProgram;
+	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //------------------------------------------------------------------------------
-    ProgramBin::ProgramBin()
-        : osgUtil::RenderStage()
+    Program::Program() : osgCompute::Resource()
     {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    ProgramBin::ProgramBin( osgUtil::RenderBin::SortMode mode )
-        : osgUtil::RenderStage( mode )
-    {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    void ProgramBin::drawInner( osg::RenderInfo& renderInfo,osgUtil::RenderLeaf*& previous, bool& doCopyTexture )
-    {
-        osgUtil::RenderBin::draw(renderInfo,previous);
-    }
-
-    //------------------------------------------------------------------------------
-    void ProgramBin::draw( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
-    { 
-        if (_stageDrawnThisFrame) return;
-        _stageDrawnThisFrame = true;
-
-        // Render all the pre draw callbacks
-        drawPreRenderStages(renderInfo,previous);
-
-        bool doCopyTexture = false;
-        // Draw bins, renderleafs and launch kernels
-        drawInner(renderInfo,previous,doCopyTexture);
-
-        // Render all the post draw callbacks
-        drawPostRenderStages(renderInfo,previous);
-    }
-
-    //------------------------------------------------------------------------------
-    void ProgramBin::drawImplementation( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
-    { 
-        osg::State& state = *renderInfo.getState();
-
-        unsigned int numToPop = (previous ? osgUtil::StateGraph::numToPop(previous->_parent) : 0);
-        if (numToPop>1) --numToPop;
-        unsigned int insertStateSetPosition = state.getStateSetStackSize() - numToPop;
-
-        if (_stateset.valid())
-        {
-            state.insertStateSet(insertStateSetPosition, _stateset.get());
-        }
-
-        ///////////////////
-        // DRAW PRE BINS //
-        ///////////////////
-        osgUtil::RenderBin::RenderBinList::iterator rbitr;
-        for(rbitr = _bins.begin();
-            rbitr!=_bins.end() && rbitr->first<0;
-            ++rbitr)
-        {
-            rbitr->second->draw(renderInfo,previous);
-        }
-
-        if( _program->getLaunchCallback() ) 
-            (*_program->getLaunchCallback())( *_program ); 
-        else launch();  
-
-        // don't forget to decrement dynamic object count
-        renderInfo.getState()->decrementDynamicObjectCount();
-
-        ////////////////////
-        // DRAW POST BINS //
-        ////////////////////
-        for(;
-            rbitr!=_bins.end();
-            ++rbitr)
-        {
-            rbitr->second->draw(renderInfo,previous);
-        }
-
-
-        if (_stateset.valid())
-        {
-            state.removeStateSet(insertStateSetPosition);
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    unsigned int ProgramBin::computeNumberOfDynamicRenderLeaves() const
-    {
-        // increment dynamic object count to execute computations
-        return osgUtil::RenderBin::computeNumberOfDynamicRenderLeaves() + 1;
-    }
-
-    //------------------------------------------------------------------------------
-    bool ProgramBin::setup( Program& program )
-    {
-        // COMPUTATION 
-        _program = &program;
-
-        // OBJECT 
-        setName( _program->getName() );
-        setDataVariance( _program->getDataVariance() );
-
-        return true;
-    }
-
-    //------------------------------------------------------------------------------
-    void ProgramBin::reset()
-    {
-        clearLocal();
-    }
-
-    //------------------------------------------------------------------------------
-    Program* ProgramBin::getProgram()
-    { 
-        return _program; 
-    }
-
-    //------------------------------------------------------------------------------
-    const Program* ProgramBin::getProgram() const
-    { 
-        return _program; 
-    }
-
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    void ProgramBin::clearLocal()
-    {
-        _stageDrawnThisFrame = false;
-        _program = NULL;
-        osgUtil::RenderStage::reset();
-    }
-
-    //------------------------------------------------------------------------------
-    void ProgramBin::launch()
-    {
-        if( !_program  )
-            return;
-
-        // Launch computations
-        ComputationList& computations = _program->getComputations();
-        for( ComputationListCnstItr itr = computations.begin(); itr != computations.end(); ++itr )
-        {
-            if( (*itr)->isEnabled() )
-            {
-                (*itr)->launch();
-            }
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    void ProgramBin::drawLeafs( osg::RenderInfo& renderInfo, osgUtil::RenderLeaf*& previous )
-    {
-        // draw fine grained ordering.
-        for(osgUtil::RenderBin::RenderLeafList::iterator rlitr= _renderLeafList.begin();
-            rlitr!= _renderLeafList.end();
-            ++rlitr)
-        {
-            osgUtil::RenderLeaf* rl = *rlitr;
-            rl->render(renderInfo,previous);
-            previous = rl;
-        }
-
-        // draw coarse grained ordering.
-        for(osgUtil::RenderBin::StateGraphList::iterator oitr=_stateGraphList.begin();
-            oitr!=_stateGraphList.end();
-            ++oitr)
-        {
-
-            for(osgUtil::StateGraph::LeafList::iterator dw_itr = (*oitr)->_leaves.begin();
-                dw_itr != (*oitr)->_leaves.end();
-                ++dw_itr)
-            {
-                osgUtil::RenderLeaf* rl = dw_itr->get();
-                rl->render(renderInfo,previous);
-                previous = rl;
-
-            }
-        }
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------ 
-    Program::Program() 
-        :   osg::Group()
-    { 
-        _launchCallback = NULL;
         _enabled = true;
-
-        // setup program order
-        _computeOrder = UPDATE_BEFORECHILDREN;
-        if( (_computeOrder & OSGCOMPUTE_UPDATE) == OSGCOMPUTE_UPDATE )
-            setNumChildrenRequiringUpdateTraversal( 1 );
     }
 
     //------------------------------------------------------------------------------
-    void Program::accept(osg::NodeVisitor& nv) 
+    void Program::launch()
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    void Program::setUpdateCallback( ProgramCallback* uc ) 
     { 
-        if( nv.validNodeMask(*this) ) 
-        {  
-            nv.pushOntoNodePath(this);
-
-            osgUtil::CullVisitor* cv = dynamic_cast<osgUtil::CullVisitor*>( &nv );
-            if( cv != NULL )
-            {
-                if( _enabled && (_computeOrder & OSGCOMPUTE_RENDER) == OSGCOMPUTE_RENDER )
-                    addBin( *cv );
-                else if( (_computeOrder & OSGCOMPUTE_NORENDER) == OSGCOMPUTE_NORENDER )
-					return; // Do not process the childs during rendering
-				else
-                    nv.apply(*this);
-            }
-            else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
-            {
-
-                if( _enabled && (_computeOrder & UPDATE_BEFORECHILDREN) == UPDATE_BEFORECHILDREN )
-                    launch();
-
-                if( getUpdateCallback() )
-                {
-                    (*getUpdateCallback())( this, &nv );
-                }
-                else
-                {
-                    applyVisitorToComputations( nv );
-                    nv.apply( *this );
-                }
-
-                if( _enabled && (_computeOrder & UPDATE_AFTERCHILDREN) == UPDATE_AFTERCHILDREN )
-                    launch();
-            }
-            else if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
-            {
-                if( getEventCallback() )
-                {
-                    (*getEventCallback())( this, &nv );
-                }
-                else
-                {
-                    applyVisitorToComputations( nv );
-                    nv.apply( *this );
-                }
-            }
-            else
-            {
-                nv.apply( *this );
-            }
-
-            nv.popFromNodePath(); 
-        } 
+        _updateCallback = uc; 
     }
 
     //------------------------------------------------------------------------------
-    void Program::addComputation( Computation& computation )
-    {
-        Resource* curResource = NULL;
-        for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-        {
-            curResource = (*itr)._resource.get();
-            if( !curResource )
-                continue;
-
-            computation.acceptResource( *curResource );
-        }
-
-        // increment traversal counter if required
-        if( computation.getEventCallback() )
-            osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() + 1 );
-
-        if( computation.getUpdateCallback() )
-            osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() + 1 );
-
-
-        _computations.push_back( &computation );
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::removeComputation( Computation& computation )
-    {
-        for( ComputationListItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-        {
-            if( (*itr) == &computation )
-            {
-                // decrement traversal counter if necessary
-                if( computation.getEventCallback() )
-                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
-
-                if( computation.getUpdateCallback() )
-                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
-
-                _computations.erase( itr );
-                return;
-            }
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::removeComputation( const std::string& computationIdentifier )
-    {
-        ComputationListItr itr = _computations.begin();
-        while( itr != _computations.end() )
-        {
-            if( (*itr)->isIdentifiedBy( computationIdentifier ) )
-            {
-                // decrement traversal counter if necessary
-                if( (*itr)->getEventCallback() )
-                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
-
-                if( (*itr)->getUpdateCallback() )
-                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
-
-
-                _computations.erase( itr );
-                itr = _computations.begin();
-            }
-            else
-            {
-                ++itr;
-            }
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::removeComputations()
-    {
-        ComputationListItr itr;
-        while( !_computations.empty() )
-        {
-            itr = _computations.begin();
-
-            Computation* curComputation = (*itr).get();
-            if( curComputation != NULL )
-            {
-                // decrement traversal counter if necessary
-                if( curComputation->getEventCallback() )
-                    osg::Node::setNumChildrenRequiringEventTraversal( osg::Node::getNumChildrenRequiringEventTraversal() - 1 );
-
-                if( curComputation->getUpdateCallback() )
-                    osg::Node::setNumChildrenRequiringUpdateTraversal( osg::Node::getNumChildrenRequiringUpdateTraversal() - 1 );
-            }
-            _computations.erase( itr );
-        }
-    }
-
-	//------------------------------------------------------------------------------
-	const Computation* Program::getComputation( const std::string& computationIdentifier ) const
-	{
-		for( ComputationListCnstItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-			if( (*itr)->isIdentifiedBy( computationIdentifier ) )
-				return (*itr).get();
-
-		return NULL;
-	}
-
-	//------------------------------------------------------------------------------
-	Computation* Program::getComputation( const std::string& computationIdentifier )
-	{
-		for( ComputationListItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-			if( (*itr)->isIdentifiedBy( computationIdentifier ) )
-				return (*itr).get();
-
-		return NULL;
-	}
-
-
-    //------------------------------------------------------------------------------
-    bool Program::hasComputation( const std::string& computationIdentifier ) const
-    {
-        for( ComputationListCnstItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-            if( (*itr)->isIdentifiedBy( computationIdentifier ) )
-                return true;
-
-        return false;
-    }
-
-    //------------------------------------------------------------------------------
-    bool Program::hasComputation( Computation& computation ) const
-    {
-        for( ComputationListCnstItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-            if( (*itr) == &computation )
-                return true;
-
-        return false;
-    }
-
-    //------------------------------------------------------------------------------
-    bool Program::hasComputations() const 
+    ProgramCallback* Program::getUpdateCallback() 
     { 
-        return !_computations.empty(); 
+        return _updateCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
-    ComputationList& Program::getComputations() 
+    const ProgramCallback* Program::getUpdateCallback() const 
     { 
-        return _computations; 
+        return _updateCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
-    const ComputationList& Program::getComputations() const 
+    void Program::setEventCallback( ProgramCallback* ec ) 
     { 
-        return _computations; 
+        _eventCallback = ec; 
     }
 
     //------------------------------------------------------------------------------
-    unsigned int Program::getNumComputations() const 
+    ProgramCallback* Program::getEventCallback() 
     { 
-        return _computations.size(); 
+        return _eventCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
-    bool osgCompute::Program::hasResource( Resource& resource ) const
-    {
-		for( ResourceHandleListCnstItr itr = _resources.begin();
-			itr != _resources.end();
-			++itr )
-		{
-			if( (*itr)._resource == &resource )
-				return true;
-		}
-
-        return false;
-    }
-
-    //------------------------------------------------------------------------------
-    bool osgCompute::Program::hasResource( const std::string& handle ) const
-    {
-        for( ResourceHandleListCnstItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-        {
-            if(	(*itr)._resource.valid() && (*itr)._resource->isIdentifiedBy(handle)  )
-                return true;
-        }
-
-        return false;
-    }
-
-    //------------------------------------------------------------------------------
-    void osgCompute::Program::addResource( Resource& resource, bool serialize )
-    {
-        if( hasResource(resource) )
-            return;
-
-        for( ComputationListItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-            (*itr)->acceptResource( resource );
-
-		ResourceHandle newHandle;
-		newHandle._resource = &resource;
-		newHandle._serialize = serialize;
-		_resources.push_back( newHandle );
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::exchangeResource( Resource& newResource, bool serialize /*= true */ )
-    {
-        IdentifierSet& ids = newResource.getIdentifiers();
-        for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-        {
-            bool exchange = false;
-            for( IdentifierSetItr idItr = ids.begin(); idItr != ids.end(); ++idItr )
-            {
-                if( (*itr)._resource->isIdentifiedBy( (*idItr) ) )
-                {
-                    exchange = true;
-                }
-            }
-
-            if( exchange )
-            {
-                // Remove and add resource
-                for( ComputationListItr modItr = _computations.begin(); modItr != _computations.end(); ++modItr )
-                {
-                    (*modItr)->removeResource( *((*itr)._resource) );
-                    (*modItr)->acceptResource( newResource );
-                }
-                // Remove resource from list
-                itr = _resources.erase( itr );
-            }
-        }
-
-        // Add new resource
-        ResourceHandle newHandle;
-        newHandle._resource = &newResource;
-        newHandle._serialize = serialize;
-        _resources.push_back( newHandle );
-    }
-
-
-    //------------------------------------------------------------------------------
-    void osgCompute::Program::removeResource( const std::string& handle )
-    {
-        Resource* curResource = NULL;
-
-        ResourceHandleListItr itr = _resources.begin();
-        while( itr != _resources.end() )
-        {
-            curResource = (*itr)._resource.get();
-            if( !curResource )
-                continue;
-
-            if( curResource->isIdentifiedBy( handle ) )
-            {
-                for( ComputationListItr moditr = _computations.begin(); moditr != _computations.end(); ++moditr )
-                    (*moditr)->removeResource( *curResource );
-
-                _resources.erase( itr );
-                itr = _resources.begin();
-            }
-            else
-            {
-                ++itr;
-            }
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::removeResource( Resource& resource )
-    {
-		for( ResourceHandleListItr itr = _resources.begin();
-			itr != _resources.end();
-			++itr )
-		{
-			if( (*itr)._resource == &resource )
-			{
-				for( ComputationListItr moditr = _computations.begin(); moditr != _computations.end(); ++moditr )
-					(*moditr)->removeResource( resource );
-
-				_resources.erase( itr );
-				return;
-			}
-		}
-
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::removeResources()
-    {
-        ResourceHandleListItr itr = _resources.begin();
-        while( itr != _resources.end() )
-        {
-            Resource* curResource = (*itr)._resource.get();
-            if( curResource != NULL )
-            {
-                for( ComputationListItr moditr = _computations.begin(); moditr != _computations.end(); ++moditr )
-                    (*moditr)->removeResource( *curResource );
-            }
-
-            _resources.erase( itr );
-            itr = _resources.begin();
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    ResourceHandleList& Program::getResources()
-    {
-        return _resources;
-    }
-
-    //------------------------------------------------------------------------------
-    const ResourceHandleList& Program::getResources() const
-    {
-        return _resources;
-    }
-
-	//------------------------------------------------------------------------------
-	bool Program::isResourceSerialized( Resource& resource ) const
-	{
-		for( ResourceHandleListCnstItr itr = _resources.begin();
-			itr != _resources.end();
-			++itr )
-		{
-			if( (*itr)._resource == &resource )
-				return (*itr)._serialize;
-		}
-
-		return false;
-	}
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    void Program::setLaunchCallback( LaunchCallback* lc ) 
+    const ProgramCallback* Program::getEventCallback() const 
     { 
-        if( lc == _launchCallback )
-            return;
-
-        _launchCallback = lc; 
+        return _eventCallback.get(); 
     }
 
     //------------------------------------------------------------------------------
-    LaunchCallback* Program::getLaunchCallback() 
-    { 
-        return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    const LaunchCallback* Program::getLaunchCallback() const 
-    { 
-        return _launchCallback; 
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::setComputeOrder( Program::ComputeOrder co, int orderNum/* = 0 */)
+    void Program::acceptResource( Resource& resource ) 
     {
-        // deactivate auto update
-        if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
-            setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() - 1 );
-
-        _computeOrder = co;
-        _computeOrderNum = orderNum;
-
-        // set auto update active in case we use the update traversal to compute things
-        if( (_computeOrder & OSGCOMPUTE_UPDATE ) == OSGCOMPUTE_UPDATE )
-            setNumChildrenRequiringUpdateTraversal( getNumChildrenRequiringUpdateTraversal() + 1 );
     }
 
     //------------------------------------------------------------------------------
-    Program::ComputeOrder Program::getComputeOrder() const
+    void Program::acceptResource( Resource& resource, const std::string& resourceIdentifier )
     {
-        return _computeOrder;
+    }
+
+    //------------------------------------------------------------------------------
+    bool Program::usesResource( const std::string& handle ) const 
+    { 
+        return false; 
+    }
+
+    //------------------------------------------------------------------------------
+    void Program::removeResource( const std::string& handle ) 
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    void Program::removeResource( const Resource& resource ) 
+    {
+    }
+
+    //------------------------------------------------------------------------------
+    Resource* Program::getResource( const std::string& handle ) 
+    { 
+        return NULL; 
+    }
+
+    //------------------------------------------------------------------------------
+    const Resource* Program::getResource( const std::string& handle ) const 
+    { 
+        return NULL; 
+    }
+
+    //------------------------------------------------------------------------------
+    void Program::getResources( ResourceList& resourceList, const std::string& handle ) 
+    { 
+    }
+
+    //------------------------------------------------------------------------------
+    void Program::getAllResources( ResourceList& resourceList ) 
+    { 
     }
 
     //------------------------------------------------------------------------------
@@ -710,135 +194,21 @@ namespace osgCompute
         return _enabled;
     }
 
-    //------------------------------------------------------------------------------
-    void Program::releaseGLObjects( osg::State* state ) const
-    {
-        if( state != NULL && GLMemory::getContext() == state->getGraphicsContext() )
-        {
-            // Make context the current context
-            if( !GLMemory::getContext()->isCurrent() && GLMemory::getContext()->isRealized() )
-                GLMemory::getContext()->makeCurrent();
+	//------------------------------------------------------------------------------
+	const std::string& Program::getLibraryName() const
+	{
+		return _libraryName;
+	}
 
-            // Release all resources associated with the current context
-            for( ComputationListItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-                (*itr)->releaseObjects();
+	//------------------------------------------------------------------------------
+	std::string& Program::getLibraryName()
+	{
+		return _libraryName;
+	}
 
-            for( ResourceHandleListItr itr = _resources.begin(); itr != _resources.end(); ++itr )
-                (*itr)._resource->releaseObjects();
-        }
-
-        Group::releaseGLObjects( state );
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //------------------------------------------------------------------------------
-    void Program::addBin( osgUtil::CullVisitor& cv )
-    {
-        if( !cv.getState() )
-        {
-            osg::notify(osg::WARN)  << "Program::addBin() for \""
-                << getName()<<"\": CullVisitor must provide a valid state."
-                << std::endl;
-
-            return;
-        }
-
-        if( GLMemory::getContext() == NULL )
-            return;
-
-        if( cv.getState()->getContextID() != GLMemory::getContext()->getState()->getContextID() )
-            return;
-
-        ///////////////////////
-        // SETUP REDIRECTION //
-        ///////////////////////
-        osgUtil::RenderBin* oldRB = cv.getCurrentRenderBin();
-        if( !oldRB )
-        {
-            osg::notify(osg::WARN)  
-                << getName() << " [Program::addBin()]: current CullVisitor has no active RenderBin."
-                << std::endl;
-
-            return;
-        }
-
-        ProgramBin* pb = new ProgramBin;
-        if( !pb )
-        {
-            osg::notify(osg::FATAL)  
-                << getName() << " [Program::addBin()]: cannot create ProgramBin."
-                << std::endl;
-
-            return;
-        }
-        pb->setup( *this );
-
-        //////////////
-        // TRAVERSE //
-        //////////////
-        cv.setCurrentRenderBin( pb );
-        cv.apply( *this );
-        cv.setCurrentRenderBin( oldRB );
-
-        osgUtil::RenderStage* rs = oldRB->getStage();
-        if( rs )
-        {
-            if( (_computeOrder & OSGCOMPUTE_POSTRENDER) ==  OSGCOMPUTE_POSTRENDER )
-            {
-                rs->addPostRenderStage(pb,_computeOrderNum);
-            }
-            else
-            {
-                rs->addPreRenderStage(pb,_computeOrderNum);
-            }
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::launch()
-    {            
-        // Check if graphics context exist
-        // or return otherwise
-        if( NULL != GLMemory::getContext() && GLMemory::getContext()->isRealized() )
-        {       
-            // Launch computations
-            if( _launchCallback.valid() ) 
-            {
-                (*_launchCallback)( *this ); 
-            }
-            else
-            {
-                for( ComputationListItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-                {
-                    if( (*itr)->isEnabled() )
-                    {
-                        (*itr)->launch();
-                    }
-                }
-            }
-        }
-    }
-
-    //------------------------------------------------------------------------------
-    void Program::applyVisitorToComputations( osg::NodeVisitor& nv )
-    {
-        if( nv.getVisitorType() == osg::NodeVisitor::EVENT_VISITOR )
-        {
-            for( ComputationListItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-            {
-                if( (*itr)->getEventCallback() )
-                    (*(*itr)->getEventCallback())( *(*itr), nv );
-            }
-        }
-        else if( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
-        {
-            for( ComputationListItr itr = _computations.begin(); itr != _computations.end(); ++itr )
-            {
-                if( (*itr)->getUpdateCallback() )
-                    (*(*itr)->getUpdateCallback())( *(*itr), nv );
-            }
-        }
-    }  
-} 
+	//------------------------------------------------------------------------------
+	void Program::setLibraryName( const std::string& libraryName )
+	{
+		_libraryName = libraryName;
+	}
+}

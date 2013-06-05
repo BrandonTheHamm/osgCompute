@@ -165,7 +165,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "[GeometryObject::~GeometryObject()]: error during cudaGLUnmapBufferObject(). "
+                    << __FUNCTION__ << ": error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -178,7 +178,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                <<"[GeometryObject::~GeometryObject()]: error during cudaGraphicsUnregisterResource()."
+                <<__FUNCTION__ << ": error during cudaGraphicsUnregisterResource()."
                 << cudaGetErrorString(res) << std::endl;
             }
         }
@@ -211,7 +211,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "[GeometryObject::~GeometryObject()]: error during cudaGLUnmapBufferObject(). "
+                    <<__FUNCTION__ << ": error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -224,7 +224,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    <<"[GeometryObject::~GeometryObject()]: error during cudaGraphicsUnregisterResource()."
+                    <<__FUNCTION__ << ": error during cudaGraphicsUnregisterResource()."
                     << cudaGetErrorString(res) << std::endl;
             }
         }
@@ -464,7 +464,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::map()]: error during cudaGraphicsMapResources(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -476,7 +476,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::map()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -503,7 +503,7 @@ namespace osgCuda
         else
         {
             osg::notify(osg::WARN)
-                << _geomref->getName() << " [osgCuda::GeometryMemory::map()]: Wrong mapping type specified. Use one of the following types: "
+                << __FUNCTION__ <<" " << _geomref->getName() << ": wrong mapping type specified. Use one of the following types: "
                 << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE."
                 << std::endl;
 
@@ -570,7 +570,7 @@ namespace osgCuda
             if( NULL == map( osgCompute::MAP_DEVICE_SOURCE, 0 ) )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::unmap()]: error during device memory synchronization (map())."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during device memory synchronization (map())."
                     << std::endl;
 
                 return;
@@ -584,7 +584,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::unmap()]: error during cudaGLUnmapBufferObject(). "
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -672,7 +672,7 @@ namespace osgCuda
             if( !memset( memory._hostPtr, 0x0, getAllElementsSize() ) )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::Buffer::reset()] : error during memset() for host memory."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during memset() for host memory."
                     << std::endl;
 
                 return false;
@@ -688,7 +688,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: error during cudaGraphicsMapResources(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -700,7 +700,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::WARN)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -712,7 +712,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: error during cudaMemset(). "
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaMemset(). "
                     << cudaGetErrorString( res )  <<"."
                     << std::endl;
 
@@ -729,7 +729,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "[osgCuda::GeometryMemory::reset()]: error during cudaGLUnmapBufferObject(). "
+                    <<  __FUNCTION__ <<": error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return false;
@@ -744,7 +744,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    <<"[osgCuda::GeometryMemory::reset()]: error during cudaGraphicsUnregisterResource()."
+                    << __FUNCTION__ <<": error during cudaGraphicsUnregisterResource()."
                     << cudaGetErrorString(res) << std::endl;
                 return false;
             }
@@ -764,7 +764,7 @@ namespace osgCuda
         if( !vbo )
         {
             osg::notify(osg::FATAL)
-                << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: no buffer object found."
+                << __FUNCTION__ <<" " << _geomref->getName() << ": no buffer object found."
                 << std::endl;
 
             return false;
@@ -777,7 +777,7 @@ namespace osgCuda
         if( NULL == glBO )
         {
             osg::notify(osg::FATAL)
-                << _geomref->getName() << " [osgCuda::GeometryMemory::reset()]: no GL buffer object found."
+                << __FUNCTION__ <<" " << _geomref->getName() << ": no GL buffer object found."
                 << std::endl;
 
             return false;
@@ -849,7 +849,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::setup()]: unable to unregister buffer object. "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": unable to unregister buffer object. "
                         << std::endl;
 
                     return false;
@@ -872,7 +872,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::setup()]: unable to register buffer object again."
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": unable to register buffer object again."
                         << std::endl;
 
                     return false;
@@ -899,7 +899,7 @@ namespace osgCuda
                 if( !curData )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::setup()]: invalid buffer data found."
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": invalid buffer data found."
                         << std::endl;
 
                     return false;
@@ -948,7 +948,7 @@ namespace osgCuda
             if( NULL == memory._hostPtr )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: error during mallocHost()."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during mallocHost()."
                     << std::endl;
 
                 return false;
@@ -984,7 +984,7 @@ namespace osgCuda
             if( !vbo )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: no buffer object found."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": no buffer object found."
                     << std::endl;
 
                 return false;
@@ -995,7 +995,7 @@ namespace osgCuda
             if( !glBO )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: no GL buffer object found."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": no GL buffer object found."
                     << std::endl;
 
                 return false;
@@ -1007,7 +1007,7 @@ namespace osgCuda
                 if( !ext )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: cannot find required extensions to compile buffer object."
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": cannot find required extensions to compile buffer object."
                         << std::endl;
 
                     return false;
@@ -1029,7 +1029,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::alloc()]: unable to register buffer object (cudaGraphicsGLRegisterBuffer)."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": unable to register buffer object (cudaGraphicsGLRegisterBuffer)."
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1073,7 +1073,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::syncStream()]: error during cudaMemcpy() to device. "
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaMemcpy() to device. "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1112,7 +1112,7 @@ namespace osgCuda
                     if( res != cudaSuccess )
                     {
                         osg::notify(osg::FATAL)
-                            << _geomref->getName() << " [osgCuda::GeometryMemory::sync()]: unable to register buffer object."
+                            << __FUNCTION__ <<" " << _geomref->getName() << ": unable to register buffer object."
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1131,7 +1131,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::sync()]: error during cudaGraphicsMapResources(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1143,7 +1143,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::GeometryMemory::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1158,7 +1158,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::GeometryMemory::syncStream()]: error during cudaMemcpy() to host memory. "
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaMemcpy() to host memory. "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1177,7 +1177,6 @@ namespace osgCuda
     {
         return new GeometryObject;
     }
-
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////
@@ -1314,7 +1313,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::mapIndices()]: error during cudaGraphicsMapResources(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1326,7 +1325,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::mapIndices()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1353,7 +1352,7 @@ namespace osgCuda
         else
         {
             osg::notify(osg::WARN)
-                << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::mapIndices()]: Wrong mapping type specified. Use one of the following types: "
+                << __FUNCTION__ <<" " << _geomref->getName() << ": Wrong mapping type specified. Use one of the following types: "
                 << "HOST_SOURCE_INDICES, HOST_TARGET_INDICES, HOST_INDICES, DEVICE_SOURCE_INDICES, DEVICE_TARGET_INDICES, DEVICE_INDICES."
                 << std::endl;
 
@@ -1411,7 +1410,7 @@ namespace osgCuda
             if( NULL == mapIndices( MAP_DEVICE_SOURCE_INDICES, 0 ) )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::unmapIndices()]: error during device memory synchronization."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during device memory synchronization."
                     << std::endl;
 
                 return;
@@ -1425,7 +1424,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::unmapIndices()]: error during cudaGLUnmapBufferObject(). "
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -1466,7 +1465,7 @@ namespace osgCuda
             if( !memset( memory._hostIdxPtr, 0x0, getIndicesByteSize() ) )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()] \"" << getName() << "\": error during memset() for host memory."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during memset() for host memory."
                     << std::endl;
 
                 return false;
@@ -1482,7 +1481,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaGraphicsMapResources(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1494,7 +1493,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1506,7 +1505,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaMemset(). "
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaMemset(). "
                     << cudaGetErrorString( res )  <<"."
                     << std::endl;
 
@@ -1523,7 +1522,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "[osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaGLUnmapBufferObject(). "
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return false;
@@ -1538,7 +1537,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() <<" [osgCuda::IndexedGeometryMemory::resetIndices()]: error during cudaGraphicsUnregisterResource()."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsUnregisterResource()."
                     << cudaGetErrorString(res) << std::endl;
                 return false;
             }
@@ -1558,7 +1557,7 @@ namespace osgCuda
         if( !ebo )
         {
             osg::notify(osg::FATAL)
-                << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: no buffer object found."
+                << __FUNCTION__ <<" " << _geomref->getName() << ": no buffer object found."
                 << std::endl;
 
             return false;
@@ -1571,7 +1570,7 @@ namespace osgCuda
         if( NULL == glBO )
         {
             osg::notify(osg::FATAL)
-                << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::resetIndices()]: no GL buffer object found."
+                << __FUNCTION__ <<" " << _geomref->getName() << ": no GL buffer object found."
                 << std::endl;
 
             return false;
@@ -1620,7 +1619,7 @@ namespace osgCuda
             if( drawElementsList.size() == 0 )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::getIndicesByteSize()]: no indices defined! setup element array first."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": no indices defined! setup element array first."
                     << std::endl;
 
                 return 0;
@@ -1670,7 +1669,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::setupIndices()]: unable to unregister buffer object. "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": unable to unregister buffer object. "
                         << std::endl;
 
                     return false;
@@ -1693,7 +1692,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::setupIndices()]: unable to register buffer object again."
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": unable to register buffer object again."
                         << std::endl;
 
                     return false;
@@ -1717,7 +1716,7 @@ namespace osgCuda
                 if( !curData )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::setupIndices()]: invalid buffer data found."
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": invalid buffer data found."
                         << std::endl;
 
                     return false;
@@ -1763,7 +1762,7 @@ namespace osgCuda
             if( NULL == memory._hostIdxPtr )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::allocIndices()]: error during mallocHost()."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during mallocHost()."
                     << std::endl;
 
                 return false;
@@ -1797,7 +1796,7 @@ namespace osgCuda
             if( !ebo )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::allocIndices()]: no buffer object found."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": no buffer object found."
                     << std::endl;
 
                 return false;
@@ -1808,7 +1807,7 @@ namespace osgCuda
             if( !glBO )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::allocIndices()]: no GL buffer object found."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": no GL buffer object found."
                     << std::endl;
 
                 return false;
@@ -1822,7 +1821,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::allocIndices()]: unable to register buffer object (cudaGraphicsGLRegisterBuffer)."
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": unable to register buffer object (cudaGraphicsGLRegisterBuffer)."
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1865,7 +1864,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: error during cudaMemcpy() to device. "
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaMemcpy() to device. "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1903,7 +1902,7 @@ namespace osgCuda
                     if( res != cudaSuccess )
                     {
                         osg::notify(osg::FATAL)
-                            << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: unable to register buffer object."
+                            << __FUNCTION__ <<" " << _geomref->getName() << ": unable to register buffer object."
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1921,7 +1920,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: error during cudaGraphicsMapResources(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1933,7 +1932,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -1948,7 +1947,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _geomref->getName() << " [osgCuda::IndexedGeometryMemory::syncIndices()]: error during cudaMemcpy() to host memory. "
+                    << __FUNCTION__ <<" " << _geomref->getName() << ": error during cudaMemcpy() to host memory. "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1974,7 +1973,6 @@ namespace osgCuda
     {
         return new IndexedGeometryObject;
     }
-
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PUBLIC FUNCTIONS /////////////////////////////////////////////////////////////////////////////

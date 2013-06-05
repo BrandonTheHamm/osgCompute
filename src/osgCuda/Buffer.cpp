@@ -50,7 +50,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    <<"BufferObject::~BufferObject(): error during cudaFree(). "
+                    <<__FUNCTION__ << ": error during cudaFree(). "
                     <<cudaGetErrorString(res)<<std::endl;
             }
         }
@@ -61,7 +61,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    <<"BufferObject::~BufferObject(): error during cudaFreeArray(). "
+                    <<__FUNCTION__ << ": error during cudaFreeArray(). "
                     <<cudaGetErrorString(res)<<std::endl;
             }
         }
@@ -214,7 +214,7 @@ namespace osgCuda
         else
         {
             osg::notify(osg::WARN)
-                << getName() << " [osgCuda::Buffer::map()] \""<<getName()<<"\": Wrong mapping. Use one of the following: "
+                << __FUNCTION__ << " " << getName() << ":  Wrong mapping. Use one of the following: "
                 << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET,  DEVICE_ARRAY, DEVICE."
                 << std::endl;
 
@@ -300,7 +300,7 @@ namespace osgCuda
             if( !memset( memory._hostPtr, 0x0, getAllElementsSize() ) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during memset() for host memory."
+                    << __FUNCTION__ << " " << getName() << ": \"" << getName() << "\": error during memset() for host memory."
                     << std::endl;
 
                 return false;
@@ -319,7 +319,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset3D() for device memory."
+                        << __FUNCTION__ << " " << getName() << ": \"" << getName() << "\": error during cudaMemset3D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -333,7 +333,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset2D() for device memory."
+                        << __FUNCTION__ << " " << getName() << ": \"" << getName() << "\": error during cudaMemset2D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -347,7 +347,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::reset()] \"" << getName() << "\": error during cudaMemset() for device memory."
+                        << __FUNCTION__ << " " << getName() << ": \"" << getName() << "\": error during cudaMemset() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -399,7 +399,7 @@ namespace osgCuda
         if( _image->getNumMipmapLevels() > 1 )
         {
             osg::notify(osg::WARN)
-                << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": Image \""
+                << __FUNCTION__ << " " << getName() << ":  Image \""
                 << _image->getName() << "\" uses MipMaps which are currently"
                 << "not supported."
                 << std::endl;
@@ -410,7 +410,7 @@ namespace osgCuda
         if( _image->getTotalSizeInBytes() != getAllElementsSize() )
         {
             osg::notify(osg::WARN)
-                << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": size of image \""
+                << __FUNCTION__ << " " << getName() << ":  size of image \""
                 << _image->getName() << "\" is wrong."
                 << std::endl;
 
@@ -431,7 +431,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": Cannot receive valid data pointer."
+                    << __FUNCTION__ << " " << getName() << ":  Cannot receive valid data pointer."
                     << std::endl;
 
                 return false;
@@ -455,7 +455,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": cudaMemcpy3D() failed."
+                        << __FUNCTION__ << " " << getName() << ":  cudaMemcpy3D() failed."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -468,7 +468,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::set()] \""<<getName()<<"\": cudaMemcpy2DToArray() failed."
+                        << __FUNCTION__ << " " << getName() << ":  cudaMemcpy2DToArray() failed."
                         << " " << cudaGetErrorString( res ) << "."
                         << std::endl;
 
@@ -481,7 +481,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": cudaMemcpyToArray() failed."
+                        << __FUNCTION__ << " " << getName() << ":  cudaMemcpyToArray() failed."
                         << " " << cudaGetErrorString( res ) << "."
                         << std::endl;
 
@@ -511,7 +511,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::WARN)
-                    << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": cannot receive valid data pointer."
+                    << __FUNCTION__ << " " << getName() << ":  cannot receive valid data pointer."
                     << std::endl;
 
                 return false;
@@ -530,7 +530,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": error during cudaMemcpy3D()."
+                        << __FUNCTION__ << " " << getName() << ":  error during cudaMemcpy3D()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -543,7 +543,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": error during cudaMemcpy2D()."
+                        << __FUNCTION__ << " " << getName() << ":  error during cudaMemcpy2D()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -556,7 +556,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": error during cudaMemcpy()."
+                        << __FUNCTION__ << " " << getName() << ":  error during cudaMemcpy()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -587,7 +587,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": cannot receive valid data pointer."
+                    << __FUNCTION__ << " " << getName() << ":  cannot receive valid data pointer."
                     << std::endl;
 
                 return false;
@@ -597,7 +597,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::Buffer::setup()] \""<<getName()<<"\": error during cudaMemcpy()."
+                    << __FUNCTION__ << " " << getName() << ":  error during cudaMemcpy()."
                     << " " << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -643,7 +643,7 @@ namespace osgCuda
             if( NULL == memory._hostPtr )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::Buffer::alloc()] \""<<getName()<<"\": error during malloc()."
+                    << __FUNCTION__ << " " << getName() << ":  error during malloc()."
                     << std::endl;
 
                 return false;
@@ -666,7 +666,7 @@ namespace osgCuda
             if( (desc.x == 0 && desc.y == 0 && desc.z == 0 && desc.w == 0) || desc.f == cudaChannelFormatKindNone )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::Buffer::allocStream()] \""<<getName()<<"\": no valid ChannelFormatDesc found."
+                    << __FUNCTION__ << " " << getName() << ":  no valid ChannelFormatDesc found."
                     << std::endl;
 
                 return false;
@@ -684,7 +684,7 @@ namespace osgCuda
                 if( cudaSuccess != res || NULL ==  memory._devArray )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::allocStream()] \""<<getName()<<"\": something goes wrong within cudaMalloc3DArray()."
+                        << getName() << " [osgCuda::Buffer::allocStream()]  something goes wrong within cudaMalloc3DArray()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -697,7 +697,7 @@ namespace osgCuda
                 if( cudaSuccess != res || NULL ==  memory._devArray )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::allocStream()] \""<<getName()<<"\": something goes wrong within mallocDevice2DArray()."
+                        << __FUNCTION__ << " " << getName() << ":  something goes wrong within mallocDevice2DArray()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -710,7 +710,7 @@ namespace osgCuda
                 if( cudaSuccess != res || NULL ==  memory._devArray )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::allocStream()] \""<<getName()<<"\": something goes wrong within mallocDeviceArray()."
+                        << __FUNCTION__ << " " << getName() << ":  something goes wrong within mallocDeviceArray()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -741,7 +741,7 @@ namespace osgCuda
                 if( cudaSuccess != res || NULL == pitchPtr.ptr )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::alloc()] \""<<getName()<<"\": error during mallocDevice3D()."
+                        << __FUNCTION__ << " " << getName() << ":  error during mallocDevice3D()."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -760,7 +760,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::alloc()] \""<<getName()<<"\": error during mallocDevice2D()."
+                        << __FUNCTION__ << " " << getName() << ":  error during mallocDevice2D()."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -777,7 +777,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << getName() << " [osgCuda::Buffer::alloc()] \""<<getName()<<"\": error during mallocDevice()."
+                        << __FUNCTION__ << " " << getName() << ":  error during mallocDevice()."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -797,7 +797,7 @@ namespace osgCuda
                 cudaGetDeviceProperties( &devProp, device );
 
                 osg::notify(osg::INFO)
-                    << getName() << " [osgCuda::Buffer::alloc()] \""<<getName()
+                    << __FUNCTION__ << " " << getName() << ": \""<<getName()
                     << "\": Buffer requirement is not a multiple of texture alignment of "<<devProp.textureAlignment<<". This "
                     << "leads to a pitch which is not equal to the logical row size in bytes."
                     << std::endl;
@@ -842,7 +842,7 @@ namespace osgCuda
                 ((memory._syncOp & osgCompute::SYNC_DEVICE) && (memory._syncOp & osgCompute::SYNC_HOST)) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::Buffer::sync()]: no current memory found."
+                    << __FUNCTION__ << " " << getName() << ": no current memory found."
                     << std::endl;
 
                 return false;
@@ -869,7 +869,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpy3D() failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -884,7 +884,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2DToArray() failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpy2DToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -897,7 +897,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpyToArray() failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpyToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -926,7 +926,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpy3D() failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -941,7 +941,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2DToArray() failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpy2DToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -954,7 +954,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpyToArray() failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpyToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -976,7 +976,7 @@ namespace osgCuda
                 ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_HOST)) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::Buffer::sync()]: no current memory found."
+                    << __FUNCTION__ << " " << getName() << ": no current memory found."
                     << std::endl;
 
                 return false;
@@ -1008,7 +1008,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: error during cudaMemcpy3D() to host memory."
+                            << __FUNCTION__ << " " << getName() << ": error during cudaMemcpy3D() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1028,7 +1028,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: error during cudaMemcpy2DFromArray() to host memory."
+                            << __FUNCTION__ << " " << getName() << ": error during cudaMemcpy2DFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1041,7 +1041,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]:  error during cudaMemcpyFromArray() to host memory."
+                            << __FUNCTION__ << " " << getName() << ":  error during cudaMemcpyFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1069,7 +1069,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() to device failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpy3D() to device failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1083,7 +1083,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2D() to device failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpy2D() to device failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1096,7 +1096,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()] \""<<getName()<<"\": cudaMemcpy() to device failed."
+                            << __FUNCTION__ << " " << getName() << ":  cudaMemcpy() to device failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
                         return false;
@@ -1117,7 +1117,7 @@ namespace osgCuda
                 ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_DEVICE)) )
             {
                 osg::notify(osg::FATAL)
-                    << getName() << " [osgCuda::Buffer::sync()]: no current memory found."
+                    << __FUNCTION__ << " " << getName() << ": no current memory found."
                     << std::endl;
 
                 return false;
@@ -1149,7 +1149,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: error during cudaMemcpy3D() to host memory."
+                            << __FUNCTION__ << " " << getName() << ": error during cudaMemcpy3D() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1170,7 +1170,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: error during cudaMemcpy2DFromArray() to host memory."
+                            << __FUNCTION__ << " " << getName() << ": error during cudaMemcpy2DFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1183,7 +1183,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]:  error during cudaMemcpyFromArray() to host memory."
+                            << __FUNCTION__ << " " << getName() << ":  error during cudaMemcpyFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1211,7 +1211,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << "[osgCuda::Buffer::sync()]: cudaMemcpy3D() to host failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpy3D() to host failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1225,7 +1225,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()]: cudaMemcpy2D() to host failed."
+                            << __FUNCTION__ << " " << getName() << ": cudaMemcpy2D() to host failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1238,7 +1238,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << getName() << " [osgCuda::Buffer::sync()] \""<<getName()<<"\": cudaMemcpy() to host failed."
+                            << __FUNCTION__ << "" << getName() << ":  cudaMemcpy() to host failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
                         return false;
@@ -1252,6 +1252,7 @@ namespace osgCuda
 
         return false;
     }
+
 
     //------------------------------------------------------------------------------
     void Buffer::setImage( osg::Image* image )

@@ -50,8 +50,6 @@ namespace osgCompute
     typedef std::multimap< std::string, osg::observer_ptr<Resource> >::iterator         ObserverMapItr;
     typedef std::multimap< std::string, osg::observer_ptr<Resource> >::const_iterator   ObserverMapCnstItr;
 
-
-
     //! Base class to observe all existing resources.
     /**
     */
@@ -106,7 +104,7 @@ namespace osgCompute
 		Abstract base class for device dependent objects.
 		Any object that is in any way connected with a device 
 		context should derive from osgCompute::Resource, 
-		like Memory or Computation objects. Resources have 
+		like Memory or Program objects. Resources have 
 		string identifiers to uniquely distinguish between 
 		different resources of the same type.
 		\code
@@ -115,7 +113,7 @@ namespace osgCompute
 		osg::ref_ptr<osgCompute::Resource> resourceB = new osgCuda::Buffer;
 		resourceA->addIdentifier("OUTPUT RESOURCE");
 		\endcode
-		Each computation will check for these names during acceptResource() 
+		Each program will check for these names during acceptResource() 
 		in order to identify its resources of interest.
     */
     class LIBRARY_EXPORT Resource : public osg::Object
@@ -167,34 +165,19 @@ namespace osgCompute
         */
         virtual void clear();
 
-        /** Release all allocations associated with this resource. 
+        /** Will release host and device memory.
         */
         virtual void releaseObjects();
 
-        /** Returns true if all allocations by a resource are released. 
-        @return Returns true if all allocations of a resource are released.
+        /** Will return true if objects are not allocated.
+        @return Returns true if objects are not allocated.
         */
-        virtual bool objectsReleased();
-
-        /** Releases all allocated objects associated with the applied state. 
-        @param[in] state the current OpenGL state.
-        */
-        virtual void releaseGLObjects(osg::State* state);
+        virtual bool objectsReleased() const;
 
     protected:
 		/** Destructor.
 		*/
         virtual ~Resource();
-
-        /** Call objectsCreated() from a specialized class in case some memory has been 
-        allocated for internal use.
-		*/
-        virtual void objectsCreated() const;
-
-        /** Non-virtual function which is called by releaseObjects(),releaseGLObjects(),Destructor().
-            Function frees all allocations of a resource.
-        */
-        void releaseObjectsLocal();
 
 	private:
 		// Copy constructor and operator should not be called
@@ -202,7 +185,6 @@ namespace osgCompute
 		Resource &operator=(const Resource&) { return *this; }
 
 		IdentifierSet _identifiers;
-        mutable bool  _objectsReleased;
 
     };
 }

@@ -28,11 +28,11 @@
 #include <osgDB/Registry>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCompute/Program>
+#include <osgCompute/Computation>
 #include <osgCompute/Callback>
 #include <osgCuda/Buffer>
 #include <osgCuda/Texture>
-#include <osgCuda/Program>
+#include <osgCuda/Computation>
 #include <osgCudaStats/Stats>
 #include <osgCudaInit/Init>
 
@@ -44,7 +44,7 @@ extern "C" void sobelFilter(
                             unsigned int srcBufferSize );
 
 
-class TexFilter : public osgCompute::Computation 
+class TexFilter : public osgCompute::Program 
 {
 public:
     //------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ public:
 
         //This texture filter launches a sobel filter on the rendered texture of a camera.
         //It is executed directly after the camera during the rendering traversal. The 
-        //result of this computation is written into a target texture which is rendered 
+        //result of this program is written into a target texture which is rendered 
         //via a screen aligned quad.
         sobelFilter(  _trgBuffer->getDimension(0), 
             _trgBuffer->getDimension(1),
@@ -188,27 +188,27 @@ osg::ref_ptr<osg::Node> setupScene()
     ////////////////////////
     // OSGCOMPUTE PROGRAM //
     ////////////////////////
-    // Create a program. Please note that you do not need
-    // to execute your CUDA kernels in programs only. However,
+    // Create a computation. Please note that you do not need
+    // to execute your CUDA kernels in computations only. However,
     // in order to get the OpenGL rendering correctly scheduled 
-    // with computations, programs are useful.
-    osg::ref_ptr<osgCuda::Program> program = new osgCuda::Program;
+    // with programs, computations are useful.
+    osg::ref_ptr<osgCuda::Computation> computation = new osgCuda::Computation;
     {
-        // Add the filter computation to the program and ...
+        // Add the filter program to the computation and ...
         osg::ref_ptr<TexFilter> texFilter = new TexFilter;
-        program->addComputation( *texFilter );
-        // ... execute it during the render traversal. Programs
+        computation->addProgram( *texFilter );
+        // ... execute it during the render traversal. Computations
         // are handled just like osg::Camera objects during
         // the rendering-traversal.
-        program->setComputeOrder( osgCompute::Program::PRE_RENDER ); 
+        computation->setComputeOrder( osgCompute::Computation::PRE_RENDER ); 
 
         // Add resources manually. Please see osgCompute::ResourceVisitor
         // for an automatic setup of resources.
-        program->addResource( *(rttTexture->getMemory()) );
-        program->addResource( *(targetTexture->getMemory()) );
+        computation->addResource( *(rttTexture->getMemory()) );
+        computation->addResource( *(targetTexture->getMemory()) );
 
         // Add the camera as a pre-render subgraph
-        program->addChild( rttCamera );
+        computation->addChild( rttCamera );
     }
 
     ////////////////////
@@ -240,7 +240,7 @@ osg::ref_ptr<osg::Node> setupScene()
     {
         scene->addChild( sceneTransform );
         scene->addChild( resultQuad );
-        scene->addChild( program );
+        scene->addChild( computation );
     }
 
     return scene;

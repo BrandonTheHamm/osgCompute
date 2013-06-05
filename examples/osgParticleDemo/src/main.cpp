@@ -24,10 +24,10 @@
 #include <osg/ShapeDrawable>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osgCompute/Computation>
+#include <osgCompute/Program>
 #include <osgCuda/Buffer>
 #include <osgCuda/Geometry>
-#include <osgCuda/Program>
+#include <osgCuda/Computation>
 #include <osgCudaStats/Stats>
 #include <osgCudaInit/Init>
 
@@ -39,7 +39,7 @@ extern "C" void move(
                      void* ptcls, 
                      float etime );
 
-class MovePtcls : public osgCompute::Computation 
+class MovePtcls : public osgCompute::Program 
 {
 public:
     MovePtcls( osg::FrameStamp& fs ) : _fs(&fs) {}
@@ -97,7 +97,7 @@ extern "C" void emit(
                      osg::Vec3f bbmin, 
                      osg::Vec3f bbmax );
 
-class EmitPtcls : public osgCompute::Computation 
+class EmitPtcls : public osgCompute::Program 
 {
 public:
     EmitPtcls( osg::Vec3f min, osg::Vec3f max ) : _min(min), _max(max) {}
@@ -182,8 +182,8 @@ public:
     }
 
 public:
-    osg::ref_ptr<osgCompute::Computation> _emit;
-    osg::ref_ptr<osgCompute::Computation> _move;
+    osg::ref_ptr<osgCompute::Program> _emit;
+    osg::ref_ptr<osgCompute::Program> _move;
 };
 
 //------------------------------------------------------------------------------
@@ -197,7 +197,7 @@ osg::ref_ptr<osg::Node> setupScene( osg::ref_ptr<osg::Geometry> geom, osg::Vec3f
     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
     geode->addDrawable( geom.get() );
 
-    osg::ref_ptr<osg::Program> program = new osg::Program;
+    osg::ref_ptr<osg::Program> computation = new osg::Program;
 
     const std::string vtxShader=
         "uniform vec2 pixelsize;                                                                \n"
@@ -213,7 +213,7 @@ osg::ref_ptr<osg::Node> setupScene( osg::ref_ptr<osg::Geometry> geom, osg::Vec3f
         "                                                                                       \n"
         "   gl_Position = projPos;                                                              \n"
         "}                                                                                      \n";
-    program->addShader( new osg::Shader(osg::Shader::VERTEX, vtxShader ) );
+    computation->addShader( new osg::Shader(osg::Shader::VERTEX, vtxShader ) );
 
     const std::string frgShader=
         "void main (void)                                                                       \n"
@@ -242,8 +242,8 @@ osg::ref_ptr<osg::Node> setupScene( osg::ref_ptr<osg::Geometry> geom, osg::Vec3f
         "   gl_FragColor = result;                                                              \n"
         "}                                                                                      \n";
 
-    program->addShader( new osg::Shader( osg::Shader::FRAGMENT, frgShader ) );
-    geode->getOrCreateStateSet()->setAttribute(program);
+    computation->addShader( new osg::Shader( osg::Shader::FRAGMENT, frgShader ) );
+    geode->getOrCreateStateSet()->setAttribute(computation);
     geode->getOrCreateStateSet()->setMode(GL_VERTEX_PROGRAM_POINT_SIZE, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
     geode->getOrCreateStateSet()->setAttribute( new osg::AlphaFunc( osg::AlphaFunc::GREATER, 0.1f) );

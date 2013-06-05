@@ -87,7 +87,7 @@ namespace osgCuda
 
 		/** Returns true if the memory object can allocate memory in the
 		specific memory space and is allowed to execute the type of mapping
-		(see osgCompute::Mapping for more details). In general osgCuda::Memory
+		(see osgCompute::Mapping for more details). In general osgCuda::Buffer
 		can be mapped in all memory spaces provided by osgCompute::Mapping.
 		@param[in] mapping specifies the memory space and type of the mapping.
 		@param[in] hint [unused] reserved.

@@ -104,7 +104,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                <<"[TextureObject::~TextureObject()]: error during cudaFree()."
+                <<__FUNCTION__ <<": error during cudaFree()."
                 << cudaGetErrorString(res) << std::endl;
             }
         }
@@ -115,7 +115,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << "[TextureObject::~TextureObject()]: error during cudaGLUnmapBufferObject(). "
+                    << __FUNCTION__ <<": error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -129,7 +129,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                <<"[TextureObject::~TextureObject()]: error during cudaGraphicsUnregisterResource()."
+                << __FUNCTION__ <<": error during cudaGraphicsUnregisterResource()."
                 << cudaGetErrorString(res) << std::endl;
             }
         }
@@ -479,7 +479,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::map()]: error during cudaGraphicsMapResources(). "
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaGraphicsMapResources(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -490,7 +490,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::map()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaGraphicsResourceGetMappedPointer(). "
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -546,7 +546,7 @@ namespace osgCuda
         else
         {
             osg::notify(osg::WARN)
-                << _texref->getName() << " [osgCuda::TextureMemory::map()]: Wrong mapping type specified. Use one of the following types: "
+                << __FUNCTION__ <<" " << _texref->getName() << ": Wrong mapping type specified. Use one of the following types: "
                 << "HOST_SOURCE, HOST_TARGET, HOST, DEVICE_SOURCE, DEVICE_TARGET, DEVICE, DEVICE_ARRAY."
                 << std::endl;
 
@@ -614,7 +614,7 @@ namespace osgCuda
             if( NULL == map( osgCompute::MAP_DEVICE_ARRAY, 0 ) )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::unmap()]: error during device memory synchronization (map())."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": error during device memory synchronization (map())."
                     << std::endl;
 
                 return;
@@ -628,7 +628,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::unmap()]: error during cudaGLUnmapBufferObject(). "
+                    << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -666,7 +666,7 @@ namespace osgCuda
             if( !memset( memory._hostPtr, 0x0, getAllElementsSize() ) )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::reset()]: error during memset() for host memory."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": error during memset() for host memory."
                     << std::endl;
 
                 return false;
@@ -685,7 +685,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::Buffer::reset()]: error during cudaMemset3D() for device memory."
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemset3D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -699,7 +699,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::Buffer::reset()]: error during cudaMemset2D() for device memory."
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemset2D() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -713,7 +713,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::Buffer::reset()]: error during cudaMemset() for device memory."
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemset() for device memory."
                         << cudaGetErrorString( res )  <<"."
                         << std::endl;
 
@@ -764,7 +764,7 @@ namespace osgCuda
             if( NULL == map( osgCompute::MAP_DEVICE_ARRAY, 0 ) )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::applyAsRenderTarget()]: error during device memory synchronization (map())."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": error during device memory synchronization (map())."
                     << std::endl;
 
                 return;
@@ -781,7 +781,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::applyAsRenderTarget()]: error during cudaGLUnmapBufferObject(). "
+                    << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaGLUnmapBufferObject(). "
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
                 return;
@@ -790,6 +790,8 @@ namespace osgCuda
         }
     }
 
+
+    
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // PROTECTED FUNCTIONS //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -842,7 +844,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << "[osgCuda::TextureMemory::setup()]: error during cudaGraphicsUnmapResources(). "
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaGraphicsUnmapResources(). "
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
                     return false;
@@ -858,7 +860,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: unable to unregister buffer object. "
+                        << __FUNCTION__ <<" " << _texref->getName() << ": unable to unregister buffer object. "
                         << std::endl;
 
                     return false;
@@ -873,7 +875,7 @@ namespace osgCuda
             if( NULL == state )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: unable to find valid state."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": unable to find valid state."
                     << std::endl;
 
                 return false;
@@ -890,7 +892,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: unable to register buffer object again."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": unable to register buffer object again."
                     << std::endl;
 
                 return false;
@@ -910,7 +912,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: cannot receive valid data pointer from image."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": cannot receive valid data pointer from image."
                     << std::endl;
 
                 return false;
@@ -927,7 +929,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy3D()."
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy3D()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -940,7 +942,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy2D()."
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy2D()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -953,7 +955,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy()."
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy()."
                         << " " << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -977,7 +979,7 @@ namespace osgCuda
             if( data == NULL )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: cannot receive valid data pointer from image."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": cannot receive valid data pointer from image."
                     << std::endl;
 
                 return false;
@@ -987,7 +989,7 @@ namespace osgCuda
             if( cudaSuccess != res )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::setup()]: error during cudaMemcpy()."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy()."
                     << " " << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1030,7 +1032,7 @@ namespace osgCuda
             if( NULL == memory._hostPtr )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: error during mallocHost()."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": error during mallocHost()."
                     << std::endl;
 
                 return false;
@@ -1050,7 +1052,7 @@ namespace osgCuda
                 if( NULL == state )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to find valid state."
+                        << __FUNCTION__ <<" " << _texref->getName() << ": unable to find valid state."
                         << std::endl;
 
                     return false;
@@ -1068,7 +1070,7 @@ namespace osgCuda
             if( res != cudaSuccess )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to register image object (cudaGraphicsGLRegisterImage()). Not all GL formats are supported."
+                    << __FUNCTION__ <<" " << _texref->getName() << ":unable to register image object (cudaGraphicsGLRegisterImage()). Not all GL formats are supported."
                     << cudaGetErrorString( res ) <<"."
                     << std::endl;
 
@@ -1095,7 +1097,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to alloc shadow-copy (cudaMalloc())."
+                        << __FUNCTION__ <<" " << _texref->getName() << ":unable to alloc shadow-copy (cudaMalloc())."
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -1111,7 +1113,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to alloc shadow-copy (cudaMallocPitch())."
+                        << __FUNCTION__ <<" " << _texref->getName() << ":unable to alloc shadow-copy (cudaMallocPitch())."
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -1124,7 +1126,7 @@ namespace osgCuda
                 if( res != cudaSuccess )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::alloc()]: unable to alloc shadow-copy (cudaMalloc())."
+                        << __FUNCTION__ <<" " << _texref->getName() << ":unable to alloc shadow-copy (cudaMalloc())."
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -1142,7 +1144,7 @@ namespace osgCuda
                 cudaGetDeviceProperties( &devProp, device );
 
                 osg::notify(osg::INFO)
-					<< _texref->getName() << " [osgCuda::TextureMemory::alloc()]: "
+					<< __FUNCTION__ <<" " << _texref->getName() << ": "
                     << "memory requirement is not a multiple of texture alignment. This "
                     << "leads to a pitch which is not equal to the logical row size in bytes. "
                     << "Texture alignment requirement is \""
@@ -1182,7 +1184,7 @@ namespace osgCuda
                 ((memory._syncOp & osgCompute::SYNC_DEVICE) && (memory._syncOp & osgCompute::SYNC_HOST)) )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": no current memory found."
                     << std::endl;
 
                 return false;
@@ -1197,7 +1199,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: cudaMemcpyToArray() failed."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": cudaMemcpyToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1212,7 +1214,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: cudaMemcpy2DToArray() failed."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": cudaMemcpy2DToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1237,7 +1239,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << "[osgCuda::TextureMemory::sync()]: cudaMemcpy3D() failed."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": cudaMemcpy3D() failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1254,7 +1256,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: cudaMemcpyToArray() failed."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": cudaMemcpyToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1269,7 +1271,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: cudaMemcpy2DToArray() failed."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": cudaMemcpy2DToArray() failed."
                             << " " << cudaGetErrorString( res ) << "."
                             << std::endl;
 
@@ -1294,7 +1296,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << "[osgCuda::TextureMemory::sync()]: cudaMemcpy3D() failed."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": cudaMemcpy3D() failed."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1315,7 +1317,7 @@ namespace osgCuda
                 ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_HOST)) )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": no current memory found."
                     << std::endl;
 
                 return false;
@@ -1329,7 +1331,7 @@ namespace osgCuda
                     if( !tex )
                     {
                         osg::notify(osg::NOTICE)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found. "
+                            << __FUNCTION__ <<" " << _texref->getName() << ": no current memory found. "
                             << std::endl;
 
                         return false;
@@ -1340,7 +1342,7 @@ namespace osgCuda
                     if( res != cudaSuccess )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: unable to register image object (cudaGraphicsGLRegisterImage())."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": unable to register image object (cudaGraphicsGLRegisterImage())."
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1355,7 +1357,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsMapResources(). "
+                            <<__FUNCTION__ <<" " << _texref->getName() << ": error during cudaGraphicsMapResources(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1366,7 +1368,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaGraphicsResourceGetMappedPointer(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1398,7 +1400,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy3D() to host memory."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy3D() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1419,7 +1421,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy2DFromArray() to host memory."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy2DFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1432,7 +1434,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]:  error during cudaMemcpyFromArray() to host memory."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpyFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1447,7 +1449,7 @@ namespace osgCuda
                 if( cudaSuccess != res )
                 {
                     osg::notify(osg::FATAL)
-                        << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy() to device from host. "
+                        << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy() to device from host. "
                         << cudaGetErrorString( res ) <<"."
                         << std::endl;
 
@@ -1467,7 +1469,7 @@ namespace osgCuda
                 ((memory._syncOp & osgCompute::SYNC_ARRAY) && (memory._syncOp & osgCompute::SYNC_DEVICE)) )
             {
                 osg::notify(osg::FATAL)
-                    << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found."
+                    << __FUNCTION__ <<" " << _texref->getName() << ": no current memory found."
                     << std::endl;
 
                 return false;
@@ -1481,7 +1483,7 @@ namespace osgCuda
                     if( !tex )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: no current memory found. "
+                            << __FUNCTION__ <<" " << _texref->getName() << ": no current memory found. "
                             << std::endl;
 
                         return false;
@@ -1492,7 +1494,7 @@ namespace osgCuda
                     if( res != cudaSuccess )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: unable to register image object (cudaGraphicsGLRegisterImage())."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": unable to register image object (cudaGraphicsGLRegisterImage())."
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1507,7 +1509,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsMapResources(). "
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaGraphicsMapResources(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1518,7 +1520,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaGraphicsResourceGetMappedPointer(). "
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaGraphicsResourceGetMappedPointer(). "
                             << cudaGetErrorString( res )  <<"."
                             << std::endl;
 
@@ -1533,7 +1535,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]:  error during cudaMemcpyFromArray() to host memory."
+                            << __FUNCTION__ <<" " << _texref->getName() << ":  error during cudaMemcpyFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1553,7 +1555,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy2DFromArray() to host memory."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy2DFromArray() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1583,7 +1585,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy3D() to host memory."
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy3D() to host memory."
                             << " " << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1624,7 +1626,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy() to device from host. "
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy() to device from host. "
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1637,7 +1639,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy() to device from host. "
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy() to device from host. "
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
@@ -1650,7 +1652,7 @@ namespace osgCuda
                     if( cudaSuccess != res )
                     {
                         osg::notify(osg::FATAL)
-                            << _texref->getName() << " [osgCuda::TextureMemory::sync()]: error during cudaMemcpy() to device from host. "
+                            << __FUNCTION__ <<" " << _texref->getName() << ": error during cudaMemcpy() to device from host. "
                             << cudaGetErrorString( res ) <<"."
                             << std::endl;
 
