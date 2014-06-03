@@ -105,7 +105,7 @@ namespace osgCompute
         //! The synchronize operation   
         unsigned int                    _syncOp;
         //! The current pitch: The BYTE size of a ROW in the memory.
-        unsigned int                    _pitch;
+        size_t                          _pitch;
 
         //! The constructor sets up the initial default values.
         MemoryObject();
