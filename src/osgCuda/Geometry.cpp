@@ -1003,7 +1003,7 @@ namespace osgCuda
 
             if( glBO->isDirty() )
             {
-                osg::GLBufferObject::Extensions* ext = osg::GLBufferObject::getExtensions( osgCompute::GLMemory::getContext()->getState()->getContextID(), true );
+                osg::GLExtensions* ext = osg::GLExtensions::Get(osgCompute::GLMemory::getContext()->getState()->getContextID(), true);
                 if( !ext )
                 {
                     osg::notify(osg::FATAL)

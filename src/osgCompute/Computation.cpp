@@ -291,7 +291,7 @@ namespace osgCompute
 
                 if( getUpdateCallback() )
                 {
-                    (*getUpdateCallback())( this, &nv );
+                    (*getUpdateCallback()).run( this, &nv );
                 }
                 else
                 {
@@ -306,7 +306,7 @@ namespace osgCompute
             {
                 if( getEventCallback() )
                 {
-                    (*getEventCallback())( this, &nv );
+                    (*getEventCallback()).run( this, &nv );
                 }
                 else
                 {

@@ -444,7 +444,7 @@ namespace osgCuda
             else
                 curLabel->setText( (*itr).name );
 
-            float curX = curLabel->getBound().xMax();
+            float curX = curLabel->getBoundingBox().xMax();
             maxX = osg::maximum( curX, maxX );
         }
 
@@ -616,7 +616,7 @@ namespace osgCuda
         curLastTimeLabel->setPosition(pos);
         curLastTimeLabel->setText( "Current Time" );
 
-        headerX = curLastTimeLabel->getBound().xMax() + 160.0f;
+        headerX = curLastTimeLabel->getBoundingBox().xMax() + 160.0f;
 
         pos.x() = headerX;
         osg::ref_ptr<osgText::Text> curAveTimeLabel = new osgText::Text;
@@ -627,7 +627,7 @@ namespace osgCuda
         curAveTimeLabel->setPosition(pos);
         curAveTimeLabel->setText( "Average Time" );
 
-        headerX = curAveTimeLabel->getBound().xMax() + 320.0f;
+        headerX = curAveTimeLabel->getBoundingBox().xMax() + 320.0f;
 
         pos.x() = headerX;
         osg::ref_ptr<osgText::Text> curPeakTimeLabel = new osgText::Text;
@@ -662,7 +662,7 @@ namespace osgCuda
             curLabel->setPosition(pos);
             curLabel->setText( curTimer->getName() );
 
-            float curX = curLabel->getBound().xMax();
+            float curX = curLabel->getBoundingBox().xMax();
             curElementXPos = osg::maximum( curX, curElementXPos );
 
             pos.y() -= characterSize*1.5f;
